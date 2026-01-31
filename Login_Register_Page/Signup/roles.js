@@ -10,15 +10,13 @@ function exitTo(url) {
 }
 
 btnOwner.addEventListener("click", () => {
-    // next page for unit types
-    exitTo("./unit_type.html");
+    exitTo("./property-owner/owner_signup.html");
 });
 
 btnResident.addEventListener("click", () => {
-    // for now resident flow placeholder
     exitTo("./resident/resident_signup.html");
 });
 
 backBtn.addEventListener("click", () => {
-    exitTo("/Landing_Page/ASSETS/front_index.html");
+    exitTo("../../Landing_Page/ASSETS/front_index.html");
 });

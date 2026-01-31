@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Create Listing</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="create_listing.css" />
+</head>
+
+<body>
+    <!-- Background (same vibe as resident) -->
+    <div class="bg">
+        <div class="blob b1"></div>
+        <div class="blob b2"></div>
+        <div class="grid"></div>
+    </div>
+
+    <header class="topbar">
+        <a class="brand" href="../../Landing_Page/ASSETS/front_index.html">
+            <span class="logo"><i data-lucide="building-2"></i></span>
+            <span class="brand-text">VISTA<span>-HR</span></span>
+        </a>
+
+        <div class="top-actions">
+            <button class="ghost" id="toDashboardBtn"><i data-lucide="layout-dashboard"></i> Dashboard</button>
+            <button class="ghost" id="myListingsBtn"><i data-lucide="list"></i> My Listings</button>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <section class="card">
+            <!-- Verification banner -->
+            <div class="banner" id="verifyBanner">
+                <div class="banner-left">
+                    <span class="badge warn"><i data-lucide="shield-alert"></i> Draft only</span>
+                    <div class="banner-text">
+                        <h3>Your account isn’t verified yet</h3>
+                        <p>You can create and save this listing as a <b>draft</b>, but you must verify to
+                            <b>publish</b>.</p>
+                    </div>
+                </div>
+                <div class="banner-actions">
+                    <button class="btn small" id="verifyNowBtn"><i data-lucide="badge-check"></i> Verify now</button>
+                    <button class="btn small ghost2" id="verifyLaterBtn">Verify later</button>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="head">
+                <p class="pill"><i data-lucide="sparkles"></i> Create listing</p>
+                <h1>Let’s set up your place</h1>
+                <p class="sub">Step-by-step wizard with autosave. You can finish later.</p>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+                <div class="progress-meta">
+                    <span id="stepLabel">Step 1 of 7</span>
+                    <span class="status" id="draftStatus">Saved as draft</span>
+                </div>
+            </div>
+
+            <!-- Slides -->
+            <div class="slider" id="slider">
+                <!-- STEP 1: Basics -->
+                <section class="slide active" data-step="1">
+                    <h2>Basics</h2>
+                    <p class="desc">Tell us what kind of unit you’re listing.</p>
+
+                    <div class="grid2">
+                        <div class="field">
+                            <label>Unit Category</label>
+                            <select class="input" id="unitCategory" required>
+                                <option value="">Select...</option>
+                                <option>Boarding House</option>
+                                <option>Apartment</option>
+                                <option>Condo</option>
+                                <option>House</option>
+                                <option>Dorm</option>
+                            </select>
+                            <small class="error" data-err="unitCategory"></small>
+                        </div>
+
+                        <div class="field">
+                            <label>Type of Place</label>
+                            <select class="input" id="placeType" required>
+                                <option value="">Select...</option>
+                                <option>Entire place</option>
+                                <option>Private room</option>
+                                <option>Shared room</option>
+                            </select>
+                            <small class="error" data-err="placeType"></small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- STEP 2: Location -->
+                <section class="slide" data-step="2">
+                    <h2>Location</h2>
+                    <p class="desc">
+                        Search your address on Google Maps. Fields will autofill but remain editable.
+                        <span class="note">Metro Manila only (NCR).</span>
+                    </p>
+
+                    <div class="field">
+                        <label>Search Address</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="map-pin"></i>
+                            <input class="input" id="placeSearch" type="text" placeholder="Search in Metro Manila..." />
+                        </div>
+                        <small class="hint">Tip: choose from the dropdown suggestions.</small>
+                    </div>
+
+                    <div class="map" id="map"></div>
+
+                    <div class="grid2">
+                        <div class="field">
+                            <label>Street Address</label>
+                            <input class="input" id="street" type="text" placeholder="Street / building / unit" />
+                        </div>
+
+                        <div class="field">
+                            <label>Barangay</label>
+                            <input class="input" id="barangay" type="text" placeholder="Barangay" />
+                        </div>
+
+                        <div class="field">
+                            <label>City / Municipality</label>
+                            <input class="input" id="city" type="text" placeholder="City" />
+                            <small class="error" data-err="city"></small>
+                        </div>
+
+                        <div class="field">
+                            <label>ZIP Code</label>
+                            <input class="input" id="zip" type="text" placeholder="ZIP (manual)" inputmode="numeric" />
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="lat" />
+                    <input type="hidden" id="lng" />
+                    <input type="hidden" id="placeId" />
+                </section>
+
+                <!-- STEP 3: Details -->
+                <section class="slide" data-step="3">
+                    <h2>Details</h2>
+                    <p class="desc">Capacity and layout info.</p>
+
+                    <div class="grid3">
+                        <div class="field">
+                            <label>Max Guests</label>
+                            <input class="input" id="guests" type="number" min="1" max="16" value="1" />
+                        </div>
+                        <div class="field">
+                            <label>Bedrooms</label>
+                            <input class="input" id="bedrooms" type="number" min="0" max="50" value="0" />
+                        </div>
+                        <div class="field">
+                            <label>Bathrooms</label>
+                            <input class="input" id="bathrooms" type="number" min="0" max="50" step="0.5" value="0" />
+                        </div>
+                    </div>
+                </section>
+
+                <!-- STEP 4: Amenities -->
+                <section class="slide" data-step="4">
+                    <h2>Amenities</h2>
+                    <p class="desc">Select what your place offers (minimum 1 for publishing).</p>
+
+                    <div class="amenities">
+                        <div class="amenity-group">
+                            <h3><i data-lucide="wifi"></i> Essentials</h3>
+                            <label class="check"><input type="checkbox" value="WiFi" class="amenity"> WiFi</label>
+                            <label class="check"><input type="checkbox" value="Aircon" class="amenity"> Aircon</label>
+                            <label class="check"><input type="checkbox" value="Kitchen" class="amenity"> Kitchen</label>
+                        </div>
+
+                        <div class="amenity-group">
+                            <h3><i data-lucide="shield"></i> Safety</h3>
+                            <label class="check"><input type="checkbox" value="Smoke alarm" class="amenity"> Smoke
+                                alarm</label>
+                            <label class="check"><input type="checkbox" value="First aid kit" class="amenity"> First aid
+                                kit</label>
+                        </div>
+                    </div>
+
+                    <small class="error" data-err="amenities"></small>
+                </section>
+
+                <!-- STEP 5: Photos -->
+                <section class="slide" data-step="5">
+                    <h2>Photos</h2>
+                    <p class="desc">Add photos (minimum 5 for publishing). Draft can be saved anytime.</p>
+
+                    <div class="field">
+                        <label>Upload photos</label>
+                        <input class="input" id="photos" type="file" accept="image/*" multiple />
+                        <small class="hint">For demo: we store file names only.</small>
+                    </div>
+
+                    <div class="photo-grid" id="photoGrid"></div>
+                    <small class="error" data-err="photos"></small>
+                </section>
+
+                <!-- STEP 6: Title & Description -->
+                <section class="slide" data-step="6">
+                    <h2>Title & Description</h2>
+                    <p class="desc">Help tenants understand your place.</p>
+
+                    <div class="field">
+                        <label>Title (max 50 chars)</label>
+                        <input class="input" id="title" maxlength="50" placeholder="Cozy room near UE..." />
+                        <small class="error" data-err="title"></small>
+                    </div>
+
+                    <div class="field">
+                        <label>Description (max 500 chars)</label>
+                        <textarea class="input area" id="description" maxlength="500"
+                            placeholder="Describe your place..."></textarea>
+                        <small class="error" data-err="description"></small>
+                    </div>
+                </section>
+
+                <!-- STEP 7: Pricing & Booking -->
+                <section class="slide" data-step="7">
+                    <h2>Pricing & Booking</h2>
+                    <p class="desc">Set your base price, down payment, and booking type.</p>
+
+                    <div class="grid2">
+                        <div class="field">
+                            <label>Base Price (₱)</label>
+                            <input class="input" id="price" type="number" min="0" placeholder="e.g. 3500" />
+                            <small class="error" data-err="price"></small>
+                        </div>
+
+                        <div class="field">
+                            <label>Booking Type</label>
+                            <select class="input" id="bookingType">
+                                <option value="Standard">Standard (host approval)</option>
+                                <option value="Instant">Instant (auto approval)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h3><i data-lucide="wallet"></i> Down Payment</h3>
+                            <label class="switch">
+                                <input type="checkbox" id="dpEnabled">
+                                <span class="sliderSwitch"></span>
+                            </label>
+                        </div>
+
+                        <div class="grid2 muted-panel" id="dpFields">
+                            <div class="field">
+                                <label>Type</label>
+                                <select class="input" id="dpType">
+                                    <option value="fixed">Fixed amount</option>
+                                    <option value="percent">Percent of base price</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Value</label>
+                                <input class="input" id="dpValue" type="number" min="0" placeholder="e.g. 1000 or 20" />
+                            </div>
+                            <div class="field full">
+                                <label>Payment Methods (for now)</label>
+                                <div class="checks-inline">
+                                    <label class="check"><input type="checkbox" class="payMethod" value="GCash">
+                                        GCash</label>
+                                    <label class="check"><input type="checkbox" class="payMethod" value="Bank Transfer">
+                                        Bank Transfer</label>
+                                    <label class="check"><input type="checkbox" class="payMethod"
+                                            value="PayMongo (later)"> PayMongo (later)</label>
+                                </div>
+                                <small class="hint">PayMongo integration will be added later. We store this as
+                                    preference for now.</small>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Footer controls -->
+            <div class="footer">
+                <button class="btn ghost2" id="prevBtn"><i data-lucide="arrow-left"></i> Back</button>
+
+                <div class="footer-mid">
+                    <button class="btn" id="saveDraftBtn"><i data-lucide="save"></i> Save draft</button>
+                </div>
+
+                <button class="btn primary" id="nextBtn">Next <i data-lucide="arrow-right"></i></button>
+            </div>
+
+            <!-- Final CTA -->
+            <div class="publish-row">
+                <button class="btn publish" id="publishBtn">
+                    Publish listing <i data-lucide="rocket"></i>
+                </button>
+                <small class="publish-hint" id="publishHint"></small>
+            </div>
+        </section>
+    </main>
+
+    <!-- Google Maps (put your key here later) -->
+    <script>
+        // If you have a key, set window.GMAPS_KEY then load:
+        //<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&libraries=places&callback=initMap" async defer></script>
+    </script>
+
+    <script src="create_listing.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>
