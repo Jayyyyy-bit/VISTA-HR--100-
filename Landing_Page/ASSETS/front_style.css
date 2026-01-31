@@ -42,17 +42,7 @@ body {
         radial-gradient(circle at 60% 10%, rgba(37, 99, 235, 0.12), transparent 50%);
 }
 
-.page-exit {
-    animation: pageExit .35s ease forwards;
-}
 
-@keyframes pageExit {
-    to {
-        opacity: 0;
-        transform: translateY(10px);
-        filter: blur(6px);
-    }
-}
 
 /* Header */
 .site-header {
@@ -902,5 +892,17 @@ body {
     * {
         transition: none !important;
         animation: none !important;
+    }
+}
+
+body.page-exit {
+    animation: pageExit .35s ease forwards;
+}
+
+@keyframes pageExit {
+    to {
+        opacity: 0;
+        transform: translateY(10px);
+        filter: blur(6px);
     }
 }
