@@ -42,7 +42,7 @@ if (visual) {
     document.getElementById("getStartedBtn").addEventListener("click", () => {
         document.body.classList.add("page-exit");
         setTimeout(() => {
-            window.location.href = "/Login_Register_Page/Signup/roles.html";
+            window.location.href = "role.html";
         }, 350);
     });
 
