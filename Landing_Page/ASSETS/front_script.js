@@ -1,5 +1,18 @@
 lucide.createIcons();
 
+const btnGetStarted = document.getElementById("getStartedBtn");
+
+// OPTIONAL: if you have a back button on this page
+const backBtn = document.getElementById("backBtn");
+
+// Page exit helper (safe)
+function exitTo(url) {
+    document.body.classList.add("page-exit");
+    setTimeout(() => {
+        window.location.href = url;
+    }, 350);
+}
+
 /**
  * Smooth reveal animation on scroll
  */
@@ -20,7 +33,7 @@ const io = new IntersectionObserver(
 revealElements.forEach((el) => io.observe(el));
 
 /**
- * Optional: small "tilt" effect on hero visual for premium feel
+ * Visual tilt effect
  */
 const visual = document.querySelector(".visual-card");
 if (visual) {
@@ -38,12 +51,24 @@ if (visual) {
     visual.addEventListener("mouseleave", () => {
         visual.style.transform = `perspective(900px) rotateX(0deg) rotateY(0deg)`;
     });
+}
 
-    document.getElementById("getStartedBtn").addEventListener("click", () => {
-        document.body.classList.add("page-exit");
-        setTimeout(() => {
-            window.location.href = "role.html";
-        }, 350);
+/**
+ * ✅ Single Get Started redirect (NO duplicates)
+ * From: Landing_Page/ASSETS/front_index.html
+ * To:   Login_Register_Page/Signup/roles.html
+ */
+if (btnGetStarted) {
+    btnGetStarted.addEventListener("click", () => {
+        exitTo("../../Login_Register_Page/Signup/roles.html");
     });
+}
 
+/**
+ * Back button (optional)
+ */
+if (backBtn) {
+    backBtn.addEventListener("click", () => {
+        exitTo("../../Landing_Page/ASSETS/front_index.html");
+    });
 }
