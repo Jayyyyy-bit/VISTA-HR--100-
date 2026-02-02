@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Create Listing</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Reuse your Step 1 CSS or a shared base CSS -->
+    <link rel="stylesheet" href="create_listing_base.css" />
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo-box"></span>
+            <span class="brand-text">VISTA<span>-HR</span></span>
+        </div>
+
+        <div class="top-actions">
+            <button class="chip" type="button" id="questionsBtn">Questions?</button>
+            <button class="chip primary" type="button" id="saveExitBtn">Save & exit</button>
+        </div>
+    </header>
+
+    <main class="page">
+        <div class="wizard-shell">
+            <div class="stage stage-centered">
+
+                <!-- MAIN -->
+                <section class="panel panel-main" data-transition-key="main">
+                    <div class="panel-head">
+                        <div class="panel-kicker">Create listing • Step 2</div>
+                        <h2 class="title">What type of space will guests have?</h2>
+                        <p class="sub">Choose what guests can access during their stay.</p>
+                    </div>
+
+                    <div class="grid grid-2" id="spaceGrid"></div>
+                </section>
+
+                <!-- SIDE (persistent illusion) -->
+                <aside class="panel-side" data-transition-key="side">
+                    <div class="side-stack">
+
+                        <section class="mini-card">
+                            <div class="mini-head">
+                                <div class="mini-title">
+                                    <i data-lucide="sparkles"></i>
+                                    Quick tips
+                                </div>
+                                <div class="mini-pill" id="selectedPill">Selected: —</div>
+                            </div>
+                            <ul class="tips" id="quickTips">
+                                <li>Pick what guests can use privately vs shared.</li>
+                                <li>This affects expectations and search filters.</li>
+                                <li>You can refine details later.</li>
+                            </ul>
+                        </section>
+
+                        <section class="mini-card">
+                            <div class="mini-head">
+                                <div class="mini-title">
+                                    <i data-lucide="check-circle-2"></i>
+                                    Draft readiness
+                                </div>
+                                <div class="mini-pill"><span id="percentLabel">0%</span></div>
+                            </div>
+
+                            <div class="progress-track">
+                                <div class="bar" id="progressBar"></div>
+                            </div>
+
+                            <div class="checklist" id="sideChecklist"></div>
+
+                            <div class="side-note">
+                                Publishing stays <b>locked</b> until verification (later).
+                            </div>
+                        </section>
+
+                    </div>
+                </aside>
+
+            </div>
+        </div>
+    </main>
+
+    <footer class="bottombar">
+        <div class="progress-bottom">
+            <span class="dot active"></span>
+            <span class="dot active"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+
+        <div class="nav">
+            <button class="btn ghost" id="backBtn" type="button">Back</button>
+            <button class="btn solid" id="nextBtn" type="button" disabled>Next</button>
+        </div>
+    </footer>
+
+    <div id="transition-overlay" class="transition-overlay"></div>
+
+    <script src="steps_transition.js"></script>
+    <script src="step2_space_type.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

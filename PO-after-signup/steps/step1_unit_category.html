@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Create Listing</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="create_listing_base.css" />
+</head>
+
+<body>
+    <!-- Top header -->
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo-box"></span>
+            <span class="brand-text">VISTA<span>-HR</span></span>
+        </div>
+
+        <div class="top-actions">
+            <button class="chip" type="button" id="questionsBtn">Questions?</button>
+            <button class="chip primary" type="button" id="saveExitBtn">Save & exit</button>
+        </div>
+    </header>
+
+    <!-- Centered stage -->
+    <main class="page">
+        <div class="wizard-shell">
+            <div class="wizard">
+                <div class="slides" id="slides">
+
+                    <!-- STEP 1 -->
+                    <section class="slide active" data-step="1">
+                        <div class="stage stage-centered">
+
+                            <!-- MAIN CARD -->
+                            <section class="panel panel-main">
+                                <div class="panel-head">
+                                    <div class="panel-kicker">Create listing • Step 1</div>
+                                    <h2 class="title">Which of these best describes your place?</h2>
+                                    <p class="sub">Pick one. You can change this later.</p>
+                                </div>
+
+                                <div class="grid" id="typeGrid"></div>
+                            </section>
+
+                            <!-- SIDE STACK (ONLY Quick tips + Draft readiness) -->
+                            <aside class="panel panel-side">
+                                <div class="side-stack">
+
+                                    <!-- Quick tips -->
+                                    <section class="mini-card">
+                                        <div class="mini-head">
+                                            <div class="mini-title">
+                                                <i data-lucide="sparkles"></i>
+                                                Quick tips
+                                            </div>
+                                            <div class="mini-pill" id="selectedPill">Selected: —</div>
+                                        </div>
+
+                                        <ul class="tips" id="guideTips">
+                                            <li>Choose the closest match for faster approval.</li>
+                                            <li>Keep details consistent with your photos.</li>
+                                            <li>You can edit this later anytime.</li>
+                                        </ul>
+                                    </section>
+
+                                    <!-- Draft readiness -->
+                                    <section class="mini-card">
+                                        <div class="mini-head">
+                                            <div class="mini-title">
+                                                <i data-lucide="check-circle-2"></i>
+                                                Draft readiness
+                                            </div>
+                                            <div class="mini-pill"><span id="percentLabel">0%</span></div>
+                                        </div>
+
+                                        <div class="progress-track">
+                                            <div class="bar" id="progressBar"></div>
+                                        </div>
+
+                                        <div class="checklist" id="sideChecklist"></div>
+
+                                        <div class="side-note">
+                                            Publishing stays <b>locked</b> until verification (later).
+                                        </div>
+                                    </section>
+
+                                </div>
+                            </aside>
+
+                        </div>
+                    </section>
+
+                    <!-- STEP 2 placeholder (unchanged structure, but centered layout) -->
+                    <section class="slide" data-step="2">
+                        <div class="stage stage-centered">
+
+                            <section class="panel panel-main">
+                                <div class="panel-head">
+                                    <div class="panel-kicker">Create listing • Step 2</div>
+                                    <h2 class="title">Step 2: What type of space will guests have?</h2>
+                                    <p class="sub">Example: Entire place / Private room / Shared room</p>
+                                </div>
+
+                                <div class="placeholder">
+                                    <div class="ph-card">
+                                        <div class="ph-row">
+                                            <span class="ph-dot"></span>
+                                            <div class="ph-lines">
+                                                <div class="ph-line w60"></div>
+                                                <div class="ph-line w35"></div>
+                                            </div>
+                                        </div>
+                                        <div class="ph-row">
+                                            <span class="ph-dot"></span>
+                                            <div class="ph-lines">
+                                                <div class="ph-line w55"></div>
+                                                <div class="ph-line w40"></div>
+                                            </div>
+                                        </div>
+                                        <div class="ph-row">
+                                            <span class="ph-dot"></span>
+                                            <div class="ph-lines">
+                                                <div class="ph-line w50"></div>
+                                                <div class="ph-line w30"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="hint">Next natin: cards selection + validation + store to draft.</div>
+                                </div>
+                            </section>
+
+                            <aside class="panel panel-side">
+                                <div class="side-stack">
+                                    <section class="mini-card is-dim">
+                                        <div class="mini-head">
+                                            <div class="mini-title">
+                                                <i data-lucide="sparkles"></i>
+                                                Quick tips
+                                            </div>
+                                            <div class="mini-pill">Selected: —</div>
+                                        </div>
+                                        <ul class="tips">
+                                            <li>Step 2 guidance will appear here.</li>
+                                            <li>This panel stays compact per step.</li>
+                                        </ul>
+                                    </section>
+
+                                    <section class="mini-card is-dim">
+                                        <div class="mini-head">
+                                            <div class="mini-title">
+                                                <i data-lucide="check-circle-2"></i>
+                                                Draft readiness
+                                            </div>
+                                            <div class="mini-pill">15%</div>
+                                        </div>
+
+                                        <div class="progress-track">
+                                            <div class="bar" style="width:15%"></div>
+                                        </div>
+
+                                        <div class="side-note">Placeholder for Step 2.</div>
+                                    </section>
+                                </div>
+                            </aside>
+
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom nav -->
+    <footer class="bottombar">
+        <div class="progress-bottom">
+            <span class="dot active"></span>
+            <span class="dot" id="dot2"></span>
+        </div>
+
+        <div class="nav">
+            <button class="btn ghost" id="backBtn" type="button" disabled>Back</button>
+            <button class="btn solid" id="nextBtn" type="button" disabled>Next</button>
+        </div>
+    </footer>
+
+    <script src="step1_unit_category.js"></script>
+    <script>lucide.createIcons();</script>
+    <script src="steps_transition.js"></script>
+
+</body>
+
+</html>

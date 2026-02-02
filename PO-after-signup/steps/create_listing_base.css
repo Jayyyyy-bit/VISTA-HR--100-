@@ -97,42 +97,31 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 26px 18px;
+    padding: 28px 18px;
 }
 
 .wizard-shell {
-    width: min(1240px, 96vw);
-    /* from 1120 -> wider */
+    width: min(1120px, 96vw);
     margin: 0 auto;
-    padding-left: 28px;
-
-    /* subtle left bias */
-    .wizard-shell {
-        width: min(1200px, 96vw);
-        margin: 0;
-        /* ❌ remove auto centering */
-    }
-
-
 }
 
 .wizard {
-    height: 520px;
-    position: relative;
+    height: 560px;
+    position: relative
 }
 
 /* Slide transitions */
 .slides {
     width: 100%;
     height: 100%;
-    position: relative;
+    position: relative
 }
 
 .slide {
     position: absolute;
     inset: 0;
     opacity: 0;
-    transform: translateX(18px) scale(.985);
+    transform: translateY(10px) scale(.992);
     pointer-events: none;
     transition:
         opacity 420ms cubic-bezier(.2, .9, .2, 1),
@@ -141,67 +130,89 @@ body {
 
 .slide.active {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateY(0) scale(1);
     pointer-events: auto;
 }
 
 .slide.exit-left {
     opacity: 0;
-    transform: translateX(-24px) scale(.985);
+    transform: translateX(-24px) scale(.985)
 }
 
 .slide.exit-right {
     opacity: 0;
-    transform: translateX(24px) scale(.985);
+    transform: translateX(24px) scale(.985)
 }
 
-/* ✅ MAIN LAYOUT (this fixes your “wtf” layout) */
+/* NEW CENTERED LAYOUT */
 .stage {
     height: 100%;
     display: grid;
-
-    /* LEFT is dominant, RIGHT is fixed */
-    grid-template-columns: 1fr 420px;
-
-    gap: 48px;
-
-    /* 🔥 THIS is the key */
-    justify-content: start;
-    align-items: center;
-
-    /* Push whole layout left but keep premium margin */
-    padding-left: 40px;
+    gap: 18px;
 }
 
-/* Left content */
-.left {
-    justify-self: start;
-    /* ✅ from center -> start */
-    width: min(640px, 92vw);
-    text-align: left;
-    /* ✅ from center -> left */
-    padding-left: 10px;
-    /* optional: konting breathing room */
+.stage-centered {
+    grid-template-columns: minmax(560px, 1fr) 380px;
+    align-items: start;
+    justify-content: center;
 }
 
+/* Floating panels */
+.panel {
+    border-radius: 22px;
+    border: 1px solid rgba(12, 19, 34, .10);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(245, 248, 255, .88));
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+    transform: translateY(-1px);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
 
-.title {
-    font-size: 22px;
-    font-weight: 950;
-    letter-spacing: -.3px;
+.panel:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 22px 65px rgba(12, 19, 34, .13)
+}
 
+.panel-main {
+    padding: 18px
+}
+
+.panel-side {
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    transform: none
+}
+
+.panel-side:hover {
+    transform: none;
+    box-shadow: none
+}
+
+.panel-head {
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(12, 19, 34, .08);
+    margin-bottom: 14px;
+}
+
+.panel-kicker {
+    font-size: 12px;
+    font-weight: 900;
+    color: rgba(12, 19, 34, .52);
+    letter-spacing: .2px;
+    margin-bottom: 6px;
 }
 
 .title {
     margin: 0;
+    font-size: 22px;
+    font-weight: 950;
+    letter-spacing: -.3px;
 }
 
 .sub {
-    margin: 10px 0 18px;
-}
-
-.sub {
-
+    margin: 10px 0 0;
     color: rgba(12, 19, 34, .55);
     font-weight: 750;
     font-size: 13px;
@@ -209,6 +220,7 @@ body {
 
 /* Grid cards */
 .grid {
+    margin-top: 14px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 14px;
@@ -216,13 +228,13 @@ body {
 
 .card {
     border: 1px solid rgba(12, 19, 34, .12);
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 12px 12px;
     background: #fff;
     text-align: left;
     cursor: pointer;
     transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-    min-height: 74px;
+    min-height: 78px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -243,158 +255,81 @@ body {
 .card .icon {
     width: 22px;
     height: 22px;
-    color: rgba(12, 19, 34, .78);
+    color: rgba(12, 19, 34, .78)
 }
 
 .card .label {
     font-weight: 950;
     font-size: 12px;
-    color: rgba(12, 19, 34, .86);
+    color: rgba(12, 19, 34, .86)
 }
 
-/* Right side panel */
-.right {
-    justify-self: center;
-    width: 420px;
-    align-self: center;
-    position: relative;
-}
-
-.guide-card {
-    border-radius: 22px;
-    border: 1px solid rgba(12, 19, 34, .10);
-    background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(245, 248, 255, .88));
-    box-shadow: var(--shadow);
-    padding: 16px 16px 14px;
-    backdrop-filter: blur(10px);
-
-    /* “floating” premium feel */
-    transform: translateY(-2px);
-    transition: transform .18s ease, box-shadow .18s ease;
-}
-
-.guide-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 22px 65px rgba(12, 19, 34, .13);
-}
-
-.guide-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+/* Side stack: only 2 compact cards */
+.side-stack {
+    display: grid;
     gap: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(12, 19, 34, .08);
+    position: sticky;
+    top: 88px;
 }
 
-.guide-title {
+.mini-card {
+    border-radius: 18px;
+    border: 1px solid rgba(12, 19, 34, .10);
+    background: rgba(255, 255, 255, .86);
+    box-shadow: 0 14px 40px rgba(12, 19, 34, .08);
+    padding: 14px 14px 12px;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.mini-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(31, 93, 255, .18);
+    box-shadow: 0 18px 55px rgba(12, 19, 34, .11);
+}
+
+.mini-card.is-dim {
+    opacity: .60;
+    pointer-events: none;
+}
+
+.mini-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(12, 19, 34, .08);
+    margin-bottom: 10px;
+}
+
+.mini-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-weight: 950;
     font-size: 13px;
+    color: rgba(12, 19, 34, .82);
 }
 
-.guide-sub {
-    margin-top: 6px;
-    color: var(--muted2);
-    font-weight: 750;
-    font-size: 12px;
-    line-height: 1.35;
+.mini-title svg {
+    width: 18px;
+    height: 18px
 }
 
-.guide-pill {
+.mini-pill {
     padding: 7px 10px;
     border-radius: 999px;
     border: 1px solid rgba(12, 19, 34, .10);
-    background: rgba(255, 255, 255, .70);
+    background: rgba(255, 255, 255, .75);
     font-weight: 950;
     font-size: 12px;
     color: rgba(12, 19, 34, .70);
     white-space: nowrap;
 }
 
-/* Accordion */
-.acc {
-    margin-top: 10px;
-    display: grid;
-    gap: 10px;
-}
-
-.acc-btn {
-    width: 100%;
-    border: 1px solid rgba(12, 19, 34, .10);
-    background: rgba(255, 255, 255, .78);
-    border-radius: 14px;
-    padding: 10px 12px;
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-
-    font-weight: 950;
-    color: rgba(12, 19, 34, .76);
-    transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
-}
-
-.acc-btn:hover {
-    transform: translateY(-1px);
-    border-color: rgba(31, 93, 255, .18);
-    box-shadow: 0 10px 22px rgba(12, 19, 34, .08);
-}
-
-.acc-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 12px;
-}
-
-.acc-left svg {
-    width: 18px;
-    height: 18px;
-}
-
-.acc-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.tiny {
-    font-size: 12px;
-    color: rgba(12, 19, 34, .60);
-}
-
-.chev {
-    width: 18px;
-    height: 18px;
-    transition: transform .2s ease;
-}
-
-.acc-body {
-    padding: 10px 12px 2px;
-    border-left: 1px solid rgba(12, 19, 34, .08);
-    border-right: 1px solid rgba(12, 19, 34, .08);
-    border-bottom: 1px solid rgba(12, 19, 34, .08);
-    border-radius: 0 0 14px 14px;
-    background: rgba(255, 255, 255, .72);
-    margin-top: -10px;
-
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height .28s ease;
-}
-
-.acc-body.open {
-    max-height: 420px;
-}
-
-.acc-btn[aria-expanded="false"] .chev {
-    transform: rotate(-90deg);
-}
-
+/* Tips list */
 .tips {
-    margin: 8px 0 8px;
+    margin: 8px 0 0;
     padding-left: 18px;
     color: rgba(12, 19, 34, .60);
     font-weight: 750;
@@ -403,32 +338,10 @@ body {
 }
 
 .tips li {
-    margin: 6px 0;
+    margin: 6px 0
 }
 
-.chips {
-    margin-top: 8px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.chips .chipmini {
-    font-size: 12px;
-    font-weight: 900;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: rgba(31, 93, 255, .10);
-    border: 1px solid rgba(31, 93, 255, .16);
-    color: rgba(31, 93, 255, .95);
-    transition: transform .12s ease, filter .12s ease;
-}
-
-.chips .chipmini:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.02);
-}
-
+/* Progress */
 .progress-track {
     margin-top: 10px;
     height: 6px;
@@ -447,10 +360,9 @@ body {
 .checklist {
     margin-top: 12px;
     display: grid;
-    gap: 10px;
+    gap: 10px
 }
 
-/* ✅ interactive checklist cards */
 .cl-item {
     display: flex;
     align-items: center;
@@ -472,48 +384,48 @@ body {
 .cl-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 10px
 }
 
 .cl-dot {
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    background: rgba(12, 19, 34, .22);
+    background: rgba(12, 19, 34, .22)
 }
 
 .cl-text {
     display: flex;
-    flex-direction: column;
+    flex-direction: column
 }
 
 .cl-t {
     font-weight: 950;
-    font-size: 12px;
+    font-size: 12px
 }
 
 .cl-s {
     font-weight: 750;
     font-size: 12px;
-    color: var(--muted2);
+    color: var(--muted2)
 }
 
 .cl-state {
     font-weight: 950;
     font-size: 12px;
-    color: rgba(12, 19, 34, .55);
+    color: rgba(12, 19, 34, .55)
 }
 
 .cl-item.active .cl-dot {
-    background: rgba(31, 93, 255, .75);
+    background: rgba(31, 93, 255, .75)
 }
 
 .cl-item.done .cl-dot {
-    background: rgba(34, 197, 94, .80);
+    background: rgba(34, 197, 94, .80)
 }
 
 .cl-item.locked .cl-dot {
-    background: rgba(12, 19, 34, .18);
+    background: rgba(12, 19, 34, .18)
 }
 
 .side-note {
@@ -523,16 +435,11 @@ body {
     color: rgba(12, 19, 34, .55);
 }
 
-.guide-card.is-dim {
-    opacity: .60;
-    pointer-events: none;
-}
-
 /* Step 2 placeholder */
 .placeholder {
     margin-top: 12px;
     display: grid;
-    gap: 14px;
+    gap: 14px
 }
 
 .ph-card {
@@ -548,26 +455,26 @@ body {
     display: flex;
     gap: 12px;
     align-items: center;
-    padding: 10px 0;
+    padding: 10px 0
 }
 
 .ph-dot {
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    background: rgba(31, 93, 255, .35);
+    background: rgba(31, 93, 255, .35)
 }
 
 .ph-lines {
     flex: 1;
     display: grid;
-    gap: 8px;
+    gap: 8px
 }
 
 .ph-line {
     height: 10px;
     border-radius: 999px;
-    background: rgba(12, 19, 34, .07);
+    background: rgba(12, 19, 34, .07)
 }
 
 .w60 {
@@ -597,7 +504,7 @@ body {
 .hint {
     font-size: 12px;
     color: rgba(12, 19, 34, .55);
-    font-weight: 700;
+    font-weight: 700
 }
 
 /* Bottom bar */
@@ -617,23 +524,23 @@ body {
 .progress-bottom {
     display: flex;
     gap: 8px;
-    align-items: center;
+    align-items: center
 }
 
 .dot {
     width: 8px;
     height: 8px;
     border-radius: 999px;
-    background: rgba(12, 19, 34, .16);
+    background: rgba(12, 19, 34, .16)
 }
 
 .dot.active {
-    background: rgba(31, 93, 255, .70);
+    background: rgba(31, 93, 255, .70)
 }
 
 .nav {
     display: flex;
-    gap: 10px;
+    gap: 10px
 }
 
 .btn {
@@ -652,47 +559,105 @@ body {
     opacity: .45;
     cursor: not-allowed;
     transform: none;
-    box-shadow: none;
+    box-shadow: none
 }
 
 .btn.ghost:hover {
     border-color: rgba(31, 93, 255, .22);
-    transform: translateY(-1px);
+    transform: translateY(-1px)
 }
 
 .btn.solid {
     border: none;
     color: #fff;
-    background: #111;
+    background: #111
 }
 
 .btn.solid:hover {
     filter: brightness(1.05);
-    transform: translateY(-1px);
+    transform: translateY(-1px)
 }
 
 /* Responsive */
 @media (max-width: 980px) {
     .wizard {
-        height: auto;
+        height: auto
     }
 
     .page {
-        align-items: flex-start;
+        align-items: flex-start
     }
 
-
-
-    .right {
-        width: min(640px, 92vw);
+    .stage-centered {
+        grid-template-columns: 1fr;
     }
 
-    .left {
-        width: min(640px, 92vw);
+    .panel-side {
+        padding: 0
+    }
 
+    .side-stack {
+        position: static
     }
 
     .grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr)
+    }
+}
+
+/* STEP 2 CSS*/
+
+.grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.card .desc {
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 750;
+    color: rgba(12, 19, 34, .55);
+    line-height: 1.35;
+}
+
+/* transition overlay */
+.transition-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    opacity: 0;
+    background:
+        radial-gradient(1200px 600px at 20% 10%, rgba(31, 93, 255, .08), transparent 60%),
+        radial-gradient(900px 500px at 80% 20%, rgba(106, 167, 255, .06), transparent 55%),
+        rgba(255, 255, 255, .35);
+    backdrop-filter: blur(10px);
+}
+
+.transition-overlay.is-on {
+    opacity: 1;
+}
+
+.transition-clone {
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 18px 55px rgba(12, 19, 34, .10);
+}
+
+
+.btn.pulse {
+    animation: btnPulse 420ms cubic-bezier(.2, .9, .2, 1);
+}
+
+@keyframes btnPulse {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+
+    40% {
+        transform: translateY(-1px) scale(1.02);
+    }
+
+    100% {
+        transform: translateY(0) scale(1);
     }
 }

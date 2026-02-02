@@ -1,0 +1,37 @@
+/* If you're using the same CSS as Step 1, only keep the add-ons below */
+
+.grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.card .desc {
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 750;
+    color: rgba(12, 19, 34, .55);
+    line-height: 1.35;
+}
+
+/* transition overlay */
+.transition-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    opacity: 0;
+    background:
+        radial-gradient(1200px 600px at 20% 10%, rgba(31, 93, 255, .08), transparent 60%),
+        radial-gradient(900px 500px at 80% 20%, rgba(106, 167, 255, .06), transparent 55%),
+        rgba(255, 255, 255, .35);
+    backdrop-filter: blur(10px);
+}
+
+.transition-overlay.is-on {
+    opacity: 1;
+}
+
+.transition-clone {
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 18px 55px rgba(12, 19, 34, .10);
+}
