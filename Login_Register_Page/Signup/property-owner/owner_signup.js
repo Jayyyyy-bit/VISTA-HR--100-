@@ -383,5 +383,5 @@ form.addEventListener("submit", (e) => {
     localStorage.setItem(LS_SESSION_KEY, JSON.stringify({ userId: newUser.id, role: newUser.role }));
 
     // ✅ Option B: after signup → go straight to create listing wizard
-    window.location.href = "../../../Property-Owner/listings/create_listing.html";
+    window.location.href = "../../../PO-after-signup/PO_welcome-page.html";
 });

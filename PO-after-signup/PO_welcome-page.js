@@ -58,7 +58,7 @@ function goVerify() {
 }
 
 function goWizard() {
-    safeGoTo("../../../Property-Owner/listings/create_listing.html");
+    safeGoTo("../../../PO-after-signup/listing-wizard/index.html");
 }
 
 
