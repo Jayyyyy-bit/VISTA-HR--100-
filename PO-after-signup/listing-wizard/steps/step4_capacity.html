@@ -1,0 +1,48 @@
+<div class="step-header">
+    <div class="step-kicker">Create listing • Step 4</div>
+    <h1 class="step-title">How many guests can stay?</h1>
+    <p class="step-sub">Set the maximum number of guests and sleeping arrangements.</p>
+</div>
+
+<section class="formCard capCard">
+
+    <!-- Guests -->
+    <div class="cap-row">
+        <div class="cap-left">
+            <div class="cap-title">Guests</div>
+            <div class="cap-sub">How many people can stay here?</div>
+        </div>
+        <div class="cap-right">
+            <input type="range" id="capGuests" min="1" max="16" step="1">
+            <div class="cap-value"><span id="capGuestsVal">1</span> guests</div>
+        </div>
+    </div>
+
+    <!-- Bedrooms -->
+    <div class="cap-row">
+        <div class="cap-left">
+            <div class="cap-title">Bedrooms</div>
+            <div class="cap-sub">Separate sleeping rooms</div>
+        </div>
+        <div class="cap-stepper" data-key="bedrooms"></div>
+    </div>
+
+    <!-- Beds -->
+    <div class="cap-row">
+        <div class="cap-left">
+            <div class="cap-title">Beds</div>
+            <div class="cap-sub">Total sleeping spots</div>
+        </div>
+        <div class="cap-stepper" data-key="beds"></div>
+    </div>
+
+    <!-- Bathrooms -->
+    <div class="cap-row">
+        <div class="cap-left">
+            <div class="cap-title">Bathrooms</div>
+            <div class="cap-sub">Toilet + shower (½ allowed)</div>
+        </div>
+        <div class="cap-stepper" data-key="bathrooms" data-step="0.5"></div>
+    </div>
+
+</section>

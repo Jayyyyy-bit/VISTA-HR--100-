@@ -1,65 +1,74 @@
 <div class="step-header">
     <div class="step-kicker">Create listing • Step 3</div>
-    <h1 class="step-title" id="locTitle">Where's your place located?</h1>
-    <p class="step-sub" id="locSub">Your address is only shared with guests after they’ve made a reservation.</p>
+    <h1 class="step-title">Where’s your place located?</h1>
+    <p class="step-sub">Your address is only shared with guests after they book.</p>
 </div>
 
-<section class="loc-stage" id="locStageSearch">
-    <div class="loc-map">
-        <div class="map-canvas" id="mapCanvas">
-            <div class="map-placeholder">
-                <div class="mp-title">Map preview</div>
-                <div class="mp-sub">Map integration will be added later. For now, confirm your address details.</div>
-            </div>
+<section class="formCard">
+    <form id="locForm" class="formGrid" autocomplete="off">
+        <div class="field full">
+            <label>Country / Region</label>
+            <select id="country">
+                <option value="Philippines">Philippines - PH</option>
+            </select>
         </div>
 
-        <div class="loc-searchbar">
-            <i class="loc-ic" data-lucide="map-pin"></i>
-            <input id="addressSearch" class="loc-input" type="text" placeholder="Enter your address" autocomplete="off">
-            <button id="confirmAddressBtn" class="chip primary" type="button" disabled>Confirm</button>
+        <div class="field">
+            <label>Unit / Floor (optional)</label>
+            <input id="unit" type="text" placeholder="Unit 2B, 3rd floor" />
         </div>
-    </div>
-</section>
 
-<section class="loc-stage" id="locStageConfirm" hidden>
-    <div class="loc-confirm-grid">
-        <div class="loc-form">
-            <div class="field">
-                <label>Country / region</label>
-                <select id="country">
-                    <option value="Philippines">Philippines - PH</option>
+        <div class="field">
+            <label>Building (optional)</label>
+            <input id="building" type="text" placeholder="Building name" />
+        </div>
+
+        <div class="field full">
+            <label>Street address *</label>
+            <input id="street" type="text" placeholder="House no. + street" required />
+        </div>
+
+        <div class="field">
+            <label>Barangay (optional)</label>
+            <input id="barangay" type="text" placeholder="Barangay / District" />
+        </div>
+
+        <div class="field">
+            <label>City / Municipality *</label>
+
+            <div class="selectWrap">
+                <select id="city" required>
+                    <option value="">Select a city</option>
+                    <!-- options injected by JS -->
                 </select>
             </div>
-
-            <div class="field"><label>Unit, level, etc. (if applicable)</label><input id="unit" type="text"></div>
-            <div class="field"><label>Building name (if applicable)</label><input id="building" type="text"></div>
-            <div class="field"><label>Street address</label><input id="street" type="text" required></div>
-            <div class="field"><label>Barangay / district (if applicable)</label><input id="barangay" type="text"></div>
-            <div class="field"><label>City / municipality</label><input id="city" type="text" required></div>
-            <div class="field"><label>ZIP code</label><input id="zip" type="text" required></div>
-            <div class="field"><label>Province</label><input id="province" type="text" required></div>
-
-            <div class="toggle-row">
-                <div class="toggle-text">
-                    <div class="t-title">Show your home's precise location</div>
-                    <div class="t-sub">We’ll share your address after guests book.</div>
-                </div>
-                <label class="switch">
-                    <input id="preciseToggle" type="checkbox">
-                    <span class="slider"></span>
-                </label>
-            </div>
         </div>
 
-        <div class="loc-mini-map">
-            <div class="mini-map" id="miniMapCanvas">
-                <div class="map-placeholder small">
-                    <div class="mp-title">Location preview</div>
-                    <div class="mp-sub">Pin will appear once map API is connected.</div>
+        <div class="field">
+            <label class="labelRow">
+                Province *
+                <span class="hintIcon" tabindex="0"
+                    data-tip="Project scope is limited to Metro Manila only (per proposal).">
+                    i
+                </span>
+            </label>
 
-                </div>
-            </div>
+            <input id="province" type="text" value="Metro Manila" readonly />
         </div>
-    </div>
 
+
+
+        <div class="field">
+            <label>ZIP code *</label>
+            <input id="zip" type="text" inputmode="numeric" placeholder="ZIP" required />
+        </div>
+
+        <div class="divider full"></div>
+
+        <div class="preview full">
+            <div class="previewTitle">Preview</div>
+            <div class="previewLine" id="addrPreview">—</div>
+            <div class="previewHint">Preview will add on the update after API is integrated.</div>
+        </div>
+    </form>
 </section>

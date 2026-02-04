@@ -12,8 +12,14 @@
         { id: "step-2", file: "steps/step2_space_type.html", init: window.Step2Init },
         { id: "step-3", file: "steps/step3_location.html", init: window.Step3Init },
 
-        // step-3..6 later
+        // Add later as you create the files:
+        // { id: "step-4", file: "steps/step4_capacity_rooms.html", init: window.Step4Init },
+        // { id: "step-5", file: "steps/step5_amenities.html", init: window.Step5Init },
+        // { id: "step-6", file: "steps/step6_highlights.html", init: window.Step6Init },
+        // { id: "step-7", file: "steps/step7_photos_virtualtour.html", init: window.Step7Init },
+        // { id: "step-8", file: "steps/step8_title_description_review.html", init: window.Step8Init }
     ];
+
 
     function setHash(id) {
         location.hash = `#/${id}`;
@@ -106,6 +112,7 @@
     });
 
 
+
     // Header buttons
     on($("#saveExitBtn"), "click", () =>
         alert("Saved as draft. (Redirect later to dashboard)")
@@ -123,4 +130,5 @@
     // Initial load
     loadStep(getRouteFromHash(), { pushHash: false });
 })();
+
 

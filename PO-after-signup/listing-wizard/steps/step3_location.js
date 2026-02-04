@@ -1,127 +1,141 @@
-window.Step3Init = function ({ nextBtn, backBtn }) {
-    const { readDraft, saveDraft } = window.ListingStore;
+window.Step3Init = function Step3Init() {
+    const { ListingStore, SidePanel } = window;
+    const $ = (id) => document.getElementById(id);
 
-    const stageSearch = document.getElementById("locStageSearch");
-    const stageConfirm = document.getElementById("locStageConfirm");
-
-    const addressSearch = document.getElementById("addressSearch");
-    const confirmBtn = document.getElementById("confirmAddressBtn");
-
-    const country = document.getElementById("country");
-    const unit = document.getElementById("unit");
-    const building = document.getElementById("building");
-    const street = document.getElementById("street");
-    const barangay = document.getElementById("barangay");
-    const city = document.getElementById("city");
-    const zip = document.getElementById("zip");
-    const province = document.getElementById("province");
-    const preciseToggle = document.getElementById("preciseToggle");
-
-    const DEFAULT_LOC = {
-        lat: null, lng: null,
-        addressLine: "",
-        country: "Philippines",
-        unit: "", building: "",
-        street: "", barangay: "", city: "", zip: "", province: "",
-        precise: false
+    const els = {
+        country: $("country"),
+        unit: $("unit"),
+        building: $("building"),
+        street: $("street"),
+        barangay: $("barangay"),
+        city: $("city"),
+        province: $("province"),
+        zip: $("zip"),
+        preview: $("addrPreview"),
+        nextBtn: $("nextBtn"),
     };
 
-    const draft = readDraft();
-    const loc = { ...DEFAULT_LOC, ...(draft.location || {}) };
+    // Guard
+    if (!els.street || !els.city || !els.province || !els.zip || !els.preview) return;
 
-    function patchLocation(patch) {
-        const d = readDraft();
-        const nextLoc = { ...DEFAULT_LOC, ...(d.location || {}), ...patch };
-        saveDraft({ location: nextLoc });
-        window.SidePanel.refresh();
-        refreshNext();
+    const METRO_MANILA_CITIES = [
+        "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong",
+        "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque",
+        "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan",
+        "Taguig", "Valenzuela"
+    ];
+
+    function buildAddressLine(loc) {
+        return [
+            loc.unit,
+            loc.building,
+            loc.street,
+            loc.barangay,
+            loc.city,
+            loc.province,
+            loc.zip,
+            loc.country,
+        ].filter(Boolean).join(", ");
     }
 
-    function setMode(mode) {
-        const isConfirm = mode === "confirm";
-        stageSearch.hidden = isConfirm;
-        stageConfirm.hidden = !isConfirm;
+    function isValid(loc) {
+        return !!(loc.street && loc.city && loc.province && loc.zip);
     }
 
-    // TEMP done rule: address complete OR coords exist
-    function isDoneLocation(L) {
-        const hasCoords = !!L.lat && !!L.lng;
-        const hasAddress = !!L.street && !!L.city && !!L.province && !!L.zip;
-        return hasCoords || hasAddress;
+    // Force province always
+    els.province.value = "Metro Manila";
+
+    // Inject city options once (if select)
+    if (els.city.tagName === "SELECT") {
+        const existing = els.city.querySelectorAll("option").length;
+        if (existing <= 1) {
+            els.city.insertAdjacentHTML(
+                "beforeend",
+                METRO_MANILA_CITIES.map(c => `<option value="${c}">${c}</option>`).join("")
+            );
+        }
     }
 
-    function refreshNext() {
-        const d = readDraft();
-        nextBtn.disabled = !isDoneLocation(d.location || {});
+    function paintFromDraft() {
+        const draft = ListingStore.readDraft();
+        const loc = draft.location || {};
+
+        if (els.country) els.country.value = loc.country || "Philippines";
+        if (els.unit) els.unit.value = loc.unit || "";
+        if (els.building) els.building.value = loc.building || "";
+        if (els.street) els.street.value = loc.street || "";
+        if (els.barangay) els.barangay.value = loc.barangay || "";
+        if (els.city) els.city.value = loc.city || "";
+        els.province.value = "Metro Manila"; // always force
+        if (els.zip) els.zip.value = loc.zip || "";
+
+        const forcedLoc = { ...loc, province: "Metro Manila" };
+        const line = forcedLoc.addressLine || buildAddressLine(forcedLoc) || "—";
+        els.preview.textContent = line;
+
+        if (els.nextBtn) els.nextBtn.disabled = !isValid(forcedLoc);
     }
 
-    // hydrate search
-    addressSearch.value = loc.addressLine || "";
-    confirmBtn.disabled = (addressSearch.value.trim().length < 6);
+    function readLoc() {
+        const draft = ListingStore.readDraft();
+        const loc = draft.location || {};
 
-    addressSearch.addEventListener("input", () => {
-        const v = addressSearch.value.trim();
-        patchLocation({ addressLine: v });
-        confirmBtn.disabled = v.length < 6;
-    });
+        const nextLoc = {
+            lat: loc.lat ?? null,
+            lng: loc.lng ?? null,
+            precise: !!loc.precise,
 
-    // Confirm from search → show form
-    confirmBtn.addEventListener("click", () => {
-        // carry over search into street if empty
-        const line = addressSearch.value.trim();
-        if (line && !street.value) street.value = line;
+            country: (els.country?.value || loc.country || "Philippines").trim() || "Philippines",
+            unit: (els.unit?.value || "").trim(),
+            building: (els.building?.value || "").trim(),
+            street: (els.street?.value || "").trim(),
+            barangay: (els.barangay?.value || "").trim(),
+            city: (els.city?.value || "").trim(),
 
-        patchLocation({ addressLine: line, street: street.value.trim() });
-        setMode("confirm");
-    });
+            // hard scope
+            province: "Metro Manila",
 
-    // hydrate form fields
-    if (country) country.value = loc.country || "Philippines";
-    unit.value = loc.unit || "";
-    building.value = loc.building || "";
-    street.value = loc.street || "";
-    barangay.value = loc.barangay || "";
-    city.value = loc.city || "";
-    zip.value = loc.zip || "";
-    province.value = loc.province || "";
-    preciseToggle.checked = !!loc.precise;
+            zip: (els.zip?.value || "").trim(),
+            addressLine: "",
+        };
 
-    // save-on-type
-    const bind = (el, key) => el.addEventListener("input", () => patchLocation({ [key]: el.value.trim() }));
-    bind(unit, "unit");
-    bind(building, "building");
-    bind(street, "street");
-    bind(barangay, "barangay");
-    bind(city, "city");
-    bind(zip, "zip");
-    bind(province, "province");
+        nextLoc.addressLine = buildAddressLine(nextLoc);
+        return nextLoc;
+    }
 
-    country.addEventListener("change", () => patchLocation({ country: country.value }));
-    preciseToggle.addEventListener("change", () => patchLocation({ precise: preciseToggle.checked }));
+    function sync() {
+        const nextLoc = readLoc();
+        ListingStore.saveDraft({ location: nextLoc });
 
-    // Start mode
-    if (loc.street || loc.city || loc.zip || loc.province) setMode("confirm");
-    else setMode("search");
+        els.preview.textContent = nextLoc.addressLine || "—";
+        if (els.nextBtn) els.nextBtn.disabled = !isValid(nextLoc);
 
-    // Tips
-    if (window.SidePanel?.setTips) {
-        window.SidePanel.setTips({
+        SidePanel.setTips({
             selectedLabel: "Location",
             tips: [
-                "Use the exact street address for better discovery later.",
-                "If inside a building, include unit/floor for delivery and check-in.",
-                "You can control map precision when published."
+                "City selection is limited to Metro Manila (project scope).",
+                "Exact map pin can be added later."
             ]
         });
+        SidePanel.refresh();
     }
-    window.SidePanel?.refresh?.();
 
+    // init
+    paintFromDraft();
 
-    refreshNext();
+    // bind
+    [els.unit, els.building, els.street, els.barangay, els.city, els.zip]
+        .filter(Boolean)
+        .forEach((node) => node.addEventListener("input", sync));
 
-    // Future-proof: map adapter hooks (no-op for now)
-    window.MapAdapter = window.MapAdapter || {
-        bindAutocomplete: () => { },
-        setPin: () => { }
-    };
+    if (els.country) els.country.addEventListener("change", sync);
+
+    SidePanel.setTips({
+        selectedLabel: "Location",
+        tips: [
+            "City selection is limited to Metro Manila (project scope).",
+            "Exact map pin can be added later."
+        ]
+    });
+    SidePanel.refresh();
 };

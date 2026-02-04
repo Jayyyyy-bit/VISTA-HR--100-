@@ -5,11 +5,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VISTA-HR | Create Listing</title>
-
+    <link rel="icon" href="data:,">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="vendor/lucide.min.js"></script>
 
     <link rel="stylesheet" href="wizard.css" />
     <link rel="stylesheet" href="transition.css" />
@@ -24,7 +24,7 @@
         <div class="glow g2"></div>
     </div>
 
-    <!-- Persistent header -->
+    <!--  header -->
     <header class="topbar">
         <div class="brand">
             <span class="logo-box"></span>
@@ -43,7 +43,7 @@
             <div class="stage stage-centered">
 
                 <section class="panel panel-main" id="stepHost" data-transition-key="main">
-                    <!-- injected -->
+                    <!-- injected sa mga steps-->
                 </section>
 
                 <aside class="panel-side" data-transition-key="side">
@@ -85,7 +85,7 @@
         </div>
     </main>
 
-    <!-- Persistent footer -->
+    <!-- footer -->
     <footer class="bottombar">
         <div class="progress-bottom" id="dots"></div>
         <div class="nav">
@@ -94,10 +94,10 @@
         </div>
     </footer>
 
-    <!-- Overlay (transition) -->
+    <!-- Overlay (transition) to -->
 
 
-    <!-- Core scripts (order matters) -->
+    <!-- Core scripts naka in order para di magulo -->
     <script src="core/dom.js"></script>
     <script src="core/store.js"></script>
     <script src="core/sidepanel.js"></script>
@@ -106,9 +106,9 @@
     <script src="steps/step1_unit_category.js"></script>
     <script src="steps/step2_space_type.js"></script>
     <script src="steps/step3_location.js"></script>
-
+    <script src="steps/step4_capacity.js"></script>
+    <script src="core/bg-motion.js"></script>
     <script src="core/router.js"></script>
-
     <script>lucide.createIcons();</script>
 </body>
 
