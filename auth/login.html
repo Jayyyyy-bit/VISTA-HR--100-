@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Login</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+
+    <!-- Use your local lucide (since unpkg sometimes 404s in your setup) -->
+    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
+
+    <link rel="stylesheet" href="login.css" />
+</head>
+
+<body>
+    <!-- Background (same structure vibe as PO_welcome-page) -->
+    <div class="bg" aria-hidden="true">
+        <div class="grid"></div>
+        <div class="glow g1"></div>
+        <div class="glow g2"></div>
+        <div class="glow g3"></div>
+    </div>
+
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo-box"></span>
+            <span class="brand-text">VISTA<span>-HR</span></span>
+        </div>
+
+        <div class="top-actions">
+            <button class="chip" type="button" id="goSignupBtn">
+                Create account
+            </button>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <section class="card" aria-label="Login card">
+            <div class="cardHead">
+                <div class="pill">
+                    <i data-lucide="sparkles"></i>
+                    Welcome back
+                </div>
+                <h1 class="title">Sign in</h1>
+                <p class="sub">Choose your role and continue to VISTA-HR.</p>
+            </div>
+
+            <!-- Role tabs -->
+            <div class="tabs" role="tablist" aria-label="Role tabs">
+                <button class="tab isActive" id="tabOwner" type="button" role="tab" aria-selected="true"
+                    data-role="OWNER">
+                    <i data-lucide="building-2"></i>
+                    Property owner
+                </button>
+                <button class="tab" id="tabResident" type="button" role="tab" aria-selected="false"
+                    data-role="RESIDENT">
+                    <i data-lucide="home"></i>
+                    Resident
+                </button>
+                <span class="tabIndicator" id="tabIndicator" aria-hidden="true"></span>
+            </div>
+
+            <form class="form" id="loginForm" autocomplete="on">
+                <div class="field">
+                    <label>Email</label>
+                    <div class="inputWrap">
+                        <i class="inIc" data-lucide="mail"></i>
+                        <input id="email" type="email" placeholder="you@email.com" required />
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Password</label>
+                    <div class="inputWrap">
+                        <i class="inIc" data-lucide="lock"></i>
+                        <input id="password" type="password" placeholder="••••••••" required />
+                        <button class="ghostIcon" type="button" id="togglePw" aria-label="Show password">
+                            <i data-lucide="eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <label class="check">
+                        <input id="remember" type="checkbox" />
+                        <span>Remember me</span>
+                    </label>
+
+                    <button class="link" type="button" id="forgotBtn">Forgot password?</button>
+                </div>
+
+                <div class="error" id="errBox" role="alert" aria-live="polite"></div>
+
+                <button class="primary" type="submit" id="loginBtn">
+                    Continue
+                    <i data-lucide="arrow-right"></i>
+                </button>
+
+                <div class="fine">
+                    No account?
+                    <button class="link" type="button" id="goRolesBtn">Create one</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script src="login.js"></script>
+    <script>
+        if (window.lucide?.createIcons) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>
