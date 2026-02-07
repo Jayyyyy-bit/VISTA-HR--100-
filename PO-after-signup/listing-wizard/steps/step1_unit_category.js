@@ -1,5 +1,7 @@
+// steps/step1.js (or wherever your Step 1 script lives)
+
 window.Step1Init = function ({ nextBtn }) {
-    const { readDraft, saveDraft } = window.ListingStore;
+    const { readDraft, saveDraft, syncStep1 } = window.ListingStore;
 
     const PLACE_TYPES = [
         { key: "CONDO", label: "Condominium", icon: "building-2" },
@@ -14,15 +16,42 @@ window.Step1Init = function ({ nextBtn }) {
     ];
 
     const GUIDANCE = {
-        CONDO: { title: "Condominium", tips: ["Add building name/tower.", "Mention visitor/ID policy.", "Best photos: living+bed+bath."] },
-        APARTMENT: { title: "Apartment", tips: ["Clarify elevator/walk-up.", "Utilities included/excluded.", "Add nearby landmark."] },
-        DORM: { title: "Dormitory", tips: ["State curfew/visitor rules.", "Specify bed + locker.", "Highlight shared areas."] },
-        BEDSPACE: { title: "Bedspace", tips: ["Beds per room + privacy.", "Include inclusions.", "Add schedule rules."] },
-        STUDIO: { title: "Studio unit", tips: ["Show layout clearly.", "Furnished status.", "Wide shot + bathroom."] },
-        HOUSE: { title: "House", tips: ["Rooms/floors included.", "Parking availability.", "Neighborhood landmark/safety."] },
-        TOWNHOUSE: { title: "Townhouse", tips: ["Floors + stairs.", "Gate/guard/parking.", "Noise rules (shared walls)."] },
-        ROOM: { title: "Private room", tips: ["Bathroom private/shared.", "Access to common areas.", "Clear house rules."] },
-        GUESTHOUSE: { title: "Guesthouse", tips: ["Caretaker/front desk.", "Check-in/out rules.", "Room+entrance+bath photos."] },
+        CONDO: {
+            title: "Condominium",
+            tips: ["Add building name/tower.", "Mention visitor/ID policy.", "Best photos: living+bed+bath."],
+        },
+        APARTMENT: {
+            title: "Apartment",
+            tips: ["Clarify elevator/walk-up.", "Utilities included/excluded.", "Add nearby landmark."],
+        },
+        DORM: {
+            title: "Dormitory",
+            tips: ["State curfew/visitor rules.", "Specify bed + locker.", "Highlight shared areas."],
+        },
+        BEDSPACE: {
+            title: "Bedspace",
+            tips: ["Beds per room + privacy.", "Include inclusions.", "Add schedule rules."],
+        },
+        STUDIO: {
+            title: "Studio unit",
+            tips: ["Show layout clearly.", "Furnished status.", "Wide shot + bathroom."],
+        },
+        HOUSE: {
+            title: "House",
+            tips: ["Rooms/floors included.", "Parking availability.", "Neighborhood landmark/safety."],
+        },
+        TOWNHOUSE: {
+            title: "Townhouse",
+            tips: ["Floors + stairs.", "Gate/guard/parking.", "Noise rules (shared walls)."],
+        },
+        ROOM: {
+            title: "Private room",
+            tips: ["Bathroom private/shared.", "Access to common areas.", "Clear house rules."],
+        },
+        GUESTHOUSE: {
+            title: "Guesthouse",
+            tips: ["Caretaker/front desk.", "Check-in/out rules.", "Room+entrance+bath photos."],
+        },
     };
 
     const grid = document.getElementById("typeGrid");
@@ -32,11 +61,11 @@ window.Step1Init = function ({ nextBtn }) {
         return;
     }
 
-
+    // render cards sa current selection
     const draft = readDraft();
     const selected = draft.placeType;
 
-    grid.innerHTML = PLACE_TYPES.map(t => {
+    grid.innerHTML = PLACE_TYPES.map((t) => {
         const sel = selected === t.key ? "selected" : "";
         return `
       <button class="card ${sel}" type="button" data-key="${t.key}">
@@ -48,7 +77,7 @@ window.Step1Init = function ({ nextBtn }) {
 
     lucide.createIcons();
 
-    // Next disabled until selection
+    // disabled yung next but pag walang selection 
     nextBtn.disabled = !selected;
 
     function applyTips(key) {
@@ -63,11 +92,12 @@ window.Step1Init = function ({ nextBtn }) {
     applyTips(selected);
     window.SidePanel.refresh();
 
-    grid.querySelectorAll(".card").forEach(btn => {
+    // card click selection
+    grid.querySelectorAll(".card").forEach((btn) => {
         btn.addEventListener("click", () => {
             saveDraft({ placeType: btn.dataset.key });
 
-            grid.querySelectorAll(".card").forEach(b => b.classList.remove("selected"));
+            grid.querySelectorAll(".card").forEach((b) => b.classList.remove("selected"));
             btn.classList.add("selected");
 
             nextBtn.disabled = false;
@@ -76,4 +106,7 @@ window.Step1Init = function ({ nextBtn }) {
             window.SidePanel.refresh();
         });
     });
+
+    //  Next button sync to backend (creates listing + saves listing_id)
+
 };

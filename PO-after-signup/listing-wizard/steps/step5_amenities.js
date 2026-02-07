@@ -1,3 +1,5 @@
+// steps/step5.js
+
 window.Step5Init = function Step5Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
 
@@ -152,7 +154,7 @@ window.Step5Init = function Step5Init({ nextBtn }) {
         router: "wifi",
         "shield-check": "shield",
         "tv-2": "tv",
-        "spray-can": "spray-can", // ok if exists, else harmless
+        "spray-can": "spray-can",
         table: "grid-2x2",
         trees: "leaf"
     };
@@ -166,6 +168,11 @@ window.Step5Init = function Step5Init({ nextBtn }) {
 
     const searchInput = document.getElementById("amenSearchInput");
     const searchClear = document.getElementById("amenSearchClear");
+
+    if (!grid || !tabs.length) {
+        console.error("[Step5] Missing amenity UI elements (#amenGrid or .amenTab).");
+        return;
+    }
 
     let activeTab = "appliances";
     let searchQ = "";
@@ -187,7 +194,7 @@ window.Step5Init = function Step5Init({ nextBtn }) {
     }
 
     function totalSelectedCount(a) {
-        return (a.appliances.length + a.activities.length + a.safety.length);
+        return a.appliances.length + a.activities.length + a.safety.length;
     }
 
     function setIndicatorTo(btn) {
@@ -220,7 +227,7 @@ window.Step5Init = function Step5Init({ nextBtn }) {
     function renderTab(tabKey) {
         activeTab = tabKey;
 
-        tabs.forEach(t => {
+        tabs.forEach((t) => {
             const on = t.dataset.tab === tabKey;
             t.classList.toggle("isActive", on);
             t.setAttribute("aria-selected", on ? "true" : "false");
@@ -232,12 +239,12 @@ window.Step5Init = function Step5Init({ nextBtn }) {
         const a = readAmenDraft();
         const selectedSet = new Set(a[tabKey]);
 
-        const list = (OPTIONS[tabKey] || []).filter(o => {
+        const list = (OPTIONS[tabKey] || []).filter((o) => {
             if (!searchQ) return true;
             return norm(o.label).includes(searchQ);
         });
 
-        const html = list.map(o => {
+        grid.innerHTML = list.map((o) => {
             const icon = ICON_FALLBACK[o.icon] || o.icon;
             const sel = selectedSet.has(o.key) ? "selected" : "";
             return `
@@ -246,9 +253,7 @@ window.Step5Init = function Step5Init({ nextBtn }) {
           <div class="label">${o.label}</div>
         </button>
       `;
-        }).join("");
-
-        grid.innerHTML = html || `
+        }).join("") || `
       <div class="amenEmpty">
         <div class="amenEmptyTitle">No results</div>
         <div class="amenEmptySub">Try a different keyword.</div>
@@ -257,7 +262,7 @@ window.Step5Init = function Step5Init({ nextBtn }) {
 
         if (window.lucide?.createIcons) window.lucide.createIcons();
 
-        grid.querySelectorAll(".amenCard").forEach(btn => {
+        grid.querySelectorAll(".amenCard").forEach((btn) => {
             btn.addEventListener("click", () => {
                 const key = btn.dataset.key;
                 const curr = readAmenDraft();
@@ -274,7 +279,7 @@ window.Step5Init = function Step5Init({ nextBtn }) {
             });
         });
 
-        const activeBtn = tabs.find(t => t.dataset.tab === tabKey);
+        const activeBtn = tabs.find((t) => t.dataset.tab === tabKey);
         setIndicatorTo(activeBtn);
 
         updateCountAndNext();
@@ -292,8 +297,11 @@ window.Step5Init = function Step5Init({ nextBtn }) {
     if (searchClear) searchClear.addEventListener("click", () => setSearch(""));
 
     // tab clicks
-    tabs.forEach(btn => btn.addEventListener("click", () => renderTab(btn.dataset.tab)));
+    tabs.forEach((btn) => btn.addEventListener("click", () => renderTab(btn.dataset.tab)));
 
     // first paint
     renderTab(activeTab);
+
+    // ✅ Sync Step 5 to backend on Next
+
 };

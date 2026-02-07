@@ -1,3 +1,5 @@
+// steps/step7.js
+
 window.Step7Init = function Step7Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
 
@@ -13,13 +15,18 @@ window.Step7Init = function Step7Init({ nextBtn }) {
 
     const MIN_PHOTOS = 5;
 
+    if (!thumbGrid || !photoInput) {
+        console.error("[Step7] Missing required elements (#thumbGrid or #photoInput).");
+        return;
+    }
+
     const uid = () => "ph_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
 
     function read() {
         const d = ListingStore.readDraft();
         return {
             photos: Array.isArray(d.photos) ? d.photos : [],
-            vt: d.virtualTour || { enabled: false, panoUrl: "" }
+            vt: d.virtualTour || { enabled: false, panoUrl: "" },
         };
     }
 
@@ -33,21 +40,21 @@ window.Step7Init = function Step7Init({ nextBtn }) {
 
     function ensureCover(photos) {
         if (!photos.length) return photos;
-        const hasCover = photos.some(p => p.isCover);
+        const hasCover = photos.some((p) => p.isCover);
         if (hasCover) return photos;
         return photos.map((p, i) => ({ ...p, isCover: i === 0 }));
     }
 
     function setCover(id) {
         const { photos } = read();
-        const next = photos.map(p => ({ ...p, isCover: p.id === id }));
+        const next = photos.map((p) => ({ ...p, isCover: p.id === id }));
         savePhotos(next);
         render();
     }
 
     function removePhoto(id) {
         const { photos } = read();
-        let next = photos.filter(p => p.id !== id);
+        let next = photos.filter((p) => p.id !== id);
         next = ensureCover(next);
         savePhotos(next);
         render();
@@ -56,6 +63,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     async function filesToPhotos(fileList) {
         const files = Array.from(fileList || []);
         const out = [];
+
         for (const f of files) {
             if (!f.type.startsWith("image/")) continue;
 
@@ -67,6 +75,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
 
             out.push({ id: uid(), url, name: f.name || "photo", isCover: false });
         }
+
         return out;
     }
 
@@ -79,12 +88,10 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     }
 
     function updateNextAndSide() {
-        const { photos, vt } = read();
+        const { photos } = read();
         const count = photos.length;
 
-        if (photoCountLabel) {
-            photoCountLabel.textContent = `${count} / ${MIN_PHOTOS} minimum`;
-        }
+        if (photoCountLabel) photoCountLabel.textContent = `${count} / ${MIN_PHOTOS} minimum`;
         if (nextBtn) nextBtn.disabled = count < MIN_PHOTOS;
 
         SidePanel.setTips({
@@ -92,8 +99,8 @@ window.Step7Init = function Step7Init({ nextBtn }) {
             tips: [
                 "Use bright photos: living area, sleeping area, bathroom, and entrance.",
                 "Set a strong cover photo—this shows in search results.",
-                "Add a 360 tour later for extra approval points."
-            ]
+                "Add a 360 tour later for extra approval points.",
+            ],
         });
         SidePanel.refresh();
     }
@@ -101,22 +108,24 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     function render() {
         const { photos, vt } = read();
 
-        thumbGrid.innerHTML = photos.map(p => {
-            const cover = p.isCover ? `<div class="coverTag">Cover</div>` : "";
-            return `
-        <div class="thumb">
-          ${cover}
-          <img src="${p.url}" alt="${p.name}" />
-          <div class="thumbBar">
-            <button class="tBtn" type="button" data-act="cover" data-id="${p.id}">Set cover</button>
-            <button class="tBtn danger" type="button" data-act="remove" data-id="${p.id}">Remove</button>
+        thumbGrid.innerHTML = photos
+            .map((p) => {
+                const cover = p.isCover ? `<div class="coverTag">Cover</div>` : "";
+                return `
+          <div class="thumb">
+            ${cover}
+            <img src="${p.url}" alt="${p.name}" />
+            <div class="thumbBar">
+              <button class="tBtn" type="button" data-act="cover" data-id="${p.id}">Set cover</button>
+              <button class="tBtn danger" type="button" data-act="remove" data-id="${p.id}">Remove</button>
+            </div>
           </div>
-        </div>
-      `;
-        }).join("");
+        `;
+            })
+            .join("");
 
-        // bind buttons
-        thumbGrid.querySelectorAll("[data-act]").forEach(btn => {
+        // bind thumb actions
+        thumbGrid.querySelectorAll("[data-act]").forEach((btn) => {
             btn.addEventListener("click", () => {
                 const id = btn.dataset.id;
                 const act = btn.dataset.act;
@@ -140,12 +149,10 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     }
 
     // Upload behaviors
-    if (uploadBtn && photoInput) {
-        uploadBtn.addEventListener("click", () => photoInput.click());
-    }
+    if (uploadBtn && photoInput) uploadBtn.addEventListener("click", () => photoInput.click());
+
     if (uploadZone && photoInput) {
         uploadZone.addEventListener("click", (e) => {
-            // don’t trigger if clicking button
             if (e.target.closest("#uploadBtn")) return;
             photoInput.click();
         });
@@ -167,8 +174,8 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     }
 
     if (photoInput) {
-        photoInput.addEventListener("change", () => {
-            addFiles(photoInput.files);
+        photoInput.addEventListener("change", async () => {
+            await addFiles(photoInput.files);
             photoInput.value = "";
         });
     }
@@ -177,8 +184,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     if (vtToggle) {
         vtToggle.addEventListener("click", () => {
             const { vt } = read();
-            const next = { ...vt, enabled: !vt.enabled };
-            saveVT(next);
+            saveVT({ ...vt, enabled: !vt.enabled });
             render();
         });
     }
@@ -191,9 +197,13 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         });
     }
 
-    // initial
-    const d = ListingStore.readDraft();
     // normalize cover once
+    const d = ListingStore.readDraft();
     if (Array.isArray(d.photos)) ListingStore.saveDraft({ photos: ensureCover(d.photos) });
+
+    // initial render
     render();
+
+    // ✅ Sync Step 7 to backend on Next
+
 };

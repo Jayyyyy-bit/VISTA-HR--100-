@@ -1,3 +1,5 @@
+// steps/step6.js
+
 window.Step6Init = function Step6Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
 
@@ -26,14 +28,14 @@ window.Step6Init = function Step6Init({ nextBtn }) {
         { key: "WELL_EQUIPPED", label: "Well-equipped", icon: "check-circle-2" },
         { key: "CLEAN", label: "Very clean", icon: "sparkles" },
         { key: "NEAR_SCHOOLS", label: "Near schools", icon: "graduation-cap" },
-        { key: "NEAR_HOSPITALS", label: "Near hospitals", icon: "heart-pulse" }
+        { key: "NEAR_HOSPITALS", label: "Near hospitals", icon: "heart-pulse" },
     ];
 
     const ICON_FALLBACK = {
         gem: "sparkles",
         sofa: "home",
         "shield-check": "shield",
-        "badge-percent": "badge-check"
+        "badge-percent": "badge-check",
     };
 
     const chipsEl = document.getElementById("hlChips");
@@ -41,8 +43,12 @@ window.Step6Init = function Step6Init({ nextBtn }) {
     const searchInput = document.getElementById("hlSearchInput");
     const searchClear = document.getElementById("hlSearchClear");
 
-    let q = "";
+    if (!chipsEl) {
+        console.error("[Step6] #hlChips not found.");
+        return;
+    }
 
+    let q = "";
     const norm = (s) => (s || "").toLowerCase().trim();
 
     function readSelected() {
@@ -54,39 +60,41 @@ window.Step6Init = function Step6Init({ nextBtn }) {
         ListingStore.saveDraft({ highlights: arr });
     }
 
-    function paintCount(selected) {
-        if (countEl) countEl.textContent = String(selected.length);
-        if (nextBtn) nextBtn.disabled = selected.length < 1;
+    function paintCount(selectedArr) {
+        if (countEl) countEl.textContent = String(selectedArr.length);
+        if (nextBtn) nextBtn.disabled = selectedArr.length < 1;
 
         SidePanel.setTips({
             selectedLabel: "Highlights",
             tips: [
                 "Pick only what you can honestly support with photos and details.",
                 "5 strong highlights beats 15 generic ones.",
-                "You can edit these later from your dashboard."
-            ]
+                "You can edit these later from your dashboard.",
+            ],
         });
         SidePanel.refresh();
     }
 
     function render() {
         const selected = new Set(readSelected());
-        const list = HIGHLIGHTS.filter(h => !q || norm(h.label).includes(q));
+        const list = HIGHLIGHTS.filter((h) => !q || norm(h.label).includes(q));
 
-        chipsEl.innerHTML = list.map(h => {
-            const on = selected.has(h.key);
-            const icon = ICON_FALLBACK[h.icon] || h.icon;
-            return `
-        <button class="hlChip ${on ? "selected" : ""}" type="button" data-key="${h.key}">
-          <i class="hlIc" data-lucide="${icon}"></i>
-          <span>${h.label}</span>
-        </button>
-      `;
-        }).join("");
+        chipsEl.innerHTML = list
+            .map((h) => {
+                const on = selected.has(h.key);
+                const icon = ICON_FALLBACK[h.icon] || h.icon;
+                return `
+          <button class="hlChip ${on ? "selected" : ""}" type="button" data-key="${h.key}">
+            <i class="hlIc" data-lucide="${icon}"></i>
+            <span>${h.label}</span>
+          </button>
+        `;
+            })
+            .join("");
 
         if (window.lucide?.createIcons) window.lucide.createIcons();
 
-        chipsEl.querySelectorAll(".hlChip").forEach(btn => {
+        chipsEl.querySelectorAll(".hlChip").forEach((btn) => {
             btn.addEventListener("click", () => {
                 const key = btn.dataset.key;
                 const current = new Set(readSelected());
@@ -94,7 +102,6 @@ window.Step6Init = function Step6Init({ nextBtn }) {
                 const wasOn = current.has(key);
 
                 if (!wasOn && current.size >= MAX) {
-                    // soft feedback (no alert spam)
                     btn.classList.add("shake");
                     setTimeout(() => btn.classList.remove("shake"), 240);
                     return;
@@ -124,5 +131,9 @@ window.Step6Init = function Step6Init({ nextBtn }) {
     if (searchInput) searchInput.addEventListener("input", (e) => setSearch(e.target.value));
     if (searchClear) searchClear.addEventListener("click", () => setSearch(""));
 
+    // initial render
     render();
+
+    // ✅ Sync Step 6 to backend on Next
+
 };

@@ -1,4 +1,5 @@
 // steps/step8_details.js
+
 window.Step8Init = function Step8Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
 
@@ -13,7 +14,6 @@ window.Step8Init = function Step8Init({ nextBtn }) {
     const DESC_MAX = 500;
 
     // ✅ HARD requirements (for enabling Finish)
-    // Keep these light so you can finish the wizard.
     const MIN_TITLE_HARD = 3;
     const MIN_DESC_HARD = 10;
 
@@ -21,14 +21,14 @@ window.Step8Init = function Step8Init({ nextBtn }) {
     const MIN_TITLE_SOFT = 10;
     const MIN_DESC_SOFT = 40;
 
-    if (!titleEl || !descEl) return;
+    if (!titleEl || !descEl || !nextBtn) return;
 
     function readDetails() {
         const d = ListingStore.readDraft();
         const details = d.details || {};
         return {
             title: String(details.title || ""),
-            description: String(details.description || "")
+            description: String(details.description || ""),
         };
     }
 
@@ -46,7 +46,7 @@ window.Step8Init = function Step8Init({ nextBtn }) {
     function hardValid(title, desc) {
         const t = (title || "").trim();
         const p = (desc || "").trim();
-        return (t.length >= MIN_TITLE_HARD) && (p.length >= MIN_DESC_HARD);
+        return t.length >= MIN_TITLE_HARD && p.length >= MIN_DESC_HARD;
     }
 
     function getSoftWarnings(title, desc) {
@@ -71,7 +71,7 @@ window.Step8Init = function Step8Init({ nextBtn }) {
         if (pvDesc) pvDesc.textContent = desc.trim() || "—";
 
         // ✅ Enable Finish using HARD rules only
-        if (nextBtn) nextBtn.disabled = !hardValid(title, desc);
+        nextBtn.disabled = !hardValid(title, desc);
 
         const softWarns = getSoftWarnings(title, desc);
 
@@ -81,8 +81,8 @@ window.Step8Init = function Step8Init({ nextBtn }) {
                 "Title idea: Place type + city + key feature (e.g., “Studio in Makati w/ Wi-Fi”).",
                 "Describe what guests get + what's included (Wi-Fi, aircon, etc.).",
                 "Avoid claims you can’t show in photos.",
-                ...softWarns
-            ]
+                ...softWarns,
+            ],
         });
         SidePanel.refresh();
     }
@@ -99,13 +99,24 @@ window.Step8Init = function Step8Init({ nextBtn }) {
         tTimer = setTimeout(() => {
             saveDetails({
                 title: titleEl.value.trim(),
-                description: descEl.value.trim()
+                description: descEl.value.trim(),
             });
         }, 120);
     }
 
-    titleEl.addEventListener("input", () => { paint(); debouncedSave(); });
-    descEl.addEventListener("input", () => { paint(); debouncedSave(); });
+    titleEl.addEventListener("input", () => {
+        paint();
+        debouncedSave();
+    });
 
+    descEl.addEventListener("input", () => {
+        paint();
+        debouncedSave();
+    });
+
+    // initial paint
     paint();
+
+
+
 };
