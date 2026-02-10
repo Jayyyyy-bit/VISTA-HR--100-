@@ -1,0 +1,49 @@
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7f7f7;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont;
+}
+
+.guide-card {
+    background: white;
+    padding: 32px;
+    width: 380px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 24px;
+}
+
+.steps {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 24px;
+}
+
+.steps li {
+    padding: 10px 0;
+    font-size: 15px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    background: #ff385c;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}

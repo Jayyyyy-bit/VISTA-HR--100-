@@ -1,27 +1,35 @@
 // steps/step4.js
-
 window.Step4Init = function Step4Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
 
     const draft = ListingStore.readDraft();
-    const cap = draft.capacity || {
-        guests: 1,
-        bedrooms: 0,
-        beds: 1,
-        bathrooms: 1,
-    };
+    const cap = draft.capacity || { guests: 1, bedrooms: 0, beds: 1, bathrooms: 1 };
 
-    /* =========================
-       Guests slider
-       ========================= */
     const guestInput = document.getElementById("capGuests");
     const guestVal = document.getElementById("capGuestsVal");
 
-    if (!guestInput || !guestVal) {
-        console.error("[Step4] capGuests/capGuestsVal not found.");
-        return;
+    if (!guestInput || !guestVal) return;
+
+    function setNextState() {
+        if (nextBtn) nextBtn.disabled = Number(cap.guests) < 1;
     }
 
+    function save() {
+        ListingStore.saveDraft({ capacity: cap });
+        setNextState();
+
+        SidePanel.setTips({
+            selectedLabel: "Capacity",
+            tips: [
+                "Guest count affects pricing and search visibility.",
+                "Bathrooms can be set in halves (e.g. 1.5).",
+                "You can adjust this later.",
+            ],
+        });
+        SidePanel.refresh();
+    }
+
+    // Guests slider
     guestInput.value = cap.guests;
     guestVal.textContent = cap.guests;
 
@@ -31,9 +39,7 @@ window.Step4Init = function Step4Init({ nextBtn }) {
         save();
     });
 
-    /* =========================
-       Steppers
-       ========================= */
+    // Steppers
     document.querySelectorAll(".cap-stepper").forEach((wrap) => {
         const key = wrap.dataset.key;
         const step = Number(wrap.dataset.step || 1);
@@ -47,15 +53,17 @@ window.Step4Init = function Step4Init({ nextBtn }) {
     `;
 
         const valEl = wrap.querySelector(".step-val");
+        const minusBtn = wrap.querySelector(".minus");
+        const plusBtn = wrap.querySelector(".plus");
 
-        wrap.querySelector(".minus").onclick = () => {
+        minusBtn.onclick = () => {
             value = Math.max(0, value - step);
             valEl.textContent = value;
             cap[key] = value;
             save();
         };
 
-        wrap.querySelector(".plus").onclick = () => {
+        plusBtn.onclick = () => {
             value += step;
             valEl.textContent = value;
             cap[key] = value;
@@ -63,26 +71,7 @@ window.Step4Init = function Step4Init({ nextBtn }) {
         };
     });
 
-    function save() {
-        ListingStore.saveDraft({ capacity: cap });
-        SidePanel.refresh();
-        nextBtn.disabled = cap.guests < 1;
-    }
-
-    /* Tips */
-    SidePanel.setTips({
-        selectedLabel: "Capacity",
-        tips: [
-            "Guest count affects pricing and search visibility.",
-            "Bathrooms can be set in halves (e.g. 1.5).",
-            "You can adjust this later.",
-        ],
-    });
-    SidePanel.refresh();
-
-    // initial state
-    nextBtn.disabled = cap.guests < 1;
-
-    // ✅ Sync Step 4 to backend on Next
-
+    // init
+    setNextState();
+    save();
 };

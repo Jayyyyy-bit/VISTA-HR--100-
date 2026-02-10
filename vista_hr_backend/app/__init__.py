@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, app, jsonify
 from flask_cors import CORS
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -27,5 +27,12 @@ def create_app():
     @app.errorhandler(SQLAlchemyError)
     def handle_db_error(_):
         return jsonify({"error": "Database error"}), 500
+    
+
+    @app.get("/api/_routes")
+    def _routes():
+        return jsonify(sorted([str(r) for r in app.url_map.iter_rules()])), 200
+    
 
     return app
+

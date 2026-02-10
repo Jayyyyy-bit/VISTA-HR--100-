@@ -1,3 +1,11 @@
+/* =========================================================
+   WIZARD.CSS — Organized (Step 0–8)
+   Goal: keep visuals identical, but reduce true duplicates
+   ========================================================= */
+
+/* =========================
+   STEP 0 — TOKENS + GLOBALS
+   ========================= */
 :root {
     --ink: #0c1322;
     --muted: rgba(12, 19, 34, .60);
@@ -30,6 +38,20 @@ body {
     background: #fff;
 }
 
+/* ✅ SINGLE SOURCE OF TRUTH: caret/text color safety
+   (this existed twice; kept once to avoid duplication) */
+input,
+select,
+textarea {
+    caret-color: var(--ink);
+    color: var(--ink);
+    -webkit-text-fill-color: var(--ink);
+}
+
+/* =========================
+   STEP 1 — BACKGROUND
+   ========================= */
+
 /* ===== Background (same feel as PO_welcome) ===== */
 .bg {
     position: fixed;
@@ -61,41 +83,12 @@ body {
     border-radius: 999px;
     filter: blur(40px);
     opacity: .22;
-}
 
-.bg .g1 {
-    left: -220px;
-    top: -240px;
-    background: radial-gradient(circle, rgba(31, 93, 255, .65), transparent 60%);
-}
-
-.bg .g2 {
-    right: -260px;
-    top: -160px;
-    background: radial-gradient(circle, rgba(106, 167, 255, .55), transparent 60%);
-}
-
-/* =========================
-   BACKGROUND MOTION (glows)
-   ========================= */
-
-/* smoother perf */
-.bg .glow {
+    /* smoother perf */
     will-change: transform, opacity;
     transform: translate3d(0, 0, 0);
-}
 
-/* big slow float */
-.bg .g1 {
-    animation: float-g1 12s ease-in-out infinite;
-}
-
-.bg .g2 {
-    animation: float-g2 14s ease-in-out infinite;
-}
-
-/* gentle pulse (optional but nice) */
-.bg .glow {
+    /* gentle pulse (optional but nice) */
     animation-name: pulse-soft;
     animation-duration: 6s;
     animation-timing-function: ease-in-out;
@@ -103,12 +96,21 @@ body {
     animation-direction: alternate;
 }
 
-/* combine float + pulse */
 .bg .g1 {
+    left: -220px;
+    top: -240px;
+    background: radial-gradient(circle, rgba(31, 93, 255, .65), transparent 60%);
+
+    /* combine float + pulse (final intended state) */
     animation: float-g1 12s ease-in-out infinite, pulse-soft 6s ease-in-out infinite alternate;
 }
 
 .bg .g2 {
+    right: -260px;
+    top: -160px;
+    background: radial-gradient(circle, rgba(106, 167, 255, .55), transparent 60%);
+
+    /* combine float + pulse (final intended state) */
     animation: float-g2 14s ease-in-out infinite, pulse-soft 7s ease-in-out infinite alternate;
 }
 
@@ -160,7 +162,21 @@ body {
     }
 }
 
-/* ===== Topbar ===== */
+/* (kept) Bg moving blobs by JS — still same effect */
+.bg .glow {
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bg .glow {
+        transform: none !important;
+    }
+}
+
+/* =========================
+   STEP 2 — TOPBAR + SHELL
+   ========================= */
 .topbar {
     height: 64px;
     display: flex;
@@ -250,7 +266,9 @@ body {
     align-items: start;
 }
 
-/* ===== Panels ===== */
+/* =========================
+   STEP 3 — PANELS + CARDS
+   ========================= */
 .panel {
     border-radius: var(--radius-xl);
     border: 1px solid rgba(12, 19, 34, .10);
@@ -426,7 +444,9 @@ body {
     margin-bottom: 8px;
 }
 
-/* ===== Side stack ===== */
+/* =========================
+   STEP 3.5 — SIDE STACK
+   ========================= */
 .side-stack {
     display: grid;
     gap: 12px;
@@ -584,7 +604,9 @@ body {
     color: rgba(12, 19, 34, .55);
 }
 
-/* ===== Footer ===== */
+/* =========================
+   STEP 3.9 — FOOTER
+   ========================= */
 .bottombar {
     height: 78px;
     border-top: 1px solid rgba(12, 19, 34, .08);
@@ -674,9 +696,8 @@ body {
 }
 
 /* ===============================
-   STEP 2 – FORCE ROW LAYOUT
+   STEP 2 — FORCE ROW LAYOUT
    =============================== */
-
 #spaceGrid {
     display: grid;
     grid-template-columns: 1fr !important;
@@ -717,7 +738,7 @@ body {
 }
 
 /* ===============================
-   ICON MICRO-ANIMATION (ON SELECT)
+   STEP 2.5 — ICON MICRO-ANIMATION
    =============================== */
 .card-ic {
     transition: transform 260ms cubic-bezier(.2, .9, .2, 1), color 200ms ease;
@@ -747,8 +768,7 @@ body {
 }
 
 /* =========================
-   (Optional legacy) Location map styles
-   If you re-enable maps later
+   STEP 3 — OPTIONAL MAP STYLES
    ========================= */
 .loc-stage {
     max-width: 820px;
@@ -822,7 +842,7 @@ body {
     font-size: 14px;
 }
 
-/* ✅ IMPORTANT: scope the old "field with border-bottom" ONLY to loc-form */
+/* ✅ IMPORTANT: scope old border-bottom ONLY to loc-form */
 .loc-form .field {
     display: flex;
     flex-direction: column;
@@ -836,9 +856,8 @@ body {
 }
 
 /* =========================
-   Step 3 form polish (FINAL)
+   STEP 3 — LOCATION FORM
    ========================= */
-
 .formCard {
     background: rgba(255, 255, 255, .78);
     border: 1px solid var(--line);
@@ -852,7 +871,7 @@ body {
 .formGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 18px;
+    gap: 12px 18px;
 }
 
 .field {
@@ -880,7 +899,7 @@ body {
 .field input,
 .field select {
     width: 100%;
-    padding: 14px 14px;
+    padding: 11px 14px;
     border-radius: 14px;
     border: 1px solid rgba(12, 19, 34, .14);
     background: rgba(255, 255, 255, .92);
@@ -903,7 +922,21 @@ body {
     transform: translateY(-1px);
 }
 
-/* ✅ Custom select wrapper (cleaner + chevron animation) */
+/* placeholder readable */
+.formCard input::placeholder,
+.field input::placeholder {
+    color: rgba(12, 19, 34, .45);
+}
+
+/* keep background stable on hover */
+.formCard input:hover,
+.formCard select:hover,
+.field input:hover,
+.field select:hover {
+    background: rgba(255, 255, 255, .92);
+}
+
+/* ✅ Custom select wrapper (keep same behavior, add polish below) */
 .selectWrap {
     position: relative;
 }
@@ -944,25 +977,71 @@ body {
 }
 
 /* Preview */
+.preview {
+    margin-bottom: 12px;
+    /* bawasan from default */
+    padding-bottom: 0;
+}
+
 .previewTitle {
-    font-weight: 900;
-    font-size: 12px;
-    color: rgba(12, 19, 34, .70);
+    margin-bottom: 4px;
 }
 
 .previewLine {
-    font-weight: 850;
-    margin-top: 6px;
-    color: rgba(12, 19, 34, .90);
+    margin-bottom: 2px;
 }
 
 .previewHint {
-    margin-top: 4px;
-    font-size: 12px;
-    color: rgba(12, 19, 34, .55);
+    margin-bottom: 0;
+    font-size: 13px;
+    color: #6b7280;
 }
 
-/* Tooltip icon (Metro Manila scope) */
+/* map container spacing */
+.mapWrap {
+    margin-top: 8px;
+    /* dati malaki to */
+    padding-top: 0;
+}
+
+.formGrid>.divider.full,
+.formGrid>.preview.full,
+.formGrid>.mapWrap.full {
+    grid-column: 1 / -1;
+}
+
+
+
+.osmMap {
+    height: 240px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f2f2f2;
+}
+
+.mapHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.mapTitle {
+    font-weight: 700;
+}
+
+.mapSub {
+    font-size: 13px;
+    opacity: .8;
+}
+
+.mapHint {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: .75;
+}
+
+/* Tooltip icon */
 .hintIcon {
     width: 18px;
     height: 18px;
@@ -1035,20 +1114,185 @@ body {
     }
 }
 
-/* Bg moving blobs by JS */
-.bg .glow {
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
+/* =========================
+   STEP 3 — CITY DROPDOWN POLISH
+   ========================= */
+.selectWrap select {
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .bg .glow {
-        transform: none !important;
-    }
+.selectWrap:hover select {
+    transform: translateY(-1px);
+    border-color: rgba(31, 93, 255, .22);
+    box-shadow: 0 12px 26px rgba(12, 19, 34, .10);
+}
+
+/* “zoom text” illusion on hover */
+.selectWrap:hover select {
+    font-size: 15px;
+}
+
+select option {
+    padding: 10px;
+}
+
+/* Suggestions */
+.suggestEmpty {
+    padding: 10px 12px;
+    font-size: 13px;
+    opacity: .65;
+}
+
+/* STEP3 — HARD FIX: suggestion dropdown always visible on top */
+.suggestWrap,
+.suggestwrap {
+    position: relative !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+}
+
+/* force the suggest box to anchor correctly */
+#barangaySuggest,
+#barangaySuggest.suggestBox {
+
+    background: rgba(255, 255, 255, .96) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(12, 19, 34, .12) !important;
+    box-shadow: 0 18px 55px rgba(12, 19, 34, .12) !important;
 }
 
 
-/* ===== Step 4 – Capacity ===== */
+
+/* ===== FIX: Barangay suggestion visibility ===== */
+
+/* ===== Step3: Barangay dropdown should OVERLAY + SCROLL (no stretching) ===== */
+.suggestWrap {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+#barangaySuggest {
+    position: absolute !important;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px) !important;
+
+    /* IMPORTANT: stop “inundo” */
+    max-height: 240px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    background: rgba(255, 255, 255, .96) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(12, 19, 34, .12) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 18px 55px rgba(12, 19, 34, .12) !important;
+    z-index: 999999 !important;
+
+    padding: 6px !important;
+    opacity: 1 !important;
+    color: var(--ink) !important;
+}
+
+/* Make items look premium + clickable */
+#barangaySuggest .suggestItem {
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: var(--ink) !important;
+    -webkit-text-fill-color: var(--ink) !important;
+
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    font-weight: 800 !important;
+    font-size: 13px !important;
+
+    transition: transform .12s ease, background .12s ease, border-color .12s ease !important;
+}
+
+#barangaySuggest .suggestItem:hover,
+#barangaySuggest .suggestItem.active {
+    background: rgba(31, 93, 255, .08) !important;
+    border-color: rgba(31, 93, 255, .18) !important;
+    transform: scale(1.01) !important;
+}
+
+/* Optional: nice scrollbar */
+#barangaySuggest::-webkit-scrollbar {
+    width: 10px;
+}
+
+#barangaySuggest::-webkit-scrollbar-thumb {
+    background: rgba(12, 19, 34, .16);
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, .75);
+}
+
+#barangaySuggest::-webkit-scrollbar-thumb:hover {
+    background: rgba(12, 19, 34, .22);
+}
+
+
+
+.formCard,
+.formGrid,
+.field {
+    overflow: visible !important;
+}
+
+.suggestBox.hidden {
+    display: none;
+}
+
+#cityInput {
+    cursor: pointer;
+}
+
+/* NOTE:
+   .suggestItem looked duplicated but actually differs (extra border + background)
+   so we keep the later (stronger) version to preserve visuals */
+.suggestItem {
+    transition: transform .14s ease, background .14s ease;
+}
+
+.suggestItem:hover,
+.suggestItem.active {
+    transform: scale(1.01);
+}
+
+.suggestItem {
+    transition: transform .14s ease, background .14s ease, border-color .14s ease;
+    border: 1px solid transparent;
+    text-align: left;
+    width: 100%;
+    background: transparent;
+}
+
+.suggestItem:hover,
+.suggestItem.active {
+    background: rgba(31, 93, 255, .06);
+    border-color: rgba(31, 93, 255, .18);
+    transform: scale(1.015);
+}
+
+/* errors */
+.fieldError {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #d93025;
+    min-height: 14px;
+}
+
+.inputInvalid {
+    border-color: rgba(217, 48, 37, .5) !important;
+}
+
+/* =========================
+   STEP 4 — CAPACITY
+   ========================= */
 .capCard {
     max-width: 640px;
     margin: 0 auto;
@@ -1089,12 +1333,14 @@ body {
 
 .cap-value {
     font-weight: 800;
+    cursor: default;
 }
 
 .cap-stepper {
     display: flex;
     align-items: center;
     gap: 12px;
+    cursor: pointer;
 }
 
 .step-btn {
@@ -1107,29 +1353,19 @@ body {
     cursor: pointer;
 }
 
+.step-btn:disabled,
+.qtyBtn:disabled {
+    cursor: not-allowed;
+}
+
 .step-val {
     min-width: 32px;
     text-align: center;
     font-weight: 800;
+    cursor: default;
 }
 
-/* placeholder readable */
-.formCard input::placeholder,
-.field input::placeholder {
-    color: rgba(12, 19, 34, .45);
-}
-
-/* keep background stable on hover */
-.formCard input:hover,
-.formCard select:hover,
-.field input:hover,
-.field select:hover {
-    background: rgba(255, 255, 255, .92);
-}
-
-/* =========================
-   Step 4: +/- hover polish
-   ========================= */
+/* +/- hover polish */
 .qtyBtn {
     position: relative;
     overflow: hidden;
@@ -1164,16 +1400,14 @@ body {
     transform: translateX(40%) rotate(10deg);
 }
 
-/* =========================
-   Step 4: Bathrooms title row
-   ========================= */
+/* Bathrooms title row */
 .cap-titleRow {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-/* tooltip icon (re-use your style but tuned for Step 4 spacing) */
+/* tooltip icon tuned for Step 4 spacing */
 .cap-titleRow .hintIcon {
     width: 18px;
     height: 18px;
@@ -1244,7 +1478,7 @@ body {
 }
 
 /* =========================
-   STEP 5 – Amenities (Tabs)
+   STEP 5 — AMENITIES
    ========================= */
 .amenShell {
     max-width: 720px;
@@ -1322,7 +1556,6 @@ body {
     color: rgba(12, 19, 34, .55);
 }
 
-/* Amenity cards: reuse your .card but tighten spacing */
 .amenCard {
     min-height: 92px;
 }
@@ -1332,7 +1565,6 @@ body {
     height: 34px;
 }
 
-/* footer */
 .amenFooter {
     margin-top: 12px;
     display: flex;
@@ -1354,9 +1586,7 @@ body {
     color: rgba(12, 19, 34, .50);
 }
 
-/* =========================
-   STEP 5 – Search + Scroll
-   ========================= */
+/* search + scroll */
 .amenTop {
     display: flex;
     align-items: flex-end;
@@ -1422,18 +1652,14 @@ body {
     border-color: rgba(31, 93, 255, .22);
 }
 
-/* This is the key: scroll area inside step (no page stretching) */
 .amenScroll {
     margin-top: 10px;
     padding-right: 4px;
-    /* space for scrollbar */
     overflow: auto;
     border-radius: 14px;
-    /* fit inside viewport: header + tabs + footer are fixed/sticky */
     max-height: calc(100vh - 64px - 78px - 220px);
 }
 
-/* nice scrollbar */
 .amenScroll::-webkit-scrollbar {
     width: 10px;
 }
@@ -1448,7 +1674,6 @@ body {
     background: rgba(12, 19, 34, .22);
 }
 
-/* empty state */
 .amenEmpty {
     border: 1px dashed rgba(12, 19, 34, .16);
     border-radius: 16px;
@@ -1485,9 +1710,8 @@ body {
     }
 }
 
-
 /* =========================
-   STEP 6 – Highlights (chips)
+   STEP 6 — HIGHLIGHTS (chips)
    ========================= */
 .hlShell {
     max-width: 720px;
@@ -1643,9 +1867,8 @@ body {
     color: rgba(12, 19, 34, .55);
 }
 
-
 /* =========================
-   STEP 7 – Photos
+   STEP 7 — PHOTOS
    ========================= */
 .photoShell {
     max-width: 820px;
@@ -1801,6 +2024,7 @@ body {
     border-color: rgba(239, 68, 68, .35);
 }
 
+/* video tour */
 .vtCard {
     border-radius: 18px;
     border: 1px solid rgba(12, 19, 34, .10);
@@ -1902,9 +2126,8 @@ body {
     }
 }
 
-
 /* =========================
-   STEP 8 – Title + Description
+   STEP 8 — DETAILS (Title/Desc + Custom Dropdown)
    ========================= */
 .detShell {
     max-width: 820px;
@@ -2030,27 +2253,159 @@ body {
     line-height: 1.45;
 }
 
-
-/* invisible caret/cursor on hover/focus ===== */
-.formCard input,
-.formCard select,
-.field input,
-.field select {
-    color: var(--ink) !important;
-    caret-color: var(--ink) !important;
-    -webkit-text-fill-color: var(--ink) !important;
-    /* fixes some browsers */
-    cursor: text;
+/* ========= Custom Dropdown (City) ========= */
+.nativeSelect {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
 }
 
-/* invisible caret/cursor on hover/focus ===== */
+.dd {
+    position: relative;
+}
+
+.ddBtn {
+    width: 100%;
+    height: 50px;
+    border-radius: 14px;
+    border: 1px solid rgba(12, 19, 34, .14);
+    background: rgba(255, 255, 255, .92);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 14px;
+    cursor: pointer;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.ddBtn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(31, 93, 255, .35);
+    box-shadow: 0 10px 24px rgba(12, 19, 34, .08);
+}
+
+.ddBtn:focus-visible {
+    outline: none;
+    border-color: rgba(31, 93, 255, .65);
+    box-shadow: 0 0 0 4px rgba(31, 93, 255, .12);
+}
+
+.ddVal {
+    font-weight: 850;
+    color: rgba(12, 19, 34, .86);
+}
+
+.ddChevron {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid rgba(12, 19, 34, .55);
+    border-bottom: 2px solid rgba(12, 19, 34, .55);
+    transform: rotate(45deg);
+    transition: transform .18s ease, opacity .18s ease;
+    opacity: .85;
+}
+
+.dd.open .ddChevron {
+    transform: rotate(225deg);
+    opacity: 1;
+}
+
+/* Menu popover */
+.ddMenu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 8px);
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid rgba(12, 19, 34, .12);
+    border-radius: 16px;
+    box-shadow: 0 18px 55px rgba(12, 19, 34, .12);
+    backdrop-filter: blur(10px);
+    padding: 8px;
+    max-height: 280px;
+    overflow: auto;
+    z-index: 80;
+
+    transform-origin: top;
+    transform: translateY(-6px) scale(.98);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .18s ease, opacity .18s ease;
+}
+
+.dd.open .ddMenu {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Options */
+.ddOpt {
+    padding: 10px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 850;
+    color: rgba(12, 19, 34, .86);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform .12s ease, background .12s ease;
+}
+
+.ddOpt:hover {
+    background: rgba(31, 93, 255, .08);
+    transform: scale(1.02);
+}
+
+.ddOpt.active {
+    background: rgba(31, 93, 255, .12);
+}
+
+.ddOpt .tag {
+    font-size: 11px;
+    font-weight: 950;
+    padding: 6px 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(31, 93, 255, .18);
+    background: rgba(31, 93, 255, .06);
+    color: rgba(31, 93, 255, .85);
+}
+
+/* Selection highlight */
+.formCard input::selection,
+.formCard textarea::selection,
+.field input::selection,
+.field textarea::selection {
+    background: rgba(31, 93, 255, .18);
+}
+
+
+/* =========================
+   CARET VISIBILITY FIX
+   ========================= */
+
+input,
+textarea,
+select,
 .formCard input,
-.formCard select,
+.formCard textarea,
 .field input,
-.field select {
+.field textarea {
     color: var(--ink) !important;
     caret-color: var(--ink) !important;
     -webkit-text-fill-color: var(--ink) !important;
-    /* fixes some browsers */
-    cursor: text;
+}
+
+/* Chrome autofill fix */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+    -webkit-text-fill-color: var(--ink) !important;
+    box-shadow: 0 0 0 1000px rgba(255, 255, 255, .92) inset !important;
+    caret-color: var(--ink) !important;
 }

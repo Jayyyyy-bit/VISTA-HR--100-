@@ -1,13 +1,14 @@
 // login.js
 (() => {
     // Same keys as your PO_welcome-page.js
-    const LS_USERS_KEY = "vista_users";
+
     const LS_SESSION_KEY = "vista_session_user";
 
-    // Update these if your paths differ
+
     const ROUTE_ROLES = "../../Login_Register_Page/Signup/roles.html";
     const ROUTE_OWNER_WELCOME = "../../PO-after-signup/PO_welcome-page/PO_welcome-page.html";
-    const ROUTE_RESIDENT_HOME = "../../Resident-SIgnUp/resident_home.html"; // change later to your actual resident homepage
+    const ROUTE_RESIDENT_HOME = "../../Resident/resident_home.html";
+
 
     const tabOwner = document.getElementById("tabOwner");
     const tabResident = document.getElementById("tabResident");
@@ -26,21 +27,7 @@
 
     let activeRole = "OWNER";
 
-    function readUsers() {
-        try { return JSON.parse(localStorage.getItem(LS_USERS_KEY)) || []; }
-        catch { return []; }
-    }
 
-    function writeSession(user) {
-        // minimal session (same style as your welcome page expects: userId)
-        const payload = {
-            userId: user.id,
-            role: user.role || activeRole,
-            email: user.email,
-            createdAt: new Date().toISOString()
-        };
-        localStorage.setItem(LS_SESSION_KEY, JSON.stringify(payload));
-    }
 
     function setError(msg) {
         if (!errBox) return;
@@ -99,52 +86,48 @@
     });
 
     // Submit
-    form?.addEventListener("submit", (e) => {
+    form?.addEventListener("submit", async (e) => {
         e.preventDefault();
         setError("");
 
         const email = (emailEl?.value || "").trim().toLowerCase();
-        const pw = (pwEl?.value || "").trim();
+        const password = (pwEl?.value || "").trim();
 
-        if (!email || !pw) {
+        if (!email || !password) {
             setError("Please enter your email and password.");
             return;
         }
 
-        const users = readUsers();
+        try {
+            const res = await fetch("http://127.0.0.1:5000/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password, role: activeRole }) // 👈 IMPORTANT
+            });
 
-        // match user by email + role (case-insensitive)
-        const user = users.find(u =>
-            (u.email || "").toLowerCase() === email &&
-            ((u.role || "").toUpperCase() === activeRole)
-        );
+            const data = await res.json().catch(() => ({}));
 
-        // NOTE: local demo only. Later replace with backend hash check.
-        if (!user) {
-            setError(`No ${activeRole.toLowerCase()} account found for this email.`);
-            return;
-        }
+            if (!res.ok) {
+                setError(data?.message || "Login failed");
+                return;
+            }
 
-        const ok =
-            (user.password && user.password === pw) ||
-            (user.passwordPlain && user.passwordPlain === pw);
+            // ✅ store token + user (keep same key name)
+            localStorage.setItem("vista_session_user", JSON.stringify({
+                user: data.user,
+                token: data.access_token,
+                role: data.user.role,
+                createdAt: new Date().toISOString()
+            }));
 
-        if (!ok) {
-            setError("Incorrect password.");
-            return;
-        }
+            // redirect
+            if (data.user.role === "OWNER") window.location.href = ROUTE_OWNER_WELCOME;
+            else window.location.href = ROUTE_RESIDENT_HOME;
 
-        writeSession(user);
-
-        // redirect based on role
-        if (activeRole === "OWNER") {
-            window.location.href = ROUTE_OWNER_WELCOME;
-        } else {
-            window.location.href = ROUTE_RESIDENT_HOME;
+        } catch (err) {
+            console.error(err);
+            setError("Server unavailable. Please try again.");
         }
     });
 
-    // init
-    setRole("OWNER");
-    window.lucide?.createIcons?.();
 })();

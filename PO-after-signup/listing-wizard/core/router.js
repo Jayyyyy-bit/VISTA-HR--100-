@@ -9,6 +9,7 @@
 
     const DASHBOARD_URL = "/Property-Owner/dashboard/property-owner-dashboard.html";
 
+    // ✅ Correct route table (ALL entries must have id + file)
     const ROUTES = [
         { id: "step-1", file: "steps/step1_unit_category.html", init: window.Step1Init, sync: "syncStep1" },
         { id: "step-2", file: "steps/step2_space_type.html", init: window.Step2Init, sync: "syncStep2" },
@@ -25,25 +26,27 @@
     }
 
     function getRouteFromHash() {
-        const h = (location.hash || "").replace("#/", "").replace("#", "").trim();
-        return h || "step-1";
+        // supports "#/step-1" or "#/step-1?x=y"
+        const raw = (location.hash || "");
+        const cleaned = raw.replace(/^#\/?/, "");
+        const id = cleaned.split("?")[0].trim();
+        return id || "step-1";
     }
 
     function indexOfRoute(id) {
-        return ROUTES.findIndex((r) => r.id === id);
+        return ROUTES.findIndex(r => r.id === id);
     }
 
     function renderDots(activeIndex) {
         if (!dots) return;
-        dots.innerHTML = ROUTES.map((_, i) =>
-            `<span class="dot ${i <= activeIndex ? "active" : ""}"></span>`
-        ).join("");
+        dots.innerHTML = ROUTES
+            .map((_, i) => `<span class="dot ${i <= activeIndex ? "active" : ""}"></span>`)
+            .join("");
     }
 
     function setNextLabel(idx) {
         if (!nextBtn) return;
-        const isLast = idx === ROUTES.length - 1;
-        nextBtn.textContent = isLast ? "Finish" : "Next";
+        nextBtn.textContent = (idx === ROUTES.length - 1) ? "Finish" : "Next";
     }
 
     function updateStepKicker(idx) {
@@ -54,56 +57,66 @@
     const STEP_CACHE = new Map();
     async function getStepHTML(file) {
         if (STEP_CACHE.has(file)) return STEP_CACHE.get(file);
+
         const res = await fetch(file, { cache: "no-store" });
+        if (!res.ok) {
+            throw new Error(`Failed to load step HTML: ${file} (${res.status})`);
+        }
         const html = await res.text();
         STEP_CACHE.set(file, html);
         return html;
     }
 
     async function loadStep(id) {
-        const route = ROUTES.find((r) => r.id === id) || ROUTES[0];
+        const route = ROUTES.find(r => r.id === id) || ROUTES[0];
         const idx = indexOfRoute(route.id);
 
-        // ✅ Guard: prevent jumping to step 2+ without server listing_id
-        if (idx > 0) {
-            const draft = window.ListingStore?.readDraft?.() || {};
-            if (!draft.listing_id) {
-                setHash("step-1");
-                return;
-            }
+        if (!route?.file) {
+            console.error("[router] route file missing for", id, route);
+            setHash("step-1");
+            return;
         }
 
-
+        // prefetch HTML
         const htmlPromise = getStepHTML(route.file);
 
-        if (stepHost?.dataset?.hasStep) {
+        // fade out old content
+        if (stepHost?.dataset?.hasStep && window.StepTransition?.fadeOut) {
             await window.StepTransition.fadeOut(stepHost);
         }
 
+        // inject new HTML
         const html = await htmlPromise;
         stepHost.innerHTML = html;
         stepHost.dataset.hasStep = "1";
 
+        // header updates
         updateStepKicker(idx);
 
+        // init step JS
         if (typeof route.init === "function") {
             route.init({ stepId: route.id, nextBtn, backBtn });
         }
 
+        // icons
         if (window.lucide?.createIcons) window.lucide.createIcons();
 
+        // buttons / dots
         renderDots(idx);
         setNextLabel(idx);
         if (backBtn) backBtn.disabled = idx <= 0;
 
         if (window.SidePanel?.refresh) window.SidePanel.refresh();
 
-        await window.StepTransition.fadeIn(stepHost);
+        // fade in
+        if (window.StepTransition?.fadeIn) {
+            await window.StepTransition.fadeIn(stepHost);
+        }
     }
 
     window.loadStep = loadStep;
 
-    // Back
+    // Back button
     on(backBtn, "click", () => {
         const current = getRouteFromHash();
         const idx = indexOfRoute(current);
@@ -111,25 +124,23 @@
         setHash(prevId);
     });
 
-    // ✅ Next: sync current step first, then navigate
+    // Next button: sync then navigate
     on(nextBtn, "click", async () => {
         const current = getRouteFromHash();
         const idx = indexOfRoute(current);
-        const route = ROUTES[idx];
+        const route = ROUTES[idx] || ROUTES[0];
         const isLast = idx >= ROUTES.length - 1;
 
         try {
             nextBtn.disabled = true;
 
-            // sync if defined
+            // ✅ call store sync if exists
             const fnName = route?.sync;
             const fn = fnName ? window.ListingStore?.[fnName] : null;
-            if (typeof fn === "function") {
-                await fn();
-            }
+            if (typeof fn === "function") await fn();
 
             if (isLast) {
-                // optional submit-for-verification later
+                // optional: submitForVerification
                 // await window.ListingStore?.submitForVerification?.();
                 location.href = DASHBOARD_URL;
                 return;
@@ -138,13 +149,11 @@
             setHash(ROUTES[idx + 1].id);
         } catch (e) {
             console.error("[router] next sync failed", e);
-
             const msg =
                 e?.payload?.error ||
                 e?.error ||
                 e?.message ||
                 "Failed to save this step. Please try again.";
-
             alert(msg);
             nextBtn.disabled = false;
         }
@@ -158,33 +167,23 @@
 
     on($("#questionsBtn"), "click", () => alert("FAQ coming soon."));
 
-    window.addEventListener("hashchange", () => {
-        loadStep(getRouteFromHash());
-    });
+    // Hash change
+    window.addEventListener("hashchange", () => loadStep(getRouteFromHash()));
 
-    // ✅ Initial boot: resume + auto-jump to next incomplete step
+    // Boot
     (async () => {
         try {
-            // if you later add resumeDraft() to store.js, safe call
-            if (window.ListingStore?.resumeDraft) await window.ListingStore.resumeDraft();
+            const token = localStorage.getItem("access_token");
+            if (token && window.ListingStore?.resumeDraft) {
+                await window.ListingStore.resumeDraft();
+            }
         } catch (e) {
             console.warn("[router] resumeDraft failed", e);
         }
 
-        const hasMeaningfulHash =
-            !!(location.hash && location.hash.startsWith("#/") && location.hash.length > 2);
-
-        if (!hasMeaningfulHash) {
-            const draft = window.ListingStore?.readDraft?.() || {};
-            const prog = window.ListingStore?.computeProgress?.(draft);
-            const nextStepNum = prog?.nextStep || 1;
-            const target = `step-${nextStepNum}`;
-            setHash(target);
-            loadStep(target);
-            return;
-
-        }
-
-        loadStep(getRouteFromHash());
+        const id = getRouteFromHash();
+        // if invalid hash -> force step-1
+        if (indexOfRoute(id) === -1) setHash("step-1");
+        else loadStep(id);
     })();
 })();

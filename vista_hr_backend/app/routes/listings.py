@@ -1,6 +1,11 @@
 # app/routes/listings.py
 from __future__ import annotations
 
+import json
+import os
+import re
+from typing import Any, Dict, Optional
+
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -12,17 +17,34 @@ from ..utils.errors import json_error
 listings_bp = Blueprint("listings", __name__)
 
 # =========================
-# Helpers / constants
+# NCR barangay dataset loader
 # =========================
-METRO_MANILA = {
-    "Manila", "Quezon City", "Makati", "Taguig", "Pasig",
-    "Mandaluyong", "Parañaque", "Las Piñas", "Pasay",
-    "Caloocan", "Malabon", "Navotas", "Valenzuela",
-    "San Juan", "Marikina", "Muntinlupa", "Pateros"
-}
+NCR_DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ncr_barangays.json")
+_NCR_CACHE: Optional[Dict[str, list]] = None
 
 
-def _get_owned_listing_or_404(listing_id: int) -> Listing | None:
+def _load_ncr_barangays() -> Dict[str, list]:
+    global _NCR_CACHE
+    if _NCR_CACHE is not None:
+        return _NCR_CACHE
+
+    if not os.path.exists(NCR_DATA_PATH):
+        _NCR_CACHE = {}
+        return _NCR_CACHE
+
+    with open(NCR_DATA_PATH, "r", encoding="utf-8") as f:
+        _NCR_CACHE = json.load(f) or {}
+    return _NCR_CACHE
+
+
+def _norm(s: Any) -> str:
+    return str(s or "").strip().lower()
+
+
+# =========================
+# Helpers
+# =========================
+def _get_owned_listing_or_404(listing_id: int) -> Optional[Listing]:
     user = g.current_user
     listing = Listing.query.get(listing_id)
     if not listing or listing.owner_id != user.id:
@@ -30,10 +52,10 @@ def _get_owned_listing_or_404(listing_id: int) -> Listing | None:
     return listing
 
 
-def _commit_or_500(success_payload: dict, status_code: int = 200):
+def _commit_or_500(payload: dict, status_code: int = 200):
     try:
         db.session.commit()
-        return jsonify(success_payload), status_code
+        return jsonify(payload), status_code
     except SQLAlchemyError:
         db.session.rollback()
         return json_error("Database error", 500)
@@ -56,8 +78,8 @@ def get_listing(listing_id: int):
 def get_latest_draft():
     user = g.current_user
 
-    # NOTE: requires Listing.updated_at column for best results.
-    # If you don't have updated_at yet, switch to order_by(Listing.id.desc()) temporarily.
+    # NOTE: requires Listing.updated_at for best results.
+    # If you don't have it, change to: .order_by(Listing.id.desc())
     listing = (
         Listing.query
         .filter_by(owner_id=user.id, status="DRAFT")
@@ -79,17 +101,13 @@ def create_step1():
 
     place_type = data.get("placeType") or data.get("place_type")
     if place_type is not None and (not isinstance(place_type, str) or not place_type.strip()):
-        return json_error(
-            "Validation failed",
-            400,
-            fields={"placeType": "Must be a non-empty string."}
-        )
+        return json_error("Validation failed", 400, fields={"placeType": "Must be a non-empty string."})
 
     listing = Listing(
         owner_id=user.id,
         status="DRAFT",
         current_step=1,
-        place_type=(place_type.strip() if isinstance(place_type, str) else None),
+        place_type=place_type.strip() if isinstance(place_type, str) else None,
     )
 
     try:
@@ -114,12 +132,8 @@ def update_step2(listing_id: int):
         return json_error("Listing not found", 404)
 
     space_type = data.get("spaceType") or data.get("space_type")
-    if not space_type or not isinstance(space_type, str):
-        return json_error(
-            "Validation failed",
-            400,
-            fields={"spaceType": "Must be a non-empty string."}
-        )
+    if not space_type or not isinstance(space_type, str) or not space_type.strip():
+        return json_error("Validation failed", 400, fields={"spaceType": "Must be a non-empty string."})
 
     listing.space_type = space_type.strip()
     listing.current_step = max(listing.current_step or 1, 2)
@@ -128,7 +142,7 @@ def update_step2(listing_id: int):
 
 
 # =========================
-# Step 3 (location)
+# Step 3 (location) - NCR validation + ZIP 4 digits
 # =========================
 @listings_bp.patch("/listings/<int:listing_id>/step-3")
 @require_role("OWNER")
@@ -139,42 +153,47 @@ def update_step3(listing_id: int):
     if not listing:
         return json_error("Listing not found", 404)
 
-    # Minimal required
     street = data.get("street")
-    barangay = data.get("barangay")
     city = data.get("city")
-    province = data.get("province") or "Metro Manila"
-    zip_code = data.get("zip")
-    country = data.get("country") or "Philippines"
+    barangay = data.get("barangay") or ""
+    zip_raw = data.get("zip")
 
-    errors = {}
+    zip_code = str(zip_raw).strip() if zip_raw is not None else ""
+    province = "Metro Manila"  # force always
+
+    fields: Dict[str, str] = {}
+
     if not isinstance(street, str) or not street.strip():
-        errors["street"] = "Street is required."
-    if not isinstance(barangay, str) or not barangay.strip():
-        errors["barangay"] = "Barangay is required."
+        fields["street"] = "Street is required."
     if not isinstance(city, str) or not city.strip():
-        errors["city"] = "City is required."
-    if not isinstance(zip_code, str) or not zip_code.strip():
-        errors["zip"] = "ZIP is required."
+        fields["city"] = "City is required."
+    if not zip_code:
+        fields["zip"] = "ZIP is required."
+    elif not re.fullmatch(r"^\d{4}$", zip_code):
+        fields["zip"] = "ZIP must be a 4-digit code."
 
-    if errors:
-        return json_error("Validation failed", 400, fields=errors)
+    ncr = _load_ncr_barangays()
 
-    if province != "Metro Manila":
-        return json_error("Only Metro Manila locations allowed", 400)
+    # city must exist in NCR dataset
+    if isinstance(city, str) and city.strip():
+        if city not in ncr:
+            fields["city"] = f"Unknown city '{city}'."
 
-    if city.strip() not in METRO_MANILA:
-        return json_error("Only Metro Manila locations allowed", 400)
+        # barangay optional but if provided must match city list
+        if barangay and city in ncr:
+            allowed = ncr.get(city) or []
+            allowed_norm = { _norm(b) for b in allowed }
+            if _norm(barangay) not in allowed_norm:
+                fields["barangay"] = f"Unknown barangay '{barangay}' for {city}."
 
-    # Store whole object as JSON (frontend sends the object)
+    if fields:
+        return json_error("Validation failed", 400, fields=fields)
+
+    # store as JSON (keep FE payload), but enforce province + normalized zip
     listing.location = {
         **data,
-        "street": street.strip(),
-        "barangay": barangay.strip(),
-        "city": city.strip(),
-        "province": "Metro Manila",
-        "zip": zip_code.strip(),
-        "country": (country.strip() if isinstance(country, str) else "Philippines"),
+        "province": province,
+        "zip": zip_code,
     }
     listing.current_step = max(listing.current_step or 1, 3)
 
@@ -238,11 +257,7 @@ def update_step5(listing_id: int):
     if total < 1:
         return json_error("Validation failed", 400, fields={"amenities": "Select at least 1 amenity."})
 
-    listing.amenities = {
-        "appliances": appliances,
-        "activities": activities,
-        "safety": safety
-    }
+    listing.amenities = {"appliances": appliances, "activities": activities, "safety": safety}
     listing.current_step = max(listing.current_step or 1, 5)
 
     return _commit_or_500({"message": "Step 5 saved", "listing": listing.to_dict()}, 200)
@@ -266,7 +281,6 @@ def update_step6(listing_id: int):
 
     if len(highlights) < 1:
         return json_error("Validation failed", 400, fields={"highlights": "Select at least 1 highlight."})
-
     if len(highlights) > 5:
         return json_error("Validation failed", 400, fields={"highlights": "Max is 5."})
 
@@ -277,7 +291,7 @@ def update_step6(listing_id: int):
 
 
 # =========================
-# Step 7 (photos + optional virtual tour)
+# Step 7 (photos)
 # =========================
 @listings_bp.patch("/listings/<int:listing_id>/step-7")
 @require_role("OWNER")
@@ -296,13 +310,6 @@ def update_step7(listing_id: int):
         return json_error("Validation failed", 400, fields={"photos": "Minimum 5 photos required."})
 
     listing.photos = photos
-
-    # Optional: store virtualTour if your model has a JSON column for it
-    # If you added it as Listing.virtual_tour (JSON), uncomment below:
-    # vt = data.get("virtualTour") or data.get("virtual_tour")
-    # if isinstance(vt, dict):
-    #     listing.virtual_tour = vt
-
     listing.current_step = max(listing.current_step or 1, 7)
 
     return _commit_or_500({"message": "Step 7 saved", "listing": listing.to_dict()}, 200)
@@ -325,7 +332,6 @@ def update_step8(listing_id: int):
 
     if not isinstance(title, str) or len(title.strip()) < 3:
         return json_error("Validation failed", 400, fields={"title": "Title must be at least 3 characters."})
-
     if not isinstance(description, str) or len(description.strip()) < 10:
         return json_error("Validation failed", 400, fields={"description": "Description must be at least 10 characters."})
 
@@ -350,10 +356,53 @@ def submit_for_verification(listing_id: int):
     if listing.owner_id != user.id:
         return json_error("Forbidden", 403)
 
-    # Owner needs manual verification by admin later
     listing.status = "PENDING_VERIFICATION" if not user.is_verified else "DRAFT"
-
     return _commit_or_500(
         {"message": "Submitted", "listing": listing.to_dict(), "owner_verified": bool(user.is_verified)},
         200
     )
+
+@listings_bp.get("/listings/feed")
+def resident_feed():
+    city = (request.args.get("city") or "").strip().lower()
+    limit = request.args.get("limit", 30, type=int)
+    limit = max(1, min(limit, 60))  # clamp 1..60
+
+    # Only show published listings to residents
+    listings = (
+        Listing.query
+        .filter(Listing.status == "PUBLISHED")
+        .order_by(Listing.updated_at.desc())
+        .limit(60)  # fetch more then python-filter by city
+        .all()
+    )
+
+    out = []
+    for l in listings:
+        d = l.to_dict()
+
+        # Optional: filter by city (works across SQLite/MySQL/Postgres safely)
+        if city:
+            loc_city = ((d.get("location") or {}).get("city") or "").strip().lower()
+            if city not in loc_city:
+                continue
+
+        # Build light "card" fields (optional but nice)
+        photos = d.get("photos") or []
+        cover = photos[0] if isinstance(photos, list) and photos else None
+
+        out.append({
+            "id": d["id"],
+            "title": d.get("title") or "Untitled space",
+            "city": (d.get("location") or {}).get("city") or "",
+            "barangay": (d.get("location") or {}).get("barangay") or "",
+            "price": (d.get("capacity") or {}).get("price") if isinstance(d.get("capacity"), dict) else None,
+            "cover": cover,
+            "status": d.get("status"),
+        })
+
+        if len(out) >= limit:
+            break
+
+    return jsonify({"listings": out}), 200
+

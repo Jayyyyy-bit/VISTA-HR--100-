@@ -14,6 +14,8 @@ function setListingId(id) {
     localStorage.setItem("listing_id", String(id));
 }
 
+
+
 async function apiFetch(path, options = {}) {
     const token = getToken();
 
@@ -189,7 +191,7 @@ window.ListingStore = (() => {
 
         const existingId = getListingId();
         if (existingId) {
-            // already created draft before; don't create new one
+            saveDraft({ listing_id: Number(existingId) });
             return { message: "Draft already exists", listing_id: Number(existingId) };
         }
 
@@ -198,7 +200,10 @@ window.ListingStore = (() => {
             body: JSON.stringify({ placeType: d.placeType }),
         });
 
-        setListingId(data.listing.id);
+        const id = data?.listing?.id;
+        if (!id) throw { error: "Server did not return listing id" };
+
+        setListingId(id);
         return data;
     }
 

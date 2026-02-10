@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Resident Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./resident_home.css" />
+</head>
+
+<body>
+
+    <!-- Auth guard -->
+    <script src="../auth/sessionGuard.js"></script>
+    <script>
+        if (!window.requireResident()) throw new Error("Unauthorized");
+    </script>
+
+    <!-- Top bar -->
+    <header class="topbar">
+        <div class="logo">VISTA-HR</div>
+
+        <div class="searchBox">
+            <input type="text" placeholder="Search by city or property" />
+            <button type="button">🔍</button>
+        </div>
+
+        <button id="logoutBtn" class="ghostBtn" type="button">Logout</button>
+    </header>
+
+    <main class="container" id="sections"></main>
+
+    <script src="./resident_home.js"></script>
+</body>
+
+</html>

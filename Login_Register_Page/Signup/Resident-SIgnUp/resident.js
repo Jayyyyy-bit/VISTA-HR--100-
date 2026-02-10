@@ -3,6 +3,28 @@ lucide.createIcons();
 const LS_USERS_KEY = "vista_users";
 const LS_SESSION_KEY = "vista_session_user";
 
+const API_BASE = "http://127.0.0.1:5000/api";
+
+// Register resident via backend API
+async function apiRegisterResident(payload) {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        // backend might return {message: "..."} or {error: "..."}
+        const msg = data?.message || data?.error || "Registration failed.";
+        throw new Error(msg);
+    }
+
+    return data; // { message, user, access_token }
+}
+
+
 const form = document.getElementById("residentForm");
 
 const firstName = document.querySelector('input[name="firstName"]');
@@ -221,7 +243,7 @@ confirmPassword.addEventListener("input", () => {
 });
 
 // Submit
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     let ok = true;
@@ -234,6 +256,7 @@ form.addEventListener("submit", (e) => {
     const pw = password.value;
     const cpw = confirmPassword.value;
 
+    // ---------- validations (keep yours) ----------
     if (!fn) { setInvalid(firstName, firstNameError, "First name is required.", true); ok = false; firstInvalid ??= firstName; }
     else if (!isValidNamePart(fn)) { setInvalid(firstName, firstNameError, "First name must contain letters only.", true); ok = false; firstInvalid ??= firstName; }
     else setValid(firstName, firstNameError);
@@ -244,12 +267,7 @@ form.addEventListener("submit", (e) => {
 
     if (!em) { setInvalid(email, emailError, "Email is required.", true); ok = false; firstInvalid ??= email; }
     else if (!isEmailValid(em)) { setInvalid(email, emailError, "Please enter a valid email address.", true); ok = false; firstInvalid ??= email; }
-    else {
-        const users = readUsers();
-        const exists = users.some(u => (u.email || "").toLowerCase() === em);
-        if (exists) { setInvalid(email, emailError, "This email is already registered.", true); ok = false; firstInvalid ??= email; }
-        else setValid(email, emailError);
-    }
+    else setValid(email, emailError);
 
     if (!ph) { setInvalid(phoneWrap, phoneError, "Phone number is required.", true); ok = false; firstInvalid ??= phone; }
     else if (ph.length !== 10 || !ph.startsWith("9")) { setInvalid(phoneWrap, phoneError, "Enter valid number: +63 9XXXXXXXXX", true); ok = false; firstInvalid ??= phone; }
@@ -272,25 +290,37 @@ form.addEventListener("submit", (e) => {
         return;
     }
 
-    const users = readUsers();
+    // ---------- DB register ----------
+    try {
+        // optional: disable submit button if meron ka
+        // form.querySelector("button[type=submit]")?.setAttribute("disabled", "true");
 
-    const newUser = {
-        id: (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
-        role: "RESIDENT",
-        firstName: fn,
-        lastName: ln,
-        fullName: `${fn} ${ln}`,
-        email: em,
-        phone: "+63" + ph,
-        passwordHash: fakeHash(pw),
-        createdAt: new Date().toISOString()
-    };
+        const data = await apiRegisterResident({
+            email: em,
+            password: pw,
+            role: "RESIDENT",
 
-    users.push(newUser);
-    saveUsers(users);
+            // NOTE: backend register currently only accepts email/password/role
+            // We’ll save name/phone later via a "profile update" endpoint.
+        });
 
-    localStorage.setItem(LS_SESSION_KEY, JSON.stringify({ userId: newUser.id, role: newUser.role }));
+        // ✅ Save token + user session (same key your login uses)
+        localStorage.setItem(LS_SESSION_KEY, JSON.stringify({
+            user: data.user,
+            token: data.access_token,
+            role: data.user.role,
+            createdAt: new Date().toISOString()
+        }));
 
-    // Redirect (you can change this later to resident dashboard/home)
-    window.location.href = "../../Login/login.html";
+        // redirect
+        window.location.href = "../../Resident-SIgnUp/quick_guide.html";
+
+    } catch (err) {
+        // show backend errors nicely
+        setInvalid(email, emailError, err.message || "Registration failed.", true);
+        scrollToField(email);
+    } finally {
+        // form.querySelector("button[type=submit]")?.removeAttribute("disabled");
+    }
 });
+

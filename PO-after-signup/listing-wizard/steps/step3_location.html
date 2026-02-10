@@ -15,52 +15,67 @@
 
         <div class="field">
             <label>Unit / Floor (optional)</label>
-            <input id="unit" type="text" placeholder="Unit 2B, 3rd floor" />
+            <input id="unit" type="text" />
         </div>
 
         <div class="field">
             <label>Building (optional)</label>
-            <input id="building" type="text" placeholder="Building name" />
+            <input id="building" type="text" />
         </div>
 
         <div class="field full">
             <label>Street address *</label>
-            <input id="street" type="text" placeholder="House no. + street" required />
+            <input id="street" type="text" required />
+            <div class="fieldError" id="streetErr"></div>
         </div>
 
         <div class="field">
-            <label>Barangay (optional)</label>
-            <input id="barangay" type="text" placeholder="Barangay / District" />
+            <label>Barangay *</label>
+
+            <div class="suggestWrap">
+                <input id="barangay" type="text" autocomplete="off" />
+                <div id="barangaySuggest" class="suggestBox hidden" role="listbox"></div>
+            </div>
+
+            <div class="fieldError" id="barangayErr"></div>
         </div>
 
         <div class="field">
             <label>City / Municipality *</label>
 
-            <div class="selectWrap">
-                <select id="city" required>
-                    <option value="">Select a city</option>
-                    <!-- options injected by JS -->
-                </select>
+            <!-- Keep real select (hidden) for compatibility -->
+            <select id="city" required class="nativeSelect">
+                <option value="">Select a city</option>
+            </select>
+
+            <!-- Custom dropdown -->
+            <div class="dd" id="cityDD">
+                <button type="button" class="ddBtn" id="cityBtn" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="ddVal" id="cityVal">Select a city</span>
+                    <span class="ddChevron"></span>
+                </button>
+
+                <div class="ddMenu" id="cityMenu" role="listbox" aria-label="City options">
+                    <!-- injected by JS -->
+                </div>
             </div>
         </div>
+
 
         <div class="field">
             <label class="labelRow">
                 Province *
                 <span class="hintIcon" tabindex="0"
-                    data-tip="Project scope is limited to Metro Manila only (per proposal).">
-                    i
-                </span>
+                    data-tip="Project scope is limited to Metro Manila only (per proposal).">i</span>
             </label>
-
             <input id="province" type="text" value="Metro Manila" readonly />
+            <div class="fieldError" id="provinceErr"></div>
         </div>
-
-
 
         <div class="field">
             <label>ZIP code *</label>
-            <input id="zip" type="text" inputmode="numeric" placeholder="ZIP" required />
+            <input id="zip" type="text" inputmode="numeric" required />
+            <div class="fieldError" id="zipErr"></div>
         </div>
 
         <div class="divider full"></div>
@@ -68,7 +83,17 @@
         <div class="preview full">
             <div class="previewTitle">Preview</div>
             <div class="previewLine" id="addrPreview">—</div>
-            <div class="previewHint">Preview will add on the update after API is integrated.</div>
+            <div class="previewHint">Map preview will update as you type.</div>
+        </div>
+
+        <div class="mapWrap full">
+            <div class="mapHeader">
+                <div class="mapTitle">Map preview</div>
+                <div class="mapSub">Drag the pin to refine location (optional).</div>
+            </div>
+
+            <div id="osmMap" class="osmMap"></div>
+            <div class="mapHint" id="mapHint">Enter street + city + ZIP to preview.</div>
         </div>
     </form>
 </section>

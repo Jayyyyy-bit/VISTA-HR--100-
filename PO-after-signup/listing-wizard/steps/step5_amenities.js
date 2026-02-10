@@ -93,8 +93,6 @@ window.Step5Init = function Step5Init({ nextBtn }) {
             { key: "CITY_VIEW", label: "City view", icon: "building" },
             { key: "PARK_VIEW", label: "Park view", icon: "trees" },
 
-            { key: "FAST_WIFI", label: "Fast Wi-Fi", icon: "zap" },
-            { key: "WIFI_WORK_READY", label: "Work-ready Wi-Fi", icon: "signal" },
 
             { key: "EXTRA_STORAGE", label: "Extra storage", icon: "archive" },
             { key: "LONG_STAY", label: "Long-stay friendly", icon: "calendar-days" },
