@@ -1,14 +1,16 @@
 # Python
-.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Environment
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
 .env
 
-# Node / frontend
-node_modules/
-
-# OS junk
+# OS
 .DS_Store
 Thumbs.db
