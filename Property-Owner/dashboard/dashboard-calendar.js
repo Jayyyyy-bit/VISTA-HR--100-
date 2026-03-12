@@ -178,11 +178,11 @@
             const active = state.activePopoverDate === ymd ? "isActive" : "";
 
             const barMarkup = `
-    ${visibleBars.map((bar) => `
-        <span class="calendarMiniBar ${bar.cls}">${bar.label}</span>
-    `).join("")}
-    ${hiddenCount > 0 ? `<span class="calendarMiniMore">+${hiddenCount} more</span>` : ""}
-`;
+            ${visibleBars.map((bar) => `
+          <span class="calendarMiniBar ${bar.cls}">${bar.label}</span>
+         `).join("")}
+           ${hiddenCount > 0 ? `<span class="calendarMiniMore">+${hiddenCount} more</span>` : ""}
+          `;
 
             const summary = dayBookings.length
                 ? `<span class="calendarDayCount">${dayBookings.length} stay${dayBookings.length > 1 ? "s" : ""}</span>`
