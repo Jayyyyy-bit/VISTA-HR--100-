@@ -1,8 +1,6 @@
 lucide.createIcons();
 
-const LS_USERS_KEY = "vista_users";
 const LS_SESSION_KEY = "vista_session_user";
-
 const API_BASE = "http://127.0.0.1:5000/api";
 
 // Register resident via backend API
@@ -10,20 +8,19 @@ async function apiRegisterResident(payload) {
     const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
     });
 
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-        // backend might return {message: "..."} or {error: "..."}
         const msg = data?.message || data?.error || "Registration failed.";
         throw new Error(msg);
     }
 
-    return data; // { message, user, access_token }
+    return data; // { message, user }
 }
-
 
 const form = document.getElementById("residentForm");
 
@@ -58,29 +55,18 @@ document.getElementById("backBtn").addEventListener("click", () => {
     window.location.href = "../roles.html";
 });
 
-function readUsers() {
-    try { return JSON.parse(localStorage.getItem(LS_USERS_KEY)) || []; }
-    catch { return []; }
-}
-function saveUsers(users) {
-    localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
-}
-function fakeHash(pw) {
-    return btoa(unescape(encodeURIComponent(pw))).split("").reverse().join("");
-}
-
 function titleCaseWords(str) {
     return str
         .toLowerCase()
         .split(" ")
         .filter(Boolean)
-        .map(word =>
+        .map((word) =>
             word
                 .split("-")
-                .map(part =>
+                .map((part) =>
                     part
                         .split("'")
-                        .map(p => (p ? p[0].toUpperCase() + p.slice(1) : ""))
+                        .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : ""))
                         .join("'")
                 )
                 .join("-")
@@ -159,7 +145,10 @@ function scrollToField(el) {
 // Email
 email.addEventListener("input", () => {
     const val = email.value.trim();
-    if (!val) { setValid(email, emailError); return; }
+    if (!val) {
+        setValid(email, emailError);
+        return;
+    }
     if (!isEmailValid(val)) setInvalid(email, emailError, "Please enter a valid email address.");
     else setValid(email, emailError);
 });
@@ -169,7 +158,10 @@ phone.addEventListener("input", () => {
     phone.value = phone.value.replace(/\D/g, "");
     if (phone.value.length > 10) phone.value = phone.value.slice(0, 10);
 
-    if (!phone.value) { setValid(phoneWrap, phoneError); return; }
+    if (!phone.value) {
+        setValid(phoneWrap, phoneError);
+        return;
+    }
 
     if (!phone.value.startsWith("9")) {
         setInvalid(phoneWrap, phoneError, "PH number must start with 9 (e.g. 9XXXXXXXXX).");
@@ -242,7 +234,7 @@ confirmPassword.addEventListener("input", () => {
     }
 });
 
-// Submit
+// Submit (DB register)
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -256,7 +248,7 @@ form.addEventListener("submit", async (e) => {
     const pw = password.value;
     const cpw = confirmPassword.value;
 
-    // ---------- validations (keep yours) ----------
+    // validations
     if (!fn) { setInvalid(firstName, firstNameError, "First name is required.", true); ok = false; firstInvalid ??= firstName; }
     else if (!isValidNamePart(fn)) { setInvalid(firstName, firstNameError, "First name must contain letters only.", true); ok = false; firstInvalid ??= firstName; }
     else setValid(firstName, firstNameError);
@@ -290,37 +282,25 @@ form.addEventListener("submit", async (e) => {
         return;
     }
 
-    // ---------- DB register ----------
     try {
-        // optional: disable submit button if meron ka
-        // form.querySelector("button[type=submit]")?.setAttribute("disabled", "true");
-
         const data = await apiRegisterResident({
             email: em,
             password: pw,
             role: "RESIDENT",
-
-            // NOTE: backend register currently only accepts email/password/role
-            // We’ll save name/phone later via a "profile update" endpoint.
+            first_name: fn,
+            last_name: ln,
+            phone: "+63" + ph,
         });
 
-        // ✅ Save token + user session (same key your login uses)
-        localStorage.setItem(LS_SESSION_KEY, JSON.stringify({
-            user: data.user,
-            token: data.access_token,
-            role: data.user.role,
-            createdAt: new Date().toISOString()
-        }));
+        // ✅ cookie auth: no token stored
+        AuthGuard.saveSession({ user: data.user });
 
         // redirect
-        window.location.href = "../../Resident-SIgnUp/quick_guide.html";
+        window.location.href = "./quick_guide.html";
+
 
     } catch (err) {
-        // show backend errors nicely
         setInvalid(email, emailError, err.message || "Registration failed.", true);
         scrollToField(email);
-    } finally {
-        // form.querySelector("button[type=submit]")?.removeAttribute("disabled");
     }
 });
-

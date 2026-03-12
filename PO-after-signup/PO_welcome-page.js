@@ -64,7 +64,8 @@ function goWizard() {
 
 function goDashboard() {
     // Later: safeGoTo("../../../Property-Owner/dashboard.html");
-    alert("Owner dashboard is coming next.");
+    safeGoTo("../Property-Owner/dashboard/property-owner-dashboard.html");
+
 }
 
 // Events

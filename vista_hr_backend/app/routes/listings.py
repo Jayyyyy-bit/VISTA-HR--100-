@@ -61,6 +61,126 @@ def _commit_or_500(payload: dict, status_code: int = 200):
         return json_error("Database error", 500)
 
 
+def _owner_listing_limit(user) -> int:
+    # ✅ your rule:
+    # unverified owners: 3 drafts/ready max
+    # verified owners: 10 drafts/ready max
+    return 10 if bool(getattr(user, "is_verified", False)) else 3
+
+
+def _active_owner_listings_count(user) -> int:
+    # counts "in progress" + "ready" (not published/archived)
+    return (
+        Listing.query
+        .filter(
+            Listing.owner_id == user.id,
+            Listing.status.in_(["DRAFT", "READY"])
+        )
+        .count()
+    )
+
+
+def _is_listing_complete(listing: Listing) -> bool:
+    # minimal completion rule (matches your step requirements)
+    # NOTE: backend is truth; you can extend later.
+    if not listing.place_type:
+        return False
+    if not listing.space_type:
+        return False
+
+    loc = listing.location or {}
+    if not (loc.get("street") and loc.get("city") and loc.get("zip")):
+        return False
+
+    cap = listing.capacity or {}
+    try:
+        guests = int(cap.get("guests", 0))
+    except Exception:
+        guests = 0
+    if guests < 1:
+        return False
+
+    amenities = listing.amenities or {}
+    a = amenities.get("appliances") or []
+    b = amenities.get("activities") or []
+    c = amenities.get("safety") or []
+    if (len(a) + len(b) + len(c)) < 1:
+        return False
+
+    highlights = listing.highlights or []
+    if len(highlights) < 1:
+        return False
+
+    photos = listing.photos or []
+    if not isinstance(photos, list) or len(photos) < 5:
+        return False
+
+    if not listing.title or len(listing.title.strip()) < 3:
+        return False
+    if not listing.description or len(listing.description.strip()) < 10:
+        return False
+
+    return True
+
+
+# =========================
+# OWNER: Dashboard list
+# =========================
+@listings_bp.get("/listings/mine")
+@require_role("OWNER")
+def my_listings():
+    user = g.current_user
+
+    listings = (
+        Listing.query
+        .filter(Listing.owner_id == user.id)
+        .order_by(Listing.updated_at.desc())
+        .all()
+    )
+
+    out = []
+    for l in listings:
+        d = l.to_dict()
+
+        # cover extraction
+        photos = d.get("photos") or []
+        cover = None
+        if isinstance(photos, list) and photos:
+            # if photos are objects, pick isCover first
+            if isinstance(photos[0], dict):
+                cover_obj = next((p for p in photos if isinstance(p, dict) and p.get("isCover")), None)
+                cover = (cover_obj or photos[0]).get("url") if isinstance((cover_obj or photos[0]), dict) else None
+            else:
+                # if photos are strings
+                cover = photos[0]
+
+        # compute "badge" state
+        status = d.get("status") or "DRAFT"
+        complete = _is_listing_complete(l)
+        # if complete but status still DRAFT, front can show "In progress" but backend will fix on step-8 anyway
+
+        out.append({
+            "id": d.get("id"),
+            "status": status,
+            "current_step": d.get("current_step") or 1,
+            "updated_at": d.get("updated_at"),
+            "created_at": d.get("created_at"),
+            "title": d.get("title") or "",
+            "city": (d.get("location") or {}).get("city") or "",
+            "barangay": (d.get("location") or {}).get("barangay") or "",
+            "cover": cover,              #  dashboard image
+            "complete": bool(complete),  #  for "Ready to publish" UI
+            "photos": photos,
+        })
+
+    return jsonify({
+        "listings": out,
+        "limit": _owner_listing_limit(user),
+        "active_count": _active_owner_listings_count(user),
+        "owner_verified": bool(getattr(user, "is_verified", False)),
+    }), 200
+
+
 # =========================
 # Read / Resume endpoints
 # =========================
@@ -77,27 +197,55 @@ def get_listing(listing_id: int):
 @require_role("OWNER")
 def get_latest_draft():
     user = g.current_user
-
-    # NOTE: requires Listing.updated_at for best results.
-    # If you don't have it, change to: .order_by(Listing.id.desc())
     listing = (
         Listing.query
-        .filter_by(owner_id=user.id, status="DRAFT")
+        .filter(
+            Listing.owner_id == user.id,
+            Listing.status.in_(["DRAFT", "READY"])
+        )
         .order_by(Listing.updated_at.desc())
         .first()
     )
-
     return jsonify({"listing": listing.to_dict() if listing else None}), 200
+
+# =========================
+# Delete listing (OWNER)
+# =========================
+@listings_bp.delete("/listings/<int:listing_id>")
+@require_role("OWNER")
+def delete_listing(listing_id: int):
+    listing = _get_owned_listing_or_404(listing_id)
+    if not listing:
+        return json_error("Listing not found", 404)
+
+    try:
+        db.session.delete(listing)
+        db.session.commit()
+        return jsonify({"message": "Listing deleted", "id": listing_id}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
 
 
 # =========================
-# Step 1 (Create draft)
+# Step 1 (Create draft) + LIMIT
 # =========================
 @listings_bp.post("/listings/step-1")
 @require_role("OWNER")
 def create_step1():
     user = g.current_user
     data = request.get_json(silent=True) or {}
+
+    # ✅ enforce limit here (backend truth)
+    limit = _owner_listing_limit(user)
+    active_count = _active_owner_listings_count(user)
+    if active_count >= limit:
+        return json_error(
+            "Listing limit reached",
+            403,
+            fields={"limit": f"You can only have {limit} active listings (DRAFT/READY)."}
+        )
 
     place_type = data.get("placeType") or data.get("place_type")
     if place_type is not None and (not isinstance(place_type, str) or not place_type.strip()):
@@ -113,11 +261,51 @@ def create_step1():
     try:
         db.session.add(listing)
         db.session.commit()
-        return jsonify({"message": "Draft listing created", "listing": listing.to_dict()}), 201
+        return jsonify({
+            "message": "Draft listing created",
+            "listing": listing.to_dict(),
+            "limit": limit,
+            "active_count": active_count + 1
+        }), 201
     except SQLAlchemyError:
         db.session.rollback()
         return json_error("Database error", 500)
+    
 
+
+# =========================
+# Step 1 Place type 
+# =========================
+
+@listings_bp.patch("/listings/<int:listing_id>/step-1")
+@require_role("OWNER")
+def update_step1(listing_id: int):
+    data = request.get_json(silent=True) or {}
+    listing = _get_owned_listing_or_404(listing_id)
+    if not listing:
+        return json_error("Listing not found", 404)
+
+    place_type = data.get("placeType") or data.get("place_type")
+    if not place_type or not isinstance(place_type, str) or not place_type.strip():
+        return json_error(
+            "Validation failed",
+            400,
+            fields={"placeType": "Must be a non-empty string."}
+        )
+
+    listing.place_type = place_type.strip()
+    listing.current_step = max(listing.current_step or 1, 1)
+    listing.status = "DRAFT"
+
+    try:
+        db.session.commit()
+        return jsonify({
+            "message": "Step 1 saved",
+            "listing": listing.to_dict()
+        }), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
 
 # =========================
 # Step 2 (space type)
@@ -126,7 +314,6 @@ def create_step1():
 @require_role("OWNER")
 def update_step2(listing_id: int):
     data = request.get_json(silent=True) or {}
-
     listing = _get_owned_listing_or_404(listing_id)
     if not listing:
         return json_error("Listing not found", 404)
@@ -137,6 +324,7 @@ def update_step2(listing_id: int):
 
     listing.space_type = space_type.strip()
     listing.current_step = max(listing.current_step or 1, 2)
+    listing.status = "DRAFT"  # unfinished stays draft
 
     return _commit_or_500({"message": "Step 2 saved", "listing": listing.to_dict()}, 200)
 
@@ -148,7 +336,6 @@ def update_step2(listing_id: int):
 @require_role("OWNER")
 def update_step3(listing_id: int):
     data = request.get_json(silent=True) or {}
-
     listing = _get_owned_listing_or_404(listing_id)
     if not listing:
         return json_error("Listing not found", 404)
@@ -159,10 +346,9 @@ def update_step3(listing_id: int):
     zip_raw = data.get("zip")
 
     zip_code = str(zip_raw).strip() if zip_raw is not None else ""
-    province = "Metro Manila"  # force always
+    province = "Metro Manila"
 
     fields: Dict[str, str] = {}
-
     if not isinstance(street, str) or not street.strip():
         fields["street"] = "Street is required."
     if not isinstance(city, str) or not city.strip():
@@ -173,29 +359,21 @@ def update_step3(listing_id: int):
         fields["zip"] = "ZIP must be a 4-digit code."
 
     ncr = _load_ncr_barangays()
-
-    # city must exist in NCR dataset
     if isinstance(city, str) and city.strip():
         if city not in ncr:
             fields["city"] = f"Unknown city '{city}'."
-
-        # barangay optional but if provided must match city list
         if barangay and city in ncr:
             allowed = ncr.get(city) or []
-            allowed_norm = { _norm(b) for b in allowed }
+            allowed_norm = {_norm(b) for b in allowed}
             if _norm(barangay) not in allowed_norm:
                 fields["barangay"] = f"Unknown barangay '{barangay}' for {city}."
 
     if fields:
         return json_error("Validation failed", 400, fields=fields)
 
-    # store as JSON (keep FE payload), but enforce province + normalized zip
-    listing.location = {
-        **data,
-        "province": province,
-        "zip": zip_code,
-    }
+    listing.location = {**data, "province": province, "zip": zip_code}
     listing.current_step = max(listing.current_step or 1, 3)
+    listing.status = "DRAFT"
 
     return _commit_or_500({"message": "Step 3 saved", "listing": listing.to_dict()}, 200)
 
@@ -207,7 +385,6 @@ def update_step3(listing_id: int):
 @require_role("OWNER")
 def update_step4(listing_id: int):
     data = request.get_json(silent=True) or {}
-
     listing = _get_owned_listing_or_404(listing_id)
     if not listing:
         return json_error("Listing not found", 404)
@@ -226,6 +403,7 @@ def update_step4(listing_id: int):
 
     listing.capacity = cap
     listing.current_step = max(listing.current_step or 1, 4)
+    listing.status = "DRAFT"
 
     return _commit_or_500({"message": "Step 4 saved", "listing": listing.to_dict()}, 200)
 
@@ -237,7 +415,6 @@ def update_step4(listing_id: int):
 @require_role("OWNER")
 def update_step5(listing_id: int):
     data = request.get_json(silent=True) or {}
-
     listing = _get_owned_listing_or_404(listing_id)
     if not listing:
         return json_error("Listing not found", 404)
@@ -259,6 +436,7 @@ def update_step5(listing_id: int):
 
     listing.amenities = {"appliances": appliances, "activities": activities, "safety": safety}
     listing.current_step = max(listing.current_step or 1, 5)
+    listing.status = "DRAFT"
 
     return _commit_or_500({"message": "Step 5 saved", "listing": listing.to_dict()}, 200)
 
@@ -270,7 +448,6 @@ def update_step5(listing_id: int):
 @require_role("OWNER")
 def update_step6(listing_id: int):
     data = request.get_json(silent=True) or {}
-
     listing = _get_owned_listing_or_404(listing_id)
     if not listing:
         return json_error("Listing not found", 404)
@@ -278,7 +455,6 @@ def update_step6(listing_id: int):
     highlights = data.get("highlights")
     if not isinstance(highlights, list):
         return json_error("Validation failed", 400, fields={"highlights": "Must be an array."})
-
     if len(highlights) < 1:
         return json_error("Validation failed", 400, fields={"highlights": "Select at least 1 highlight."})
     if len(highlights) > 5:
@@ -286,6 +462,7 @@ def update_step6(listing_id: int):
 
     listing.highlights = highlights
     listing.current_step = max(listing.current_step or 1, 6)
+    listing.status = "DRAFT"
 
     return _commit_or_500({"message": "Step 6 saved", "listing": listing.to_dict()}, 200)
 
@@ -297,7 +474,6 @@ def update_step6(listing_id: int):
 @require_role("OWNER")
 def update_step7(listing_id: int):
     data = request.get_json(silent=True) or {}
-
     listing = _get_owned_listing_or_404(listing_id)
     if not listing:
         return json_error("Listing not found", 404)
@@ -305,24 +481,23 @@ def update_step7(listing_id: int):
     photos = data.get("photos")
     if not isinstance(photos, list):
         return json_error("Validation failed", 400, fields={"photos": "Must be an array."})
-
     if len(photos) < 5:
         return json_error("Validation failed", 400, fields={"photos": "Minimum 5 photos required."})
 
     listing.photos = photos
     listing.current_step = max(listing.current_step or 1, 7)
+    listing.status = "DRAFT"
 
     return _commit_or_500({"message": "Step 7 saved", "listing": listing.to_dict()}, 200)
 
 
 # =========================
-# Step 8 (title + description)
+# Step 8 (title + description) -> mark READY if complete and unverified
 # =========================
 @listings_bp.patch("/listings/<int:listing_id>/step-8")
 @require_role("OWNER")
 def update_step8(listing_id: int):
     data = request.get_json(silent=True) or {}
-
     listing = _get_owned_listing_or_404(listing_id)
     if not listing:
         return json_error("Listing not found", 404)
@@ -339,11 +514,24 @@ def update_step8(listing_id: int):
     listing.description = description.strip()
     listing.current_step = max(listing.current_step or 1, 8)
 
+    # ✅ your rule:
+    # unfinished = DRAFT
+    # finished = READY (if owner not verified)
+    user = g.current_user
+    if _is_listing_complete(listing):
+        if bool(getattr(user, "is_verified", False)):
+            # you can keep it READY too if you prefer manual publish
+            listing.status = "PUBLISHED"
+        else:
+            listing.status = "READY"
+    else:
+        listing.status = "DRAFT"
+
     return _commit_or_500({"message": "Step 8 saved", "listing": listing.to_dict()}, 200)
 
 
 # =========================
-# Submit for verification
+# Publish Listing (optional button)
 # =========================
 @listings_bp.post("/listings/<int:listing_id>/submit-for-verification")
 @require_role("OWNER")
@@ -356,38 +544,47 @@ def submit_for_verification(listing_id: int):
     if listing.owner_id != user.id:
         return json_error("Forbidden", 403)
 
-    listing.status = "PENDING_VERIFICATION" if not user.is_verified else "DRAFT"
+    if not _is_listing_complete(listing):
+        return json_error("Listing not complete", 400, fields={"listing": "Complete all steps before submitting."})
+
+    if user.is_verified:
+        listing.status = "PUBLISHED"
+        msg = "Published"
+    else:
+        listing.status = "READY"
+        msg = "Ready (blocked until owner verification)"
+
     return _commit_or_500(
-        {"message": "Submitted", "listing": listing.to_dict(), "owner_verified": bool(user.is_verified)},
+        {"message": msg, "listing": listing.to_dict(), "owner_verified": bool(user.is_verified)},
         200
     )
 
+
+# =========================
+# Resident feed (PUBLISHED only)
+# =========================
 @listings_bp.get("/listings/feed")
 def resident_feed():
     city = (request.args.get("city") or "").strip().lower()
     limit = request.args.get("limit", 30, type=int)
-    limit = max(1, min(limit, 60))  # clamp 1..60
+    limit = max(1, min(limit, 60))
 
-    # Only show published listings to residents
     listings = (
         Listing.query
         .filter(Listing.status == "PUBLISHED")
         .order_by(Listing.updated_at.desc())
-        .limit(60)  # fetch more then python-filter by city
+        .limit(60)
         .all()
     )
 
     out = []
     for l in listings:
         d = l.to_dict()
-
-        # Optional: filter by city (works across SQLite/MySQL/Postgres safely)
         if city:
             loc_city = ((d.get("location") or {}).get("city") or "").strip().lower()
             if city not in loc_city:
                 continue
 
-        # Build light "card" fields (optional but nice)
         photos = d.get("photos") or []
         cover = photos[0] if isinstance(photos, list) and photos else None
 
@@ -405,4 +602,3 @@ def resident_feed():
             break
 
     return jsonify({"listings": out}), 200
-

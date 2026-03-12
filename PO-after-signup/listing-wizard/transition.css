@@ -2,14 +2,19 @@
 
 #stepHost {
     opacity: 1;
-    transition: opacity 450ms ease;
-    will-change: opacity;
+    transform: translateY(0);
+    transition:
+        opacity 420ms cubic-bezier(.2, .9, .2, 1),
+        transform 420ms cubic-bezier(.2, .9, .2, 1);
+    will-change: opacity, transform;
 }
 
 #stepHost.fx-out {
     opacity: 0;
+    transform: translateY(12px) scale(.98);
 }
 
 #stepHost.fx-in {
     opacity: 1;
+    transform: translateY(0) scale(1);
 }

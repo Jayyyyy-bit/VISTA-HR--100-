@@ -1,5 +1,3 @@
-// steps/step1.js (or wherever your Step 1 script lives)
-
 window.Step1Init = function ({ nextBtn }) {
     const { readDraft, saveDraft, syncStep1 } = window.ListingStore;
 
@@ -61,9 +59,8 @@ window.Step1Init = function ({ nextBtn }) {
         return;
     }
 
-    // render cards sa current selection
     const draft = readDraft();
-    const selected = draft.placeType;
+    const selected = draft.placeType || "";
 
     grid.innerHTML = PLACE_TYPES.map((t) => {
         const sel = selected === t.key ? "selected" : "";
@@ -75,38 +72,63 @@ window.Step1Init = function ({ nextBtn }) {
     `;
     }).join("");
 
-    lucide.createIcons();
+    window.lucide?.createIcons?.();
 
-    // disabled yung next but pag walang selection 
     nextBtn.disabled = !selected;
 
     function applyTips(key) {
         const g = GUIDANCE[key];
         if (!g) {
-            window.SidePanel.setTips({ selectedLabel: "—" });
+            window.SidePanel?.setTips?.({ selectedLabel: "—" });
             return;
         }
-        window.SidePanel.setTips({ selectedLabel: g.title, tips: g.tips });
+        window.SidePanel?.setTips?.({ selectedLabel: g.title, tips: g.tips });
     }
 
     applyTips(selected);
-    window.SidePanel.refresh();
+    window.SidePanel?.refresh?.();
 
-    // card click selection
     grid.querySelectorAll(".card").forEach((btn) => {
         btn.addEventListener("click", () => {
-            saveDraft({ placeType: btn.dataset.key });
+            const key = btn.dataset.key;
+            saveDraft({ placeType: key });
 
             grid.querySelectorAll(".card").forEach((b) => b.classList.remove("selected"));
             btn.classList.add("selected");
 
             nextBtn.disabled = false;
 
-            applyTips(btn.dataset.key);
-            window.SidePanel.refresh();
+            applyTips(key);
+            window.SidePanel?.refresh?.();
         });
     });
 
-    //  Next button sync to backend (creates listing + saves listing_id)
+    let submitting = false;
 
+    nextBtn.onclick = async () => {
+        if (submitting) return;
+
+        const latestDraft = readDraft();
+        if (!latestDraft.placeType) {
+            alert("Please select a place type first.");
+            return;
+        }
+
+        try {
+            submitting = true;
+            nextBtn.disabled = true;
+
+            const result = await syncStep1();
+            console.log("[Step1] sync success:", result);
+
+            // move to step 2
+            window.location.hash = "#/step-2";
+        } catch (err) {
+            console.error("[Step1] sync failed:", err);
+            alert(err?.error || err?.message || "Failed to save Step 1.");
+            nextBtn.disabled = false;
+        } finally {
+            submitting = false;
+        }
+    };
 };

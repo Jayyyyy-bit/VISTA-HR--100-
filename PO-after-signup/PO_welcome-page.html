@@ -129,19 +129,17 @@
         </section>
     </main>
     <div class="page-transition" aria-hidden="true"></div>
-    <script src="../../transition.js"></script>
-    <script src="PO_welcome-page.js"></script>
-    <script>lucide.createIcons();</script>
-
     <button class="back-btn back-floating" id="backBtn" type="button">
         <i data-lucide="arrow-left"></i>
         <span>Back</span>
     </button>
 
-    <script src="/PO-after-signup/listing-wizard/core/transition.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/auth/sessionGuard.js"></script>
     <script src="PO_welcome-page.js"></script>
     <script>
         lucide.createIcons();
+        (async () => { await AuthGuard.requireOwner(); })();
     </script>
 
 </body>

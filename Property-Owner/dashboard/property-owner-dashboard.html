@@ -3,108 +3,200 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VISTA-HR | Property Owner Dashboard</title>
 
+    <!--GOOGLE FONT LINK -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
 
-    <!-- ✅ use local lucide to avoid unpkg 404 -->
-    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
-
-    <!-- ✅ reuse wizard vibe -->
-    <link rel="stylesheet" href="/PO-after-signup/listing-wizard/wizard.css" />
-    <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css" />
-
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-calendar.css">
 </head>
 
 <body>
-    <!-- BG (same vibe) -->
-    <div class="bg" aria-hidden="true">
-        <div class="bg-grid"></div>
-        <div class="glow g1"></div>
-        <div class="glow g2"></div>
-    </div>
 
+    <!--  Topbar  -->
     <header class="topbar">
-        <div class="brand">
-            <span class="logo-box"></span>
-            <span class="brand-text">VISTA<span>-HR</span></span>
-        </div>
+        <div class="topbar-inner">
 
-        <div class="top-actions">
-            <button class="chip" id="btnHelp" type="button">Help</button>
-            <button class="chip primary" id="btnNewListing" type="button">Create listing</button>
-        </div>
-    </header>
+            <a class="brand" href="/resident/home">
+                <span class="brandDot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </a>
 
-    <main class="dash">
-        <div class="dashShell">
-            <div class="dashHead">
-                <div>
-                    <div class="dashKicker">Property owner</div>
-                    <h1 class="dashTitle">Dashboard</h1>
-                    <p class="dashSub">Manage your listings, bookings, and messages.</p>
-                </div>
+            <nav class="dashTabs" role="tablist" aria-label="Dashboard tabs">
+                <button class="dashTab active" data-tab="today" role="tab" aria-selected="true">Today</button>
+                <button class="dashTab" data-tab="calendar" role="tab" aria-selected="false">Calendar</button>
+                <button class="dashTab" data-tab="listings" role="tab" aria-selected="false">Listings</button>
+                <button class="dashTab" data-tab="messages" role="tab" aria-selected="false">Messages</button>
+            </nav>
 
-                <div class="dashTabs" role="tablist">
-                    <button class="dashTab isActive" data-tab="listings" type="button">
-                        <i data-lucide="home"></i><span>Listings</span>
+            <div class="rightTools">
+                <button class="btn ghost" id="switchResidentBtn" type="button">Switch to Resident</button>
+
+                <button class="avatarBtn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                    <span class="avatarCircle" id="avatarCircle">O</span>
+                </button>
+
+                <div class="profileMenu" id="profileMenu" aria-hidden="true">
+                    <button class="menuItem" id="menuAccount" type="button">
+                        <i data-lucide="user"></i><span>Account</span>
                     </button>
-                    <button class="dashTab" data-tab="calendar" type="button">
-                        <i data-lucide="calendar-days"></i><span>Calendar</span>
+                    <button class="menuItem" id="menuHelp" type="button">
+                        <i data-lucide="help-circle"></i><span>Help</span>
                     </button>
-                    <button class="dashTab" data-tab="messages" type="button">
-                        <i data-lucide="messages-square"></i><span>Messages</span>
+                    <div class="menuSep"></div>
+                    <button class="menuItem danger" id="menuLogout" type="button">
+                        <i data-lucide="log-out"></i><span>Logout</span>
                     </button>
-                    <span class="dashIndicator" id="dashIndicator"></span>
                 </div>
             </div>
 
-            <!-- Listings -->
-            <section class="dashPanel isActive" id="tab-listings">
-                <div class="panelTop">
-                    <div class="panelTitle">Your listings</div>
-                    <div class="panelActions">
-                        <button class="btn ghost" id="btnClearDraft" type="button">Clear draft</button>
-                        <button class="btn solid" id="btnContinue" type="button">Continue</button>
+        </div>
+    </header>
+
+    <!--  Main -->
+    <main class="dashMain">
+
+        <!-- TODAY -->
+        <section class="tabPanel active" id="tab-today" data-panel="today" role="tabpanel">
+            <div class="heroCard">
+                <div class="heroIcon">
+                    <i data-lucide="book-open"></i>
+                </div>
+                <div class="heroText">
+                    <h2>You don’t have any reservations</h2>
+                    <p>To get booked, you’ll need to complete and publish your listing.</p>
+                    <button class="btn solid" id="btnCompleteListing" type="button">Complete your listing</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- CALENDAR -->
+        <section class="tabPanel" id="tab-calendar" data-panel="calendar" role="tabpanel">
+            <div class="calendarPage" id="calendarPage">
+                <div class="calendarHeader">
+                    <div class="calendarIntro">
+                        <h2 class="pageTitle">Rental calendar</h2>
+                        <p class="pageSub">Manage availability, rental dates, and pricing for your units.</p>
+                    </div>
+
+                    <div class="calendarControls">
+                        <button class="btn ghost" id="calTodayBtn" type="button">Today</button>
+                        <button class="btn ghost" id="calPrevBtn" type="button" aria-label="Previous month">‹</button>
+                        <div class="calendarMonthLabel" id="calendarMonthLabel">Month Year</div>
+                        <button class="btn ghost" id="calNextBtn" type="button" aria-label="Next month">›</button>
                     </div>
                 </div>
 
-                <div class="listingGrid" id="listingGrid"></div>
-            </section>
+                <div class="calendarLayout">
+                    <div class="calendarMainCard">
+                        <div class="calendarWeekdays" id="calendarWeekdays"></div>
+                        <div class="calendarGrid" id="calendarGrid"></div>
+                    </div>
 
-            <!-- Calendar -->
-            <section class="dashPanel" id="tab-calendar">
-                <div class="emptyState">
-                    <div class="emptyIcon"><i data-lucide="calendar-days"></i></div>
-                    <div class="emptyTitle">Calendar (next)</div>
-                    <div class="emptySub">We’ll show booked dates per listing here (mock first, backend later).</div>
-                </div>
-            </section>
+                    <div class="calendarSidePanel" id="calendarSidePanel">
+                        <div class="calendarInspector" id="calendarInspector">
+                            <div class="calendarInspectorOverview" id="calendarInspectorOverview">
+                                <div class="calendarSideCard">
+                                    <div class="calendarSideLabel">Selected date</div>
+                                    <div class="calendarSelectedDateLarge" id="calendarSelectedDate">Select a date</div>
+                                    <div class="calendarSelectedMeta" id="calendarSelectedMeta">
+                                        Choose a day to view rental activity.
+                                    </div>
+                                </div>
 
-            <!-- Messages -->
-            <section class="dashPanel" id="tab-messages">
-                <div class="emptyState">
-                    <div class="emptyIcon"><i data-lucide="messages-square"></i></div>
-                    <div class="emptyTitle">Messages (next)</div>
-                    <div class="emptySub">We’ll add inbox + chat UI here (mock first, realtime later).</div>
+                                <div class="calendarSideCard">
+                                    <div class="calendarSideHead">
+                                        <h3 class="calendarSideTitle">Availability settings</h3>
+                                    </div>
+
+                                    <div class="calendarInfoRow">
+                                        <span>Minimum stay</span>
+                                        <strong>1 month</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Maximum stay</span>
+                                        <strong>12 months</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Status</span>
+                                        <strong id="calendarAvailabilityStatus">Available</strong>
+                                    </div>
+                                </div>
+
+                                <div class="calendarSideCard">
+                                    <div class="calendarSideHead">
+                                        <h3 class="calendarSideTitle">Price settings</h3>
+                                    </div>
+
+                                    <div class="calendarInfoRow">
+                                        <span>Base rent</span>
+                                        <strong>₱12,000 / month</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Discount</span>
+                                        <strong>10% monthly</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="calendarInspectorDetail" id="calendarInspectorDetail" hidden></div>
+                        </div>
+                    </div>
                 </div>
-            </section>
-        </div>
+            </div>
+        </section>
+
+        <!-- LISTINGS -->
+        <section class="tabPanel" id="tab-listings" data-panel="listings" role="tabpanel">
+            <div class="listingsHeader">
+                <div class="pageIntro">
+                    <h2 class="pageTitle">Your listings</h2>
+                    <p class="pageSub">Manage drafts, ready spaces, and recent updates.</p>
+                </div>
+
+                <div class="headerActions">
+                    <button class="btn solid primaryCta" id="btnNewListing" type="button">Create listing</button>
+                </div>
+            </div>
+
+            <div class="listingGrid" id="listingGrid"></div>
+        </section>
+
+        <!-- MESSAGES -->
+        <section class="tabPanel" id="tab-messages" data-panel="messages" role="tabpanel">
+            <div class="placeholderCard">
+                <h3>Messages</h3>
+                <p>Messaging (later).</p>
+            </div>
+        </section>
+
     </main>
 
-    <!-- ✅ IMPORTANT: load the same store.js used by wizard -->
-    <!-- lucide (LOCAL) -->
-    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
+    <!-- Confirm Modal -->
+    <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
+        <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <h3 class="modalTitle" id="modalTitle">Confirm</h3>
+            <p class="modalMsg" id="modalMessage"></p>
+            <div class="modalActions">
+                <button class="btn ghost" id="modalCancel" type="button">Cancel</button>
+                <button class="btn solid" id="modalConfirm" type="button">Confirm</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- IMPORTANT: load ListingStore -->
-    <script src="/PO-after-signup/listing-wizard/core/store.js"></script>
-    <script src="property-owner-dashboard.js"></script>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/PO-after-signup/listing-wizard/core/store.js" defer></script>
+    <script src="property-owner-dashboard.js" defer></script>
+    <script src="dashboard-calendar.js" defer></script>
 
 
-    </script>
 </body>
 
 </html>

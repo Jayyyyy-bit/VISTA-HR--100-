@@ -1,4 +1,5 @@
 // steps/step7.js
+// Cloudinary Signed Upload (CLEAN)
 
 window.Step7Init = function Step7Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
@@ -14,6 +15,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     const vtUrl = document.getElementById("vtUrl");
 
     const MIN_PHOTOS = 5;
+    const API_BASE = "http://127.0.0.1:5000/api";
 
     if (!thumbGrid || !photoInput) {
         console.error("[Step7] Missing required elements (#thumbGrid or #photoInput).");
@@ -40,7 +42,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
 
     function ensureCover(photos) {
         if (!photos.length) return photos;
-        const hasCover = photos.some((p) => p.isCover);
+        const hasCover = photos.some((p) => p && p.isCover);
         if (hasCover) return photos;
         return photos.map((p, i) => ({ ...p, isCover: i === 0 }));
     }
@@ -60,31 +62,89 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         render();
     }
 
+    function setUploading(on) {
+        if (uploadBtn) uploadBtn.disabled = !!on;
+        if (photoInput) photoInput.disabled = !!on;
+        if (nextBtn) nextBtn.disabled = !!on; // prevent next during upload
+        if (uploadZone) uploadZone.classList.toggle("isUploading", !!on);
+
+        if (uploadBtn) {
+            uploadBtn.dataset._origText = uploadBtn.dataset._origText || uploadBtn.textContent;
+            uploadBtn.textContent = on ? "Uploading..." : uploadBtn.dataset._origText;
+        }
+    }
+
+    // =========================
+    // Cloudinary Signed Upload
+    // =========================
+    async function getUploadSignature() {
+        // ✅ keep ONE endpoint only
+        const res = await fetch(`${API_BASE}/uploads/sign`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder: "vista_hr/listings" }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw data;
+        return data; // {timestamp, signature, cloudName, apiKey, folder}
+    }
+
+    async function uploadOneToCloudinary(file) {
+        const sig = await getUploadSignature();
+        const url = `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`;
+
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("api_key", sig.apiKey);
+        fd.append("timestamp", sig.timestamp);
+        fd.append("signature", sig.signature);
+        fd.append("folder", sig.folder);
+
+        const res = await fetch(url, { method: "POST", body: fd });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) throw out;
+
+        return {
+            id: uid(),
+            url: out.secure_url,      // ✅ hosted URL
+            public_id: out.public_id, // ✅ for delete later
+            name: file.name || "photo",
+            isCover: false,
+            width: out.width,
+            height: out.height,
+            bytes: out.bytes,
+        };
+    }
+
     async function filesToPhotos(fileList) {
-        const files = Array.from(fileList || []);
+        const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
         const out = [];
 
         for (const f of files) {
-            if (!f.type.startsWith("image/")) continue;
-
-            const url = await new Promise((resolve) => {
-                const r = new FileReader();
-                r.onload = () => resolve(r.result);
-                r.readAsDataURL(f);
-            });
-
-            out.push({ id: uid(), url, name: f.name || "photo", isCover: false });
+            const uploaded = await uploadOneToCloudinary(f);
+            out.push(uploaded);
         }
-
         return out;
     }
 
     async function addFiles(fileList) {
         const { photos } = read();
-        const added = await filesToPhotos(fileList);
-        let next = ensureCover([...photos, ...added]);
-        savePhotos(next);
-        render();
+
+        setUploading(true);
+        try {
+            const added = await filesToPhotos(fileList);
+            let next = ensureCover([...photos, ...added]);
+            savePhotos(next);
+            render();
+        } catch (e) {
+            console.error("[Step7] upload failed", e);
+            alert(e?.message || e?.error?.message || e?.error || "Upload failed. Please try again.");
+        } finally {
+            setUploading(false);
+            updateNextAndSide();
+        }
     }
 
     function updateNextAndSide() {
@@ -110,21 +170,24 @@ window.Step7Init = function Step7Init({ nextBtn }) {
 
         thumbGrid.innerHTML = photos
             .map((p) => {
-                const cover = p.isCover ? `<div class="coverTag">Cover</div>` : "";
+                const src = typeof p === "string" ? p : p?.url;
+                const name = typeof p === "string" ? "photo" : (p?.name || "photo");
+                const cover = (typeof p !== "string" && p?.isCover) ? `<div class="coverTag">Cover</div>` : "";
+                const pid = typeof p === "string" ? null : p?.id;
+
                 return `
           <div class="thumb">
             ${cover}
-            <img src="${p.url}" alt="${p.name}" />
+            <img src="${src || ""}" alt="${name}" />
             <div class="thumbBar">
-              <button class="tBtn" type="button" data-act="cover" data-id="${p.id}">Set cover</button>
-              <button class="tBtn danger" type="button" data-act="remove" data-id="${p.id}">Remove</button>
+              ${pid ? `<button class="tBtn" type="button" data-act="cover" data-id="${pid}">Set cover</button>` : ``}
+              ${pid ? `<button class="tBtn danger" type="button" data-act="remove" data-id="${pid}">Remove</button>` : ``}
             </div>
           </div>
         `;
             })
             .join("");
 
-        // bind thumb actions
         thumbGrid.querySelectorAll("[data-act]").forEach((btn) => {
             btn.addEventListener("click", () => {
                 const id = btn.dataset.id;
@@ -144,7 +207,6 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         if (vtUrl) vtUrl.value = vt.panoUrl || "";
 
         if (window.lucide?.createIcons) window.lucide.createIcons();
-
         updateNextAndSide();
     }
 
@@ -201,9 +263,5 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     const d = ListingStore.readDraft();
     if (Array.isArray(d.photos)) ListingStore.saveDraft({ photos: ensureCover(d.photos) });
 
-    // initial render
     render();
-
-    // ✅ Sync Step 7 to backend on Next
-
 };

@@ -1,49 +1,69 @@
-body {
-    margin: 0;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f7f7f7;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont;
+* {
+    box-sizing: border-box
 }
 
-.guide-card {
-    background: white;
-    padding: 32px;
-    width: 380px;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
-    text-align: center;
+body {
+    margin: 0;
+    font-family: system-ui;
+    background: #0b1220;
+    color: #e9eefc
+}
+
+.wrap {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px
+}
+
+.card {
+    width: min(560px, 100%);
+    background: #121a2b;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .35)
 }
 
 h1 {
-    margin-bottom: 8px;
+    margin: 0 0 6px;
+    font-size: 26px
 }
 
-.subtitle {
-    color: #666;
-    margin-bottom: 24px;
+.sub {
+    margin: 0 0 16px;
+    color: rgba(233, 238, 252, .75)
 }
 
 .steps {
-    list-style: none;
-    padding: 0;
-    margin-bottom: 24px;
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 10px
 }
 
-.steps li {
-    padding: 10px 0;
-    font-size: 15px;
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px
 }
 
 button {
-    width: 100%;
-    padding: 14px;
-    border-radius: 10px;
-    border: none;
-    background: #ff385c;
+    border: 0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-weight: 700;
+    cursor: pointer
+}
+
+#continueBtn {
+    background: #3b82f6;
     color: white;
-    font-size: 16px;
-    cursor: pointer;
+    flex: 1
+}
+
+.ghost {
+    background: transparent;
+    color: #e9eefc;
+    border: 1px solid rgba(255, 255, 255, .14)
 }

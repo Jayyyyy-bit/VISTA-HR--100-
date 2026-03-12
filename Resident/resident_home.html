@@ -1,36 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Resident Home</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="./resident_home.css" />
 </head>
 
 <body>
-
-    <!-- Auth guard -->
-    <script src="../auth/sessionGuard.js"></script>
-    <script>
-        if (!window.requireResident()) throw new Error("Unauthorized");
-    </script>
-
-    <!-- Top bar -->
     <header class="topbar">
-        <div class="logo">VISTA-HR</div>
+        <div class="brand">VISTA HR</div>
 
-        <div class="searchBox">
-            <input type="text" placeholder="Search by city or property" />
-            <button type="button">🔍</button>
+        <div class="search">
+            <input id="qCity" placeholder="Search city (e.g., Makati)" />
+            <input id="qBudget" placeholder="Max budget (₱)" inputmode="numeric" />
+            <button id="searchBtn">Search</button>
         </div>
 
-        <button id="logoutBtn" class="ghostBtn" type="button">Logout</button>
+        <div class="right">
+            <span id="who"></span>
+            <button id="logoutBtn" class="ghost" type="button">Logout</button>
+        </div>
     </header>
 
-    <main class="container" id="sections"></main>
+    <main class="container">
+        <h2 class="title">Popular stays</h2>
+        <div id="grid" class="grid"></div>
+    </main>
 
-    <script src="./resident_home.js"></script>
+    <script src="../auth/sessionGuard.js"></script>
+    <script src="resident_home.js"></script>
 </body>
 
 </html>

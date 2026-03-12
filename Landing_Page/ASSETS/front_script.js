@@ -1,6 +1,7 @@
 lucide.createIcons();
 
 const btnGetStarted = document.getElementById("getStartedBtn");
+const btnLogin = document.getElementById("loginBtn");
 
 // OPTIONAL: if you have a back button on this page
 const backBtn = document.getElementById("backBtn");
@@ -63,6 +64,13 @@ if (btnGetStarted) {
         exitTo("../../Login_Register_Page/Signup/roles.html");
     });
 }
+
+if (btnLogin) {
+    btnLogin.addEventListener("click", () => {
+        exitTo("../../auth/login.html");
+    });
+}
+
 
 /**
  * Back button (optional)

@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 
     <!-- Use your local lucide (since unpkg sometimes 404s in your setup) -->
-    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
+    <script src="../PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
 
     <link rel="stylesheet" href="login.css" />
 </head>
@@ -50,26 +50,14 @@
             </div>
 
             <!-- Role tabs -->
-            <div class="tabs" role="tablist" aria-label="Role tabs">
-                <button class="tab isActive" id="tabOwner" type="button" role="tab" aria-selected="true"
-                    data-role="OWNER">
-                    <i data-lucide="building-2"></i>
-                    Property owner
-                </button>
-                <button class="tab" id="tabResident" type="button" role="tab" aria-selected="false"
-                    data-role="RESIDENT">
-                    <i data-lucide="home"></i>
-                    Resident
-                </button>
-                <span class="tabIndicator" id="tabIndicator" aria-hidden="true"></span>
-            </div>
+
 
             <form class="form" id="loginForm" autocomplete="on">
                 <div class="field">
                     <label>Email</label>
                     <div class="inputWrap">
                         <i class="inIc" data-lucide="mail"></i>
-                        <input id="email" type="email" placeholder="you@email.com" required />
+                        <input id="email" name="email" type="email" ... />
                     </div>
                 </div>
 
@@ -77,7 +65,7 @@
                     <label>Password</label>
                     <div class="inputWrap">
                         <i class="inIc" data-lucide="lock"></i>
-                        <input id="password" type="password" placeholder="••••••••" required />
+                        <input id="password" name="password" type="password" ... />
                         <button class="ghostIcon" type="button" id="togglePw" aria-label="Show password">
                             <i data-lucide="eye"></i>
                         </button>
@@ -108,10 +96,12 @@
         </section>
     </main>
 
-    <script src="login.js"></script>
+
     <script>
         if (window.lucide?.createIcons) window.lucide.createIcons();
     </script>
+    <script src="sessionGuard.js"></script>
+    <script src="login.js"></script>
 </body>
 
 </html>

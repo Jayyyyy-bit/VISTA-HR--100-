@@ -1,9 +1,5 @@
 // core/sidepanel.js (GLOBAL - matches index.html IDs)
 window.SidePanel = (() => {
-  /**
-   * Accepts:
-   *  setTips({ selectedLabel: "Condominium", tips: ["...", "..."] })
-   */
   function setTips({ selectedLabel = "—", tips = null } = {}) {
     const pill = document.getElementById("selectedPill");
     const ul = document.getElementById("guideTips");
@@ -21,9 +17,21 @@ window.SidePanel = (() => {
     ul.innerHTML = arr.map(t => `<li>${t}</li>`).join("");
   }
 
-  function refresh() {
+  function getActiveStepFromHash() {
+    // expects "#/step-3"
+    const raw = (location.hash || "");
+    const cleaned = raw.replace(/^#\/?/, "");
+    const id = cleaned.split("?")[0].trim(); // "step-3"
+    const m = id.match(/^step-(\d+)$/);
+    const n = m ? Number(m[1]) : 1;
+    return Number.isFinite(n) && n >= 1 ? n : 1;
+  }
+
+  function refresh(activeStep) {
+    const step = Number(activeStep) || getActiveStepFromHash();
+
     const draft = window.ListingStore?.readDraft?.() || {};
-    const prog = window.ListingStore?.computeProgress?.(draft) || { percent: 0, steps: [] };
+    const prog = window.ListingStore?.computeProgress?.(draft, step) || { percent: 0, steps: [], activeStep: step };
 
     // percent
     const pctEl = document.getElementById("percentLabel");
@@ -37,21 +45,12 @@ window.SidePanel = (() => {
     const listEl = document.getElementById("sideChecklist");
     if (listEl) {
       const steps = Array.isArray(prog.steps) ? prog.steps : [];
-      const nextStep =
-        steps.find(s => !s.done && !s.locked)?.step ??
-        steps[steps.length - 1]?.step ??
-        1;
+      const active = Number(prog.activeStep || step || 1);
 
       listEl.innerHTML = steps.map(s => {
-        const state =
-          s.done ? "done" :
-            s.locked ? "locked" :
-              (s.step === nextStep ? "active" : "");
-
-        const right =
-          s.done ? "Done" :
-            s.locked ? "Locked" :
-              (s.step === nextStep ? "Next" : "Pending");
+        // ✅ Blue current, green done, grey pending
+        const state = s.done ? "done" : (s.step === active ? "active" : "");
+        const right = s.done ? "Done" : (s.step === active ? "Current" : "Pending");
 
         return `
           <div class="cl-item ${state}">

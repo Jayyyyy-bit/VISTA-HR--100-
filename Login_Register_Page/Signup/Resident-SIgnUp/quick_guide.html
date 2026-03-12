@@ -1,28 +1,39 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Welcome to VISTA-HR</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Quick Guide</title>
     <link rel="stylesheet" href="quick_guide.css" />
 </head>
 
 <body>
-    <div class="guide-card">
-        <h1>Welcome to VISTA-HR 🎉</h1>
-        <p class="subtitle">Here’s a quick guide to get you started</p>
+    <main class="wrap">
+        <div class="card">
+            <h1>Welcome to VISTA HR 👋</h1>
+            <p class="sub">Quick guide before you start browsing homes.</p>
 
-        <ul class="steps">
-            <li>🔍 Browse available properties</li>
-            <li>❤️ Save listings you like</li>
-            <li>📩 Message property owners</li>
-            <li>🏠 Book your future home</li>
-        </ul>
+            <ol class="steps">
+                <li><b>Search</b> by city & budget.</li>
+                <li><b>Save</b> listings you like.</li>
+                <li><b>Message</b> verified owners.</li>
+                <li><b>Book</b> when ready (coming soon).</li>
+            </ol>
 
-        <button id="continueBtn">Go to Home</button>
-    </div>
+            <div class="actions">
+                <button id="continueBtn">Continue</button>
+                <button id="logoutBtn" class="ghost">Logout</button>
+            </div>
+        </div>
+    </main>
+    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
 
-    <script src="quick_guide.js"></script>
+    <!-- ✅ load AuthGuard first -->
+    <script src="/auth/sessionGuard.js"></script>
+
+    <!-- page script -->
+    <script type="module" src="quick_guide.js"></script>
 </body>
 
 </html>

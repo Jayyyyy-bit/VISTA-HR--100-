@@ -1,10 +1,7 @@
 lucide.createIcons();
 
-// =======================
-// LocalStorage keys (demo)
-// =======================
-const LS_USERS_KEY = "vista_users";
-const LS_SESSION_KEY = "vista_session_user";
+const API_BASE = "http://127.0.0.1:5000/api";
+
 
 // =======================
 // Elements
@@ -44,36 +41,41 @@ document.getElementById("backBtn").addEventListener("click", () => {
 });
 
 // =======================
-// Storage helpers
+// API: Register Owner
 // =======================
-function readUsers() {
-    try { return JSON.parse(localStorage.getItem(LS_USERS_KEY)) || []; }
-    catch { return []; }
-}
-function saveUsers(users) {
-    localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+async function apiRegisterOwner(payload) {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        const msg = data?.message || data?.error || "Registration failed.";
+        throw new Error(msg);
+    }
+
+    return data; // { message, user }
 }
 
-// Demo-only hashing placeholder
-function fakeHash(pw) {
-    return btoa(unescape(encodeURIComponent(pw))).split("").reverse().join("");
-}
-
 // =======================
-// Helpers (match resident vibe)
+// Helpers (same as your resident)
 // =======================
 function titleCaseWords(str) {
     return str
         .toLowerCase()
         .split(" ")
         .filter(Boolean)
-        .map(word =>
+        .map((word) =>
             word
                 .split("-")
-                .map(part =>
+                .map((part) =>
                     part
                         .split("'")
-                        .map(p => (p ? p[0].toUpperCase() + p.slice(1) : ""))
+                        .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : ""))
                         .join("'")
                 )
                 .join("-")
@@ -107,7 +109,6 @@ function validatePassword(pw) {
     return errors;
 }
 
-// Find the closest .field for shake/invalid border
 function getFieldWrap(el) {
     return el?.closest(".field") || el;
 }
@@ -140,7 +141,7 @@ function scrollToField(el) {
 }
 
 // =======================
-// Live: First/Last sanitize + titlecase + inline validation
+// Live sanitize (first/last)
 // =======================
 [firstName, lastName].forEach((el) => {
     el.addEventListener("input", () => {
@@ -161,24 +162,26 @@ function scrollToField(el) {
     });
 });
 
-// =======================
-// Live: Email
-// =======================
+// Email
 email.addEventListener("input", () => {
     const val = email.value.trim();
-    if (!val) { setValid(email, emailError); return; }
+    if (!val) {
+        setValid(email, emailError);
+        return;
+    }
     if (!isEmailValid(val)) setInvalid(email, emailError, "Please enter a valid email address.");
     else setValid(email, emailError);
 });
 
-// =======================
-// Live: Phone (+63 fixed) — 10 digits starting with 9
-// =======================
+// Phone (+63 fixed) — 10 digits starting with 9
 phone.addEventListener("input", () => {
     phone.value = phone.value.replace(/\D/g, "");
     if (phone.value.length > 10) phone.value = phone.value.slice(0, 10);
 
-    if (!phone.value) { setValid(phoneWrap, phoneError); return; }
+    if (!phone.value) {
+        setValid(phoneWrap, phoneError);
+        return;
+    }
 
     if (!phone.value.startsWith("9")) {
         setInvalid(phoneWrap, phoneError, "PH number must start with 9 (e.g. 9XXXXXXXXX).");
@@ -189,9 +192,7 @@ phone.addEventListener("input", () => {
     }
 });
 
-// =======================
-// Eye toggle FIX (show/hide + re-render lucide)
-// =======================
+// Eye toggle
 function toggleEye(btn, input) {
     const show = input.type === "password";
     input.type = show ? "text" : "password";
@@ -202,9 +203,7 @@ function toggleEye(btn, input) {
 togglePass.addEventListener("click", () => toggleEye(togglePass, password));
 toggleConfirm.addEventListener("click", () => toggleEye(toggleConfirm, confirmPassword));
 
-// =======================
-// Password strength + inline validation
-// =======================
+// Password strength
 password.addEventListener("input", () => {
     if (password.value.length > 16) password.value = password.value.slice(0, 16);
 
@@ -235,7 +234,6 @@ password.addEventListener("input", () => {
         setValid(password, passwordError);
     }
 
-    // live confirm match
     if (confirmPassword.value) {
         if (confirmPassword.value !== password.value) {
             setInvalid(confirmPassword, confirmPasswordError, "Passwords do not match.", false);
@@ -258,9 +256,9 @@ confirmPassword.addEventListener("input", () => {
 });
 
 // =======================
-// Submit validation (SHAKE ONLY HERE)
+// Submit (DB register)
 // =======================
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     let ok = true;
@@ -274,78 +272,35 @@ form.addEventListener("submit", (e) => {
     const cpw = confirmPassword.value;
 
     // First name
-    if (!fn) {
-        setInvalid(firstName, firstNameError, "First name is required.", true);
-        ok = false; firstInvalid ??= firstName;
-    } else if (!isValidNamePart(fn)) {
-        setInvalid(firstName, firstNameError, "First name must contain letters only.", true);
-        ok = false; firstInvalid ??= firstName;
-    } else {
-        setValid(firstName, firstNameError);
-    }
+    if (!fn) { setInvalid(firstName, firstNameError, "First name is required.", true); ok = false; firstInvalid ??= firstName; }
+    else if (!isValidNamePart(fn)) { setInvalid(firstName, firstNameError, "First name must contain letters only.", true); ok = false; firstInvalid ??= firstName; }
+    else setValid(firstName, firstNameError);
 
     // Last name
-    if (!ln) {
-        setInvalid(lastName, lastNameError, "Last name is required.", true);
-        ok = false; firstInvalid ??= lastName;
-    } else if (!isValidNamePart(ln)) {
-        setInvalid(lastName, lastNameError, "Last name must contain letters only.", true);
-        ok = false; firstInvalid ??= lastName;
-    } else {
-        setValid(lastName, lastNameError);
-    }
+    if (!ln) { setInvalid(lastName, lastNameError, "Last name is required.", true); ok = false; firstInvalid ??= lastName; }
+    else if (!isValidNamePart(ln)) { setInvalid(lastName, lastNameError, "Last name must contain letters only.", true); ok = false; firstInvalid ??= lastName; }
+    else setValid(lastName, lastNameError);
 
     // Email
-    if (!em) {
-        setInvalid(email, emailError, "Email is required.", true);
-        ok = false; firstInvalid ??= email;
-    } else if (!isEmailValid(em)) {
-        setInvalid(email, emailError, "Please enter a valid email address.", true);
-        ok = false; firstInvalid ??= email;
-    } else {
-        const users = readUsers();
-        const exists = users.some(u => (u.email || "").toLowerCase() === em);
-        if (exists) {
-            setInvalid(email, emailError, "This email is already registered.", true);
-            ok = false; firstInvalid ??= email;
-        } else {
-            setValid(email, emailError);
-        }
-    }
+    if (!em) { setInvalid(email, emailError, "Email is required.", true); ok = false; firstInvalid ??= email; }
+    else if (!isEmailValid(em)) { setInvalid(email, emailError, "Please enter a valid email address.", true); ok = false; firstInvalid ??= email; }
+    else setValid(email, emailError);
 
     // Phone
-    if (!ph) {
-        setInvalid(phoneWrap, phoneError, "Phone number is required.", true);
-        ok = false; firstInvalid ??= phone;
-    } else if (ph.length !== 10 || !ph.startsWith("9")) {
-        setInvalid(phoneWrap, phoneError, "Enter valid number: +63 9XXXXXXXXX", true);
-        ok = false; firstInvalid ??= phone;
-    } else {
-        setValid(phoneWrap, phoneError);
-    }
+    if (!ph) { setInvalid(phoneWrap, phoneError, "Phone number is required.", true); ok = false; firstInvalid ??= phone; }
+    else if (ph.length !== 10 || !ph.startsWith("9")) { setInvalid(phoneWrap, phoneError, "Enter valid number: +63 9XXXXXXXXX", true); ok = false; firstInvalid ??= phone; }
+    else setValid(phoneWrap, phoneError);
 
     // Password
     const pwErrors = validatePassword(pw);
-    if (!pw) {
-        setInvalid(password, passwordError, "Password is required.", true);
-        ok = false; firstInvalid ??= password;
-    } else if (pwErrors.length) {
-        setInvalid(password, passwordError, pwErrors[0], true);
-        ok = false; firstInvalid ??= password;
-    } else {
-        setValid(password, passwordError);
-    }
+    if (!pw) { setInvalid(password, passwordError, "Password is required.", true); ok = false; firstInvalid ??= password; }
+    else if (pwErrors.length) { setInvalid(password, passwordError, pwErrors[0], true); ok = false; firstInvalid ??= password; }
+    else setValid(password, passwordError);
 
     // Confirm
-    if (!cpw) {
-        setInvalid(confirmPassword, confirmPasswordError, "Please confirm your password.", true);
-        ok = false; firstInvalid ??= confirmPassword;
-    } else if (cpw !== pw) {
-        setInvalid(confirmPassword, confirmPasswordError, "Passwords do not match.", true);
-        ok = false; firstInvalid ??= confirmPassword;
-    } else {
-        setValid(confirmPassword, confirmPasswordError);
-    }
+    if (!cpw) { setInvalid(confirmPassword, confirmPasswordError, "Please confirm your password.", true); ok = false; firstInvalid ??= confirmPassword; }
+    else if (cpw !== pw) { setInvalid(confirmPassword, confirmPasswordError, "Passwords do not match.", true); ok = false; firstInvalid ??= confirmPassword; }
+    else setValid(confirmPassword, confirmPasswordError);
 
     // Agree
     if (!agree.checked) {
@@ -361,27 +316,25 @@ form.addEventListener("submit", (e) => {
         return;
     }
 
-    // ✅ Create owner account (demo storage)
-    const users = readUsers();
+    // ✅ Register OWNER via backend
+    try {
+        const data = await apiRegisterOwner({
+            email: em,
+            password: pw,
+            role: "OWNER",
+            first_name: fn,
+            last_name: ln,
+            phone: "+63" + ph,
+        });
 
-    const newUser = {
-        id: (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
-        role: "PROPERTY_OWNER",
-        firstName: fn,
-        lastName: ln,
-        fullName: `${fn} ${ln}`,
-        email: em,
-        phone: "+63" + ph,
-        passwordHash: fakeHash(pw),
-        verificationStatus: "UNVERIFIED",
-        createdAt: new Date().toISOString()
-    };
+        // Cookie auth already set; keep a local session cache for UI
+        AuthGuard.saveSession({ user: data.user });
 
-    users.push(newUser);
-    saveUsers(users);
-
-    localStorage.setItem(LS_SESSION_KEY, JSON.stringify({ userId: newUser.id, role: newUser.role }));
-
-    // ✅ Option B: after signup → go straight to create listing wizard
-    window.location.href = "../../../PO-after-signup/PO_welcome-page.html";
+        // NOTE: your backend marks owners as unverified by default.
+        // They may be blocked from login until verified (403).
+        window.location.href = "../../../PO-after-signup/PO_welcome-page.html";
+    } catch (err) {
+        setInvalid(email, emailError, err.message || "Registration failed.", true);
+        scrollToField(email);
+    }
 });

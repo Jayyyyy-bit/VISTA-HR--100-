@@ -11,9 +11,11 @@ class Listing(db.Model):
 
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    status = db.Column(Enum(*LISTING_STATUS, name="listing_status"),
-                       nullable=False, default="DRAFT", server_default="DRAFT", index=True)
-
+    status = db.Column(
+    db.Enum("DRAFT", "READY", "PUBLISHED", "ARCHIVED", name="listing_status"),
+    nullable=False,
+    default="DRAFT",
+)
     current_step = db.Column(db.SmallInteger, nullable=False, default=1, server_default="1")
 
     # Wizard columns
@@ -46,4 +48,6 @@ class Listing(db.Model):
             "photos": self.photos,
             "title": self.title,
             "description": self.description,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

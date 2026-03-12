@@ -1,117 +1,137 @@
-(() => {
-    const LS_SESSION_KEY = "vista_session_user";
+document.addEventListener("DOMContentLoaded", async () => {
+  // 1) Guard (only once)
+  if (window.AuthGuard?.requireResident) {
+    const ok = await window.AuthGuard.requireResident();
+    if (!ok) return;
+  }
 
-    document.getElementById("logoutBtn")?.addEventListener("click", () => {
-        localStorage.removeItem(LS_SESSION_KEY);
-        window.location.href = "../Login_Register_Page/login.html";
+  // 2) Header (who + logout)
+  function setupHeader() {
+    const whoEl = document.getElementById("who");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    // Show cached identity (kept in sync by /auth/me)
+    const s = window.AuthGuard?.getSession?.();
+    const user = s?.user || {};
+    whoEl.textContent =
+      user.email ||
+      [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+      "Resident";
+
+    logoutBtn.addEventListener("click", () => {
+      // Use your official logout flow
+      if (window.AuthGuard?.logout) return window.AuthGuard.logout();
+
+      // extreme fallback (shouldn’t happen)
+      try { localStorage.removeItem("vista_session_user"); } catch { }
+      window.location.href = "/auth/login.html";
+    });
+  }
+
+  // 3) Page
+  initResidentHome();
+});
+
+function setupHeader() {
+  const whoEl = document.getElementById("who");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  // Try to display session identity if available
+  let email = "";
+  try {
+    if (window.AuthGuard?.getSession) {
+      const s = window.AuthGuard.getSession();
+      email = s?.user?.email || s?.email || "";
+    }
+  } catch { }
+
+  if (!email) {
+    // fallback (common keys)
+    const raw =
+      localStorage.getItem("session") ||
+      localStorage.getItem("vista_session") ||
+      localStorage.getItem("auth") ||
+      "";
+    try {
+      const parsed = raw ? JSON.parse(raw) : null;
+      email = parsed?.user?.email || parsed?.email || "";
+    } catch { }
+  }
+
+  whoEl.textContent = email || "Resident";
+
+  logoutBtn.addEventListener("click", () => {
+    // Prefer guard logout if available
+    try {
+      if (window.AuthGuard?.logout) return window.AuthGuard.logout();
+      if (window.AuthGuard?.clearSession) window.AuthGuard.clearSession();
+    } catch { }
+
+    // fallback clear
+    ["session", "vista_session", "auth", "token", "access_token"].forEach(k => {
+      try { localStorage.removeItem(k); } catch { }
     });
 
-    //  feed (replace later with backend)
-    a(async () => {
-        const API = "http://127.0.0.1:5000/api";
-        const root = document.getElementById("sections");
+    window.location.href = "../../Login/login.html";
+  });
+}
 
-        function card(item) {
-            const img = item.cover || "https://via.placeholder.com/800x600?text=No+Photo";
-            const loc = [item.barangay, item.city].filter(Boolean).join(", ") || "Metro Manila";
-            const price = item.price ? `₱${Number(item.price).toLocaleString()}` : "₱—";
+function initResidentHome() {
+  const grid = document.getElementById("grid");
 
-            return `
-      <a class="card" href="#">
-        <div class="cardImgWrap"><img src="${img}" alt=""></div>
-        <div class="cardBody">
-          <div class="cardTitle">${item.title}</div>
-          <div class="cardSub">${loc}</div>
-          <div class="cardMeta">
-            <span class="price">${price}</span>
-            <span>·</span>
-            <span>★ 4.8</span>
-          </div>
-        </div>
-      </a>
-    `;
-        }
+  // Static demo cards for now (wire API later)
+  const demo = [
+    { id: 1, title: "Studio near CBD", city: "Makati", brgy: "Poblacion", price: 9500 },
+    { id: 2, title: "Cozy room w/ Wi-Fi", city: "Quezon City", brgy: "Batasan Hills", price: 6500 },
+    { id: 3, title: "1BR near MRT", city: "Mandaluyong", brgy: "Highway Hills", price: 12000 },
+    { id: 4, title: "Bedspace for students", city: "Manila", brgy: "Sampaloc", price: 3500 },
+    { id: 5, title: "Modern shared space", city: "Taguig", brgy: "Fort Bonifacio", price: 14000 },
+    { id: 6, title: "Quiet stay w/ AC", city: "Pasig", brgy: "Kapitolyo", price: 9000 },
+  ];
 
-        async function loadFeed() {
-            const res = await fetch(`${API}/listings/feed`, { cache: "no-store" });
-            const data = await res.json().catch(() => ({}));
-            return Array.isArray(data.listings) ? data.listings : [];
-        }
-
-        const items = await loadFeed();
-
-        root.innerHTML = `
-    <section class="section">
-      <div class="sectionHeader">
-        <h2>Available Spaces</h2>
-      </div>
-      <div class="row">
-        ${items.length ? items.map(card).join("") : `<div style="padding:10px;color:#666;">No published listings yet.</div>`}
-      </div>
-    </section>
-  `;
-    })();
-
-
-
-    const root = document.getElementById("sections");
-
-    function card(item) {
+  function render(list) {
+    grid.innerHTML = list
+      .map(x => {
+        const rating = `4.${Math.floor(Math.random() * 9) + 1}`;
         return `
-      <a class="card" href="#">
-        <div class="cardImgWrap"><img src="${item.image}" alt=""></div>
-        <div class="cardBody">
-          <div class="cardTitle">${item.title}</div>
-          <div class="cardSub">${item.location}</div>
-          <div class="cardMeta">
-            <span class="price">₱${Number(item.price).toLocaleString()}</span>
-            <span>·</span>
-            <span>★ ${item.rating}</span>
-          </div>
-        </div>
-      </a>
-    `;
-    }
+          <a class="card card-link" href="/resident/listing/${x.id}" aria-label="View ${escapeHtml(x.title)}">
+            <div class="thumb"></div>
+            <div class="meta">
+              <div class="kicker">
+                <span>${escapeHtml(x.city)} • ${escapeHtml(x.brgy)}</span>
+                <span>★ ${rating}</span>
+              </div>
+              <div class="h3">${escapeHtml(x.title)}</div>
+              <div class="p">Safe, clean, and close to key locations. Message owner anytime.</div>
+              <div class="price">₱${Number(x.price).toLocaleString()} / month</div>
+            </div>
+          </a>
+        `;
+      })
+      .join("");
+  }
 
-    function render() {
-        root.innerHTML = "";
+  render(demo);
 
-        demoData.forEach((sec, idx) => {
-            const rowId = `row_${idx}`;
-            const section = document.createElement("section");
-            section.className = "section";
+  document.getElementById("searchBtn").addEventListener("click", () => {
+    const city = (document.getElementById("qCity").value || "").trim().toLowerCase();
+    const maxB = Number((document.getElementById("qBudget").value || "").replace(/\D/g, "")) || Infinity;
 
-            section.innerHTML = `
-        <div class="sectionHeader">
-          <h2>${sec.title}</h2>
-          <div class="navBtns">
-            <button type="button" data-dir="-1" data-row="${rowId}">‹</button>
-            <button type="button" data-dir="1" data-row="${rowId}">›</button>
-          </div>
-        </div>
-        <div class="row" id="${rowId}">
-          ${sec.items.map(card).join("")}
-        </div>
-      `;
+    const filtered = demo.filter(x => {
+      const okCity = !city || x.city.toLowerCase().includes(city);
+      const okBudget = x.price <= maxB;
+      return okCity && okBudget;
+    });
 
-            root.appendChild(section);
-        });
+    render(filtered);
+  });
+}
 
-        root.addEventListener("click", (e) => {
-            const btn = e.target.closest("button[data-row]");
-            if (!btn) return;
-            const row = document.getElementById(btn.dataset.row);
-            if (!row) return;
-            const dir = Number(btn.dataset.dir);
-            row.scrollBy({ left: dir * 650, behavior: "smooth" });
-        });
-    }
-
-    render();
-
-    const seen = localStorage.getItem("vista_resident_guide_seen");
-    if (!seen) {
-        window.location.href = "./quick_guide.html";
-    }
-
-})();
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
