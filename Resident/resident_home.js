@@ -1,34 +1,10 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  // 1) Guard (only once)
   if (window.AuthGuard?.requireResident) {
     const ok = await window.AuthGuard.requireResident();
     if (!ok) return;
   }
 
-  // 2) Header (who + logout)
-  function setupHeader() {
-    const whoEl = document.getElementById("who");
-    const logoutBtn = document.getElementById("logoutBtn");
-
-    // Show cached identity (kept in sync by /auth/me)
-    const s = window.AuthGuard?.getSession?.();
-    const user = s?.user || {};
-    whoEl.textContent =
-      user.email ||
-      [user.first_name, user.last_name].filter(Boolean).join(" ") ||
-      "Resident";
-
-    logoutBtn.addEventListener("click", () => {
-      // Use your official logout flow
-      if (window.AuthGuard?.logout) return window.AuthGuard.logout();
-
-      // extreme fallback (shouldn’t happen)
-      try { localStorage.removeItem("vista_session_user"); } catch { }
-      window.location.href = "/auth/login.html";
-    });
-  }
-
-  // 3) Page
+  setupHeader();
   initResidentHome();
 });
 
@@ -36,50 +12,64 @@ function setupHeader() {
   const whoEl = document.getElementById("who");
   const logoutBtn = document.getElementById("logoutBtn");
 
-  // Try to display session identity if available
-  let email = "";
+  let user = null;
+
   try {
     if (window.AuthGuard?.getSession) {
       const s = window.AuthGuard.getSession();
-      email = s?.user?.email || s?.email || "";
+      user = s?.user || null;
     }
   } catch { }
 
-  if (!email) {
-    // fallback (common keys)
-    const raw =
-      localStorage.getItem("session") ||
-      localStorage.getItem("vista_session") ||
-      localStorage.getItem("auth") ||
-      "";
-    try {
-      const parsed = raw ? JSON.parse(raw) : null;
-      email = parsed?.user?.email || parsed?.email || "";
-    } catch { }
-  }
+  const displayName =
+    user?.email ||
+    [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
+    "Resident";
 
-  whoEl.textContent = email || "Resident";
+  if (whoEl) whoEl.textContent = displayName;
 
-  logoutBtn.addEventListener("click", () => {
-    // Prefer guard logout if available
+  logoutBtn?.addEventListener("click", async () => {
     try {
-      if (window.AuthGuard?.logout) return window.AuthGuard.logout();
-      if (window.AuthGuard?.clearSession) window.AuthGuard.clearSession();
+      if (window.AuthGuard?.logout) {
+        await window.AuthGuard.logout();
+        return;
+      }
     } catch { }
 
-    // fallback clear
-    ["session", "vista_session", "auth", "token", "access_token"].forEach(k => {
-      try { localStorage.removeItem(k); } catch { }
+    try {
+      if (window.AuthGuard?.clearSession) {
+        window.AuthGuard.clearSession();
+      }
+    } catch { }
+
+    [
+      "vista_session_user",
+      "vista_last_user_id",
+      "session",
+      "vista_session",
+      "auth",
+      "token",
+      "access_token"
+    ].forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch { }
     });
 
-    window.location.href = "../../Login/login.html";
+    try {
+      await fetch("http://127.0.0.1:5000/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch { }
+
+    window.location.replace("/Login_Register_Page/index.html");
   });
 }
 
 function initResidentHome() {
   const grid = document.getElementById("grid");
 
-  // Static demo cards for now (wire API later)
   const demo = [
     { id: 1, title: "Studio near CBD", city: "Makati", brgy: "Poblacion", price: 9500 },
     { id: 2, title: "Cozy room w/ Wi-Fi", city: "Quezon City", brgy: "Batasan Hills", price: 6500 },
@@ -113,7 +103,7 @@ function initResidentHome() {
 
   render(demo);
 
-  document.getElementById("searchBtn").addEventListener("click", () => {
+  document.getElementById("searchBtn")?.addEventListener("click", () => {
     const city = (document.getElementById("qCity").value || "").trim().toLowerCase();
     const maxB = Number((document.getElementById("qBudget").value || "").replace(/\D/g, "")) || Infinity;
 

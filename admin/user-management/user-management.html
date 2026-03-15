@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | User Management</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/admin/user-management/user-management.css" />
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <span class="brandDot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="btn ghost" id="adminLogoutBtn" type="button">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="pageWrap">
+        <section class="heroCard">
+            <div>
+                <p class="eyebrow">Admin Panel</p>
+                <h1>User Management</h1>
+                <p class="heroSub">Manage system users, roles, and account status for VISTA-HR.</p>
+            </div>
+
+            <button class="btn solid" id="addUserBtn" type="button">
+                <i data-lucide="user-plus"></i>
+                <span>Add User</span>
+            </button>
+        </section>
+
+        <section class="toolbar">
+            <div class="searchWrap">
+                <i data-lucide="search"></i>
+                <input type="text" id="searchInput" placeholder="Search name, email, or role" />
+            </div>
+
+            <select id="roleFilter">
+                <option value="all">All Roles</option>
+                <option value="Admin">Admin</option>
+                <option value="Property Owner">Property Owner</option>
+                <option value="Resident">Resident</option>
+            </select>
+
+            <select id="statusFilter">
+                <option value="all">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Pending">Pending</option>
+                <option value="Suspended">Suspended</option>
+            </select>
+        </section>
+
+        <section class="statsGrid">
+            <div class="statCard">
+                <span>Total Users</span>
+                <strong id="totalUsers">0</strong>
+            </div>
+            <div class="statCard">
+                <span>Admins</span>
+                <strong id="totalAdmins">0</strong>
+            </div>
+            <div class="statCard">
+                <span>Property Owners</span>
+                <strong id="totalOwners">0</strong>
+            </div>
+            <div class="statCard">
+                <span>Residents</span>
+                <strong id="totalResidents">0</strong>
+            </div>
+        </section>
+
+        <section class="tableCard">
+            <div class="tableHead">
+                <h2>User Directory</h2>
+                <p>Demo-ready admin module for progress checking.</p>
+            </div>
+
+            <div class="tableWrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="modalOverlay" id="modalOverlay">
+        <div class="modalCard">
+            <div class="modalHeader">
+                <h3 id="modalTitle">Add User</h3>
+                <button class="iconBtn" id="closeModalBtn" type="button">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="formGrid">
+                <div class="field">
+                    <label for="nameInput">Full Name</label>
+                    <input id="nameInput" type="text" />
+                </div>
+
+                <div class="field">
+                    <label for="emailInput">Email</label>
+                    <input id="emailInput" type="email" />
+                </div>
+
+                <div class="field">
+                    <label for="roleInput">Role</label>
+                    <select id="roleInput">
+                        <option value="Admin">Admin</option>
+                        <option value="Property Owner">Property Owner</option>
+                        <option value="Resident">Resident</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="statusInput">Status</label>
+                    <select id="statusInput">
+                        <option value="Active">Active</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Suspended">Suspended</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modalActions">
+                <button class="btn ghost" id="cancelBtn" type="button">Cancel</button>
+                <button class="btn solid" id="saveUserBtn" type="button">Save User</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/admin/user-management/user-management.js" defer></script>
+</body>
+
+</html>

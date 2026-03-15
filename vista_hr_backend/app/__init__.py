@@ -8,6 +8,7 @@ from .routes.uploads import uploads_bp
 
 
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -25,10 +26,14 @@ def create_app():
     from .routes.auth import auth_bp
     from .routes.listings import listings_bp
     from .routes.locations import locations_bp
+    from .routes.users import users_bp
+
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(listings_bp, url_prefix="/api")
     app.register_blueprint(locations_bp, url_prefix="/api")
+    app.register_blueprint(users_bp, url_prefix="/api")
     app.register_blueprint(uploads_bp, url_prefix="/api")
+
 
 
     @app.get("/health")
@@ -47,6 +52,8 @@ def create_app():
     @app.get("/")
     def root_redirect():
        return redirect("http://127.0.0.1:5500/Landing_Page/ASSETS/front_index.html")
+    
+    
 
     return app
 

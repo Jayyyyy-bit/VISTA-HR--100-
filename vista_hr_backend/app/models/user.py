@@ -3,7 +3,7 @@ from sqlalchemy import Enum
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..extensions import db
 
-USER_ROLE = ("RESIDENT", "OWNER")
+USER_ROLE = ("ADMIN", "RESIDENT", "OWNER")
 
 class User(db.Model):
     __tablename__ = "users"
@@ -18,14 +18,22 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
     role = db.Column(Enum(*USER_ROLE, name="user_role"), nullable=False, index=True)
+
+    # account verification meaning depends on role:
+    # OWNER -> approved to publish publicly
+    # RESIDENT -> account/student verification later
+    # ADMIN -> usually true
     is_verified = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
+    # admin-controlled account status
+    is_suspended = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+
     has_completed_onboarding = db.Column(
-    db.Boolean,
-    nullable=False,
-    default=False,
-    server_default="0",
-)
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -38,16 +46,15 @@ class User(db.Model):
 
     def to_dict(self):
         role_val = self.role.value if hasattr(self.role, "value") else str(self.role)
-        
 
         return {
-    "id": self.id,
-    "first_name": self.first_name,
-    "last_name": self.last_name,
-    "phone": self.phone,
-    "email": self.email,
-    "role": role_val,
-    "is_verified": bool(self.is_verified),
-    "has_completed_onboarding": int(bool(getattr(self, "has_completed_onboarding", False))),
-    
-}
+            "id": self.id,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "phone": self.phone,
+            "email": self.email,
+            "role": role_val,
+            "is_verified": bool(self.is_verified),
+            "is_suspended": bool(getattr(self, "is_suspended", False)),
+            "has_completed_onboarding": int(bool(getattr(self, "has_completed_onboarding", False))),
+        }

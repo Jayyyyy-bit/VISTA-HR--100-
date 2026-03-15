@@ -4,6 +4,7 @@
     const API_BASE = "http://127.0.0.1:5000/api";
 
     const ROUTE_ROLES = "/Login_Register_Page/Signup/roles.html";
+    const ROUTE_ADMIN_USERS = "/admin/user-management/user-management.html";
     const ROUTE_OWNER_DASHBOARD = "/Property-Owner/dashboard/property-owner-dashboard.html";
     const ROUTE_OWNER_WELCOME = "/PO-after-signup/PO_welcome-page.html";
     const ROUTE_RESIDENT_HOME = "/Resident/resident_home.html";
@@ -32,16 +33,25 @@
     function redirectByRole(user) {
         const role = String(user?.role || "").toUpperCase();
 
-        if (role === "OWNER") {
-            const done = Number(user?.has_completed_onboarding) === 1;
-            window.location.href = done ? ROUTE_OWNER_DASHBOARD : ROUTE_OWNER_WELCOME;
+        if (role === "ADMIN") {
+            window.location.replace(ROUTE_ADMIN_USERS);
             return;
         }
 
-        window.location.href = ROUTE_RESIDENT_HOME;
+        if (role === "OWNER") {
+            const done = Number(user?.has_completed_onboarding) === 1;
+            window.location.replace(done ? ROUTE_OWNER_DASHBOARD : ROUTE_OWNER_WELCOME);
+            return;
+        }
+
+        if (role === "RESIDENT") {
+            window.location.replace(ROUTE_RESIDENT_HOME);
+            return;
+        }
+
+        window.location.replace(ROUTE_ROLES);
     }
 
-    // ✅ Clears listing wizard drafts that may belong to a different user
     function clearWizardDraftCache() {
         localStorage.removeItem("vista_draft_index");
         localStorage.removeItem("vista_draft_active");
@@ -56,12 +66,11 @@
             .forEach((k) => localStorage.removeItem(k));
     }
 
-    // ✅ Auto-redirect if already logged in (cookie/session via /auth/me)
     document.addEventListener("DOMContentLoaded", async () => {
         try {
             const me = await AuthGuard.fetchMe();
             if (me.ok && me.data?.user?.role) {
-                redirectByRole(me.data.user); // ✅ user object
+                redirectByRole(me.data.user);
                 return;
             }
         } catch (e) {
@@ -100,7 +109,7 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ email, password }), // ✅ no role
+                body: JSON.stringify({ email, password }),
             });
 
             const data = await res.json().catch(() => ({}));
@@ -110,7 +119,6 @@
                 return;
             }
 
-            // ✅ If user changed, clear stale wizard drafts (fixes “Listing not found”)
             const newUserId = String(data.user?.id ?? "");
             const lastUserId = localStorage.getItem(LS_LAST_USER_ID_KEY);
 
@@ -118,7 +126,6 @@
                 clearWizardDraftCache();
             }
 
-            // Save session (optional)
             localStorage.setItem(
                 LS_SESSION_KEY,
                 JSON.stringify({
@@ -128,7 +135,6 @@
                 })
             );
 
-            // Remember who logged in last (used for draft clearing)
             localStorage.setItem(LS_LAST_USER_ID_KEY, newUserId);
 
             redirectByRole(data.user);

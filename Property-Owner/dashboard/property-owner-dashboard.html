@@ -14,6 +14,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-calendar.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-messages.css">
 </head>
 
 <body>
@@ -77,77 +78,112 @@
 
         <!-- CALENDAR -->
         <section class="tabPanel" id="tab-calendar" data-panel="calendar" role="tabpanel">
-            <div class="calendarPage" id="calendarPage">
-                <div class="calendarHeader">
-                    <div class="calendarIntro">
-                        <h2 class="pageTitle">Rental calendar</h2>
-                        <p class="pageSub">Manage availability, rental dates, and pricing for your units.</p>
-                    </div>
+            <div class="calendarPage calendarPage--fixed" id="calendarPage">
 
-                    <div class="calendarControls">
-                        <button class="btn ghost" id="calTodayBtn" type="button">Today</button>
-                        <button class="btn ghost" id="calPrevBtn" type="button" aria-label="Previous month">‹</button>
-                        <div class="calendarMonthLabel" id="calendarMonthLabel">Month Year</div>
-                        <button class="btn ghost" id="calNextBtn" type="button" aria-label="Next month">›</button>
-                    </div>
-                </div>
+                <!-- CENTER: main grid -->
+                <div class="calendarCenterPanel">
+                    <div class="calendarCenterHeader">
 
-                <div class="calendarLayout">
-                    <div class="calendarMainCard">
+                        <button class="btn ghost calendarTodayBtn" id="calTodayBtn" type="button">Today</button>
+                    </div>
+                    <div class="calendarMainCard calendarMainScroll">
                         <div class="calendarWeekdays" id="calendarWeekdays"></div>
                         <div class="calendarGrid" id="calendarGrid"></div>
                     </div>
+                </div>
 
+                <!-- RIGHT: mini cal + filters + daily overview -->
+                <div class="calendarRightPanel">
+
+                    <!-- Mini calendar -->
+                    <div class="calendarMiniCalCard">
+                        <div class="calendarMiniCalHeader">
+                            <button class="calendarMiniNavBtn" id="calPrevBtn" type="button"
+                                aria-label="Previous month">&#8249;</button>
+                            <div class="calendarMonthLabel" id="calendarMonthLabel">Month Year</div>
+                            <button class="calendarMiniNavBtn" id="calNextBtn" type="button"
+                                aria-label="Next month">&#8250;</button>
+                            <div class="calendarMonthPicker" id="calendarMonthPicker" hidden></div>
+                        </div>
+                        <div class="calendarMiniGrid" id="calendarMiniGrid"></div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="calendarFiltersCard">
+                        <div class="calendarFiltersLabel">Filters</div>
+                        <div class="calendarFilterGroup">
+                            <div class="calendarFilterGroupLabel">Unit</div>
+                            <select class="calendarSelect" id="calendarUnitFilter">
+                                <option value="all">All units</option>
+                            </select>
+                        </div>
+                        <div class="calendarFilterGroup">
+                            <div class="calendarFilterGroupLabel">Status</div>
+                            <select class="calendarSelect" id="calendarStatusFilter">
+                                <option value="all">All statuses</option>
+                                <option value="AVAILABLE">Available</option>
+                                <option value="RESERVED">Reserved</option>
+                                <option value="MOVED_IN">Moved in</option>
+                                <option value="OCCUPIED">Occupied</option>
+                                <option value="MOVE_OUT">Move out</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <!-- Daily overview -->
                     <div class="calendarSidePanel" id="calendarSidePanel">
                         <div class="calendarInspector" id="calendarInspector">
                             <div class="calendarInspectorOverview" id="calendarInspectorOverview">
-                                <div class="calendarSideCard">
-                                    <div class="calendarSideLabel">Selected date</div>
-                                    <div class="calendarSelectedDateLarge" id="calendarSelectedDate">Select a date</div>
-                                    <div class="calendarSelectedMeta" id="calendarSelectedMeta">
-                                        Choose a day to view rental activity.
+                                <div class="calendarSideCard calendarOverviewCard">
+                                    <div class="calendarSideHead">
+                                        <h3 class="calendarSideTitle">Daily overview</h3>
+                                        <div class="calendarSelectedMeta" id="calendarSelectedMeta">Select a date</div>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Total stays</span>
+                                        <strong id="calendarDailyTotal">&#8212;</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Availability</span>
+                                        <strong id="calendarAvailabilityStatus">&#8212;</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Reserved</span>
+                                        <strong id="calendarDailyReserved">&#8212;</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Occupied / moved in</span>
+                                        <strong id="calendarDailyOccupied">&#8212;</strong>
                                     </div>
                                 </div>
-
                                 <div class="calendarSideCard">
                                     <div class="calendarSideHead">
-                                        <h3 class="calendarSideTitle">Availability settings</h3>
+                                        <h3 class="calendarSideTitle">Warnings &amp; conflicts</h3>
                                     </div>
-
-                                    <div class="calendarInfoRow">
-                                        <span>Minimum stay</span>
-                                        <strong>1 month</strong>
-                                    </div>
-                                    <div class="calendarInfoRow">
-                                        <span>Maximum stay</span>
-                                        <strong>12 months</strong>
-                                    </div>
-                                    <div class="calendarInfoRow">
-                                        <span>Status</span>
-                                        <strong id="calendarAvailabilityStatus">Available</strong>
-                                    </div>
-                                </div>
-
-                                <div class="calendarSideCard">
-                                    <div class="calendarSideHead">
-                                        <h3 class="calendarSideTitle">Price settings</h3>
-                                    </div>
-
-                                    <div class="calendarInfoRow">
-                                        <span>Base rent</span>
-                                        <strong>₱12,000 / month</strong>
-                                    </div>
-                                    <div class="calendarInfoRow">
-                                        <span>Discount</span>
-                                        <strong>10% monthly</strong>
+                                    <div class="calendarStackList" id="calendarWarnings">
+                                        <div class="calendarEmptyNote">No conflicts detected.</div>
                                     </div>
                                 </div>
                             </div>
-
                             <div class="calendarInspectorDetail" id="calendarInspectorDetail" hidden></div>
                         </div>
                     </div>
+
                 </div>
+
+                <!-- hidden stubs so JS does not break -->
+                <div hidden>
+                    <div id="calendarSelectedDate"></div>
+                    <div id="calendarUpcomingActions"></div>
+                    <div id="calendarDayEvents"></div>
+                    <div id="summaryAvailable">0</div>
+                    <div id="summaryReserved">0</div>
+                    <div id="summaryOccupied">0</div>
+                    <div id="summaryMoveIn">0</div>
+                    <div id="summaryMoveOut">0</div>
+                </div>
+
             </div>
         </section>
 
@@ -160,6 +196,27 @@
                 </div>
 
                 <div class="headerActions">
+                    <div class="densityToggle" id="densityToggle" role="group" aria-label="View density">
+                        <button class="densityBtn active" id="densityGrid" type="button" aria-pressed="true"
+                            title="Grid view">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <rect x="1" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                                <rect x="8.5" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                                <rect x="1" y="8.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                                <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                            </svg>
+                        </button>
+                        <button class="densityBtn" id="densityList" type="button" aria-pressed="false"
+                            title="List view">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <rect x="1" y="2" width="13" height="2.2" rx="1.1" fill="currentColor" />
+                                <rect x="1" y="6.4" width="13" height="2.2" rx="1.1" fill="currentColor" />
+                                <rect x="1" y="10.8" width="13" height="2.2" rx="1.1" fill="currentColor" />
+                            </svg>
+                        </button>
+                    </div>
                     <button class="btn solid primaryCta" id="btnNewListing" type="button">Create listing</button>
                 </div>
             </div>
@@ -169,11 +226,48 @@
 
         <!-- MESSAGES -->
         <section class="tabPanel" id="tab-messages" data-panel="messages" role="tabpanel">
-            <div class="placeholderCard">
-                <h3>Messages</h3>
-                <p>Messaging (later).</p>
+            <div class="msgShell">
+
+                <!-- LEFT: conversation list -->
+                <div class="msgSidebar">
+                    <div class="msgSidebarHead">
+                        <h2 class="msgSidebarTitle">Messages</h2>
+                        <span class="msgUnreadPill" id="msgUnreadPill">3</span>
+                    </div>
+                    <div class="msgSearchWrap">
+                        <i data-lucide="search" class="msgSearchIcon"></i>
+                        <input class="msgSearchInput" id="msgSearchInput" type="text"
+                            placeholder="Search conversations&#8230;" autocomplete="off">
+                    </div>
+                    <div class="msgThreadList" id="msgThreadList"></div>
+                </div>
+
+                <!-- CENTER: chat area -->
+                <div class="msgMain" id="msgMain">
+                    <div class="msgMainEmpty" id="msgMainEmpty">
+                        <i data-lucide="message-square"
+                            style="width:36px;height:36px;stroke-width:1.4;color:rgba(27,63,110,0.22)"></i>
+                        <p>Select a conversation to start messaging</p>
+                    </div>
+                    <div class="msgChatWrap" id="msgChatWrap" hidden>
+                        <div class="msgChatHeader" id="msgChatHeader"></div>
+                        <div class="msgBubbleList" id="msgBubbleList"></div>
+                        <div class="msgComposer">
+                            <textarea class="msgInput" id="msgInput" placeholder="Write a message&#8230;"
+                                rows="1"></textarea>
+                            <button class="msgSendBtn" id="msgSendBtn" type="button" aria-label="Send">
+                                <i data-lucide="send"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: tenant info panel -->
+                <div class="msgInfoPanel" id="msgInfoPanel" hidden>
+                    <div class="msgInfoInner" id="msgInfoInner"></div>
+                </div>
+
             </div>
-        </section>
 
     </main>
 
@@ -195,6 +289,7 @@
     <script src="/PO-after-signup/listing-wizard/core/store.js" defer></script>
     <script src="property-owner-dashboard.js" defer></script>
     <script src="dashboard-calendar.js" defer></script>
+    <script src="dashboard-messages.js" defer></script>
 
 
 </body>

@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
 
+
+
 from ..extensions import db
 from ..models import User
 from ..auth.jwt import create_access_token, require_auth, COOKIE_NAME
@@ -45,7 +47,7 @@ def register():
     last_name = (data.get("last_name") or "").strip() or None
     phone = (data.get("phone") or "").strip() or None
 
-    if not email or not password or role not in ("RESIDENT", "OWNER"):
+    if not email or not password or role not in ( "RESIDENT", "OWNER"):
         return json_error("Invalid payload. Required: email, password, role (RESIDENT|OWNER)", 400)
 
     if User.query.filter_by(email=email).first():
@@ -59,8 +61,13 @@ def register():
     user.last_name = last_name
     user.phone = phone
 
-    # Owners require manual verification
-    user.is_verified = (role != "OWNER")
+    
+    if role == "OWNER":
+      user.is_verified = False
+    else:
+      user.is_verified = True
+
+    user.is_suspended = False
 
     try:
         db.session.add(user)
@@ -95,13 +102,16 @@ def login():
         return json_error("Invalid payload. Required: email, password", 400)
 
     # If role is provided, match both. Otherwise login by email only.
-    if role in ("RESIDENT", "OWNER"):
+    if role in ("ADMIN", "RESIDENT", "OWNER"):
         user = User.query.filter_by(email=email, role=role).first()
     else:
         user = User.query.filter_by(email=email).first()
 
     if not user or not user.check_password(password):
         return json_error("Invalid credentials", 401)
+    
+    if getattr(user, "is_suspended", False):
+     return json_error("Account suspended", 403)
 
     token = create_access_token(user)
 

@@ -619,8 +619,41 @@
       if (evt.key === "Escape") closeAllMenus();
     });
 
-    // Boot
+    // ===== Density toggle =====
+    const densityGrid = document.getElementById("densityGrid");
+    const densityList = document.getElementById("densityList");
 
+    function setDensity(mode) {
+      const grid = document.getElementById("listingGrid");
+      if (!grid) return;
+
+      if (mode === "list") {
+        grid.classList.add("isList");
+        densityGrid?.classList.remove("active");
+        densityGrid?.setAttribute("aria-pressed", "false");
+        densityList?.classList.add("active");
+        densityList?.setAttribute("aria-pressed", "true");
+      } else {
+        grid.classList.remove("isList");
+        densityGrid?.classList.add("active");
+        densityGrid?.setAttribute("aria-pressed", "true");
+        densityList?.classList.remove("active");
+        densityList?.setAttribute("aria-pressed", "false");
+      }
+
+      try { localStorage.setItem("listingDensity", mode); } catch { }
+    }
+
+    densityGrid?.addEventListener("click", () => setDensity("grid"));
+    densityList?.addEventListener("click", () => setDensity("list"));
+
+    // Restore saved preference
+    try {
+      const saved = localStorage.getItem("listingDensity");
+      if (saved === "list") setDensity("list");
+    } catch { }
+
+    // Boot
     renderTabs();
 
   });
