@@ -332,7 +332,7 @@ form.addEventListener("submit", async (e) => {
 
         // NOTE: your backend marks owners as unverified by default.
         // They may be blocked from login until verified (403).
-        window.location.href = "../../../PO-after-signup/PO_welcome-page.html";
+        window.location.href = '../../../PO-after-signup/PO_welcome-page.html';
     } catch (err) {
         setInvalid(email, emailError, err.message || "Registration failed.", true);
         scrollToField(email);

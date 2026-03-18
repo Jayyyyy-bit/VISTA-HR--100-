@@ -1,10 +1,5 @@
 /* VISTA-HR | Messages
-   Companion to dashboard-messages.js
    ------------------------------------------------------------ */
-
-/* ============================================================
-   MESSAGES TAB
-   ============================================================ */
 
 #tab-messages {
     height: calc(100vh - 64px);
@@ -44,6 +39,7 @@
     font-weight: 400;
     color: #030303;
     letter-spacing: -0.02em;
+    flex: 1;
 }
 
 .msgUnreadPill {
@@ -58,7 +54,6 @@
     color: #fff;
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: 0.02em;
 }
 
 .msgSearchWrap {
@@ -115,17 +110,19 @@
     padding: 12px 16px;
     cursor: pointer;
     border-bottom: 1px solid rgba(18, 52, 88, 0.05);
-    transition: background 130ms;
+    transition: background 160ms ease, padding-left 160ms ease;
     position: relative;
 }
 
 .msgThread:hover {
     background: rgba(241, 239, 236, 0.80);
+    padding-left: 20px;
 }
 
 .msgThread.isActive {
     background: rgba(27, 63, 110, 0.07);
     border-left: 3px solid #1B3F6E;
+    padding-left: 13px;
 }
 
 .msgThread.isUnread .msgThreadName {
@@ -141,7 +138,6 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    object-fit: cover;
     flex-shrink: 0;
     background: rgba(212, 201, 190, 0.60);
     display: flex;
@@ -191,6 +187,43 @@
     text-overflow: ellipsis;
 }
 
+/* Conversation status tag */
+.msgThreadTag {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 5px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.msgThreadTag.tag-new {
+    background: rgba(26, 92, 150, 0.10);
+    color: #0C3668;
+    border: 1px solid rgba(26, 92, 150, 0.18);
+}
+
+.msgThreadTag.tag-viewing {
+    background: rgba(184, 116, 10, 0.12);
+    color: #7A4500;
+    border: 1px solid rgba(184, 116, 10, 0.22);
+}
+
+.msgThreadTag.tag-negotiating {
+    background: rgba(107, 63, 160, 0.11);
+    color: #4A1F82;
+    border: 1px solid rgba(107, 63, 160, 0.20);
+}
+
+.msgThreadTag.tag-closed {
+    background: rgba(45, 122, 82, 0.11);
+    color: #1A5C35;
+    border: 1px solid rgba(45, 122, 82, 0.20);
+}
+
 .msgUnreadDot {
     position: absolute;
     top: 50%;
@@ -200,7 +233,6 @@
     height: 8px;
     border-radius: 50%;
     background: #1B3F6E;
-    flex-shrink: 0;
 }
 
 /* ── CENTER CHAT ── */
@@ -209,6 +241,7 @@
     flex-direction: column;
     overflow: hidden;
     background: rgba(248, 246, 242, 0.60);
+    position: relative;
 }
 
 .msgMainEmpty {
@@ -231,6 +264,7 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    position: relative;
 }
 
 /* Chat header */
@@ -278,7 +312,6 @@
     margin-top: 1px;
 }
 
-/* Property chip in header */
 .msgPropertyChip {
     display: inline-flex;
     align-items: center;
@@ -329,6 +362,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    position: relative;
 }
 
 .msgBubbleGroup.isOwn {
@@ -339,14 +373,32 @@
     align-items: flex-start;
 }
 
-.msgBubble {
+/* Bubble wrapper for reaction hover */
+.msgBubbleWrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     max-width: 68%;
+}
+
+.msgBubbleGroup.isOwn .msgBubbleWrap {
+    flex-direction: row-reverse;
+}
+
+.msgBubble {
     padding: 10px 14px;
     border-radius: 16px;
     font-size: 13px;
     font-weight: 500;
     line-height: 1.5;
     word-break: break-word;
+    cursor: default;
+    transition: filter 120ms;
+}
+
+.msgBubble:hover {
+    filter: brightness(0.97);
 }
 
 .msgBubbleGroup.isOwn .msgBubble {
@@ -363,6 +415,147 @@
     box-shadow: 0 2px 8px rgba(18, 52, 88, 0.05);
 }
 
+/* Reaction popup */
+.msgReactBar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #fff;
+    border: 1px solid rgba(18, 52, 88, 0.10);
+    border-radius: 999px;
+    padding: 4px 8px;
+    box-shadow: 0 4px 18px rgba(18, 52, 88, 0.14);
+    position: absolute;
+    top: -46px;
+    z-index: 20;
+    white-space: nowrap;
+    /* hidden by default */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px) scale(0.88);
+    transform-origin: bottom center;
+    transition:
+        opacity 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* invisible bridge fills gap between bubble and react bar so hover doesn't break */
+.msgReactBar::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 0;
+    right: 0;
+    height: 14px;
+}
+
+.msgBubbleGroup.isOwn .msgReactBar {
+    right: 0;
+    transform-origin: bottom right;
+}
+
+.msgBubbleGroup.isOther .msgReactBar {
+    left: 0;
+    transform-origin: bottom left;
+}
+
+/* show on wrap hover OR when bar itself is hovered */
+.msgBubbleWrap:hover .msgReactBar,
+.msgReactBar:hover {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+.msgReactBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 3px 5px;
+    border-radius: 8px;
+    line-height: 1;
+    transition: background 120ms, transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.msgReactBtn:hover {
+    background: rgba(18, 52, 88, 0.07);
+    transform: scale(1.4) translateY(-2px);
+}
+
+/* Reaction display on bubble */
+.msgBubbleReactions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.msgReactionChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.90);
+    border: 1px solid rgba(18, 52, 88, 0.12);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 120ms, transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    user-select: none;
+    animation: msgChipPop 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes msgChipPop {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.msgReactionChip:hover {
+    background: rgba(27, 63, 110, 0.06);
+    transform: scale(1.12);
+}
+
+.msgReactionChip span {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(18, 52, 88, 0.55);
+}
+
+/* Star icon on bubble */
+.msgStarBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(18, 52, 88, 0.25);
+    font-size: 14px;
+    padding: 2px;
+    line-height: 1;
+    transition: color 120ms, transform 120ms;
+    flex-shrink: 0;
+    opacity: 0;
+}
+
+.msgBubbleWrap:hover .msgStarBtn {
+    opacity: 1;
+}
+
+.msgStarBtn.isStarred {
+    color: #D4880A;
+    opacity: 1;
+}
+
+.msgStarBtn:hover {
+    transform: scale(1.2);
+}
+
 .msgBubbleMeta {
     display: flex;
     align-items: center;
@@ -377,7 +570,6 @@
     justify-content: flex-end;
 }
 
-/* read receipt */
 .msgReceipt {
     font-size: 11px;
 }
@@ -390,12 +582,171 @@
     color: #2D7A52;
 }
 
+/* Typing indicator */
+.msgTypingIndicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(18, 52, 88, 0.09);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+    box-shadow: 0 2px 8px rgba(18, 52, 88, 0.05);
+}
+
+.msgTypingDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(18, 52, 88, 0.35);
+    animation: msgTypingBounce 1.2s infinite ease-in-out;
+}
+
+.msgTypingDot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.msgTypingDot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes msgTypingBounce {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+
+    30% {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
+}
+
+/* Unread jump button */
+.msgJumpBtn {
+    position: absolute;
+    bottom: 128px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: #1B3F6E;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(27, 63, 110, 0.28);
+    transition: opacity 200ms, transform 200ms;
+    z-index: 10;
+}
+
+.msgJumpBtn.isHidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(8px);
+}
+
+/* Quick reply templates — floating inside chat like Messenger */
+.msgQuickReplies {
+    position: absolute;
+    bottom: 76px;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    pointer-events: none;
+    z-index: 8;
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+.msgQuickReplies::-webkit-scrollbar {
+    display: none;
+}
+
+.msgQuickReplies.hasReplies {
+    pointer-events: auto;
+}
+
+.msgQuickReply {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(18, 52, 88, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+    color: rgba(18, 52, 88, 0.80);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(18, 52, 88, 0.10);
+    backdrop-filter: blur(6px);
+    transition: background 140ms, border-color 140ms, color 140ms, transform 140ms, box-shadow 140ms;
+    animation: msgQuickReplyIn 200ms ease both;
+}
+
+@keyframes msgQuickReplyIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.msgQuickReply:nth-child(2) {
+    animation-delay: 50ms;
+}
+
+.msgQuickReply:nth-child(3) {
+    animation-delay: 100ms;
+}
+
+.msgQuickReply:nth-child(4) {
+    animation-delay: 150ms;
+}
+
+.msgQuickReply:nth-child(5) {
+    animation-delay: 200ms;
+}
+
+.msgQuickReply:hover {
+    background: #fff;
+    border-color: #1B3F6E;
+    color: #1B3F6E;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(27, 63, 110, 0.14);
+}
+
+.msgQuickReply:active {
+    transform: translateY(0);
+}
+
 /* Composer */
 .msgComposer {
     display: flex;
     align-items: flex-end;
     gap: 10px;
-    padding: 12px 16px 16px;
+    padding: 10px 16px 14px;
     border-top: 1px solid rgba(18, 52, 88, 0.09);
     background: rgba(255, 255, 255, 0.90);
     flex-shrink: 0;
@@ -443,7 +794,11 @@
 
 .msgSendBtn:hover {
     background: #123058;
-    transform: scale(1.05);
+    transform: scale(1.06);
+}
+
+.msgSendBtn:active {
+    transform: scale(0.94);
 }
 
 .msgSendBtn svg {
@@ -456,6 +811,19 @@
     border-left: 1px solid rgba(18, 52, 88, 0.09);
     background: rgba(255, 255, 255, 0.75);
     overflow: hidden;
+    animation: msgPanelIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes msgPanelIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .msgInfoInner {
@@ -464,7 +832,7 @@
     padding: 18px 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     scrollbar-width: thin;
     scrollbar-color: rgba(18, 52, 88, 0.10) transparent;
 }
@@ -481,7 +849,6 @@
     font-weight: 800;
     color: rgba(18, 52, 88, 0.65);
     margin: 0 auto 2px;
-    overflow: hidden;
 }
 
 .msgInfoName {
@@ -500,12 +867,11 @@
     margin-top: 2px;
 }
 
-/* Star rating */
 .msgInfoRating {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
     margin-top: 4px;
 }
 
@@ -515,6 +881,7 @@
 }
 
 .msgInfoStarEmpty {
+    font-size: 14px;
     color: rgba(18, 52, 88, 0.18);
 }
 
@@ -525,7 +892,6 @@
     margin-left: 4px;
 }
 
-/* Info section card */
 .msgInfoSection {
     background: rgba(248, 246, 242, 0.80);
     border: 1px solid rgba(18, 52, 88, 0.08);
@@ -569,7 +935,107 @@
     text-align: right;
 }
 
-/* Property interest card */
+/* Move-in timeline */
+.msgMoveInTimeline {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.msgMoveInBar {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(18, 52, 88, 0.10);
+    overflow: hidden;
+}
+
+.msgMoveInFill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #1B3F6E, #D4880A);
+    transition: width 600ms ease;
+}
+
+.msgMoveInLabel {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(18, 52, 88, 0.48);
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Notes field */
+.msgNotesTextarea {
+    width: 100%;
+    min-height: 72px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    border: 1px solid rgba(18, 52, 88, 0.10);
+    background: rgba(255, 255, 255, 0.80);
+    color: #030303;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
+    box-sizing: border-box;
+    transition: border-color 130ms, box-shadow 130ms;
+    margin-top: 6px;
+}
+
+.msgNotesTextarea:focus {
+    border-color: rgba(184, 116, 10, 0.30);
+    box-shadow: 0 0 0 3px rgba(184, 116, 10, 0.08);
+    background: #fff;
+}
+
+/* Action buttons */
+.msgActionBtns {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 2px;
+}
+
+.msgActionBtn {
+    width: 100%;
+    height: 36px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(18, 52, 88, 0.14);
+    background: rgba(255, 255, 255, 0.90);
+    color: #1B3F6E;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: background 130ms, border-color 130ms, box-shadow 130ms;
+}
+
+.msgActionBtn:hover {
+    background: #fff;
+    border-color: rgba(27, 63, 110, 0.28);
+    box-shadow: 0 3px 10px rgba(27, 63, 110, 0.08);
+}
+
+.msgActionBtn.isPrimary {
+    background: #1B3F6E;
+    color: #fff;
+    border-color: #1B3F6E;
+}
+
+.msgActionBtn.isPrimary:hover {
+    background: #123058;
+    border-color: #123058;
+    box-shadow: 0 4px 14px rgba(27, 63, 110, 0.22);
+}
+
+/* Property card */
 .msgPropertyCard {
     border-radius: 10px;
     overflow: hidden;
@@ -578,7 +1044,7 @@
 
 .msgPropertyImg {
     width: 100%;
-    height: 80px;
+    height: 76px;
     object-fit: cover;
     display: block;
     background: rgba(212, 201, 190, 0.50);
@@ -616,4 +1082,47 @@
     background: rgba(45, 122, 82, 0.12);
     color: #1A5C35;
     border: 1px solid rgba(45, 122, 82, 0.22);
+}
+
+/* Starred messages section */
+.msgStarredList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.msgStarredItem {
+    background: rgba(255, 255, 255, 0.90);
+    border: 1px solid rgba(18, 52, 88, 0.09);
+    border-radius: 9px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #030303;
+    line-height: 1.4;
+    border-left: 3px solid #D4880A;
+}
+
+.msgStarredTime {
+    font-size: 10px;
+    color: rgba(18, 52, 88, 0.40);
+    font-weight: 600;
+    margin-top: 3px;
+}
+
+/* Nav tab unread badge */
+.dashTab[data-tab="messages"] {
+    position: relative;
+}
+
+.msgNavBadge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #C94020;
+    border: 1.5px solid rgba(255, 255, 255, 0.90);
 }

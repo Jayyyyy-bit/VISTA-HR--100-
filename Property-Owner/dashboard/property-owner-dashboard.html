@@ -23,13 +23,16 @@
     <header class="topbar">
         <div class="topbar-inner">
 
-            <a class="brand" href="/resident/home">
+            <a class="brand" href="/Property-Owner/dashboard/property-owner-dashboard.html">
                 <span class="brandDot"></span>
                 <span>VISTA<b>-HR</b></span>
             </a>
 
             <nav class="dashTabs" role="tablist" aria-label="Dashboard tabs">
-                <button class="dashTab active" data-tab="today" role="tab" aria-selected="true">Today</button>
+                <button class="dashTab active" data-tab="today" role="tab" aria-selected="true">
+                    Today
+                    <span class="dashTabBadge" id="bookingsBadge" hidden></span>
+                </button>
                 <button class="dashTab" data-tab="calendar" role="tab" aria-selected="false">Calendar</button>
                 <button class="dashTab" data-tab="listings" role="tab" aria-selected="false">Listings</button>
                 <button class="dashTab" data-tab="messages" role="tab" aria-selected="false">Messages</button>
@@ -64,16 +67,101 @@
 
         <!-- TODAY -->
         <section class="tabPanel active" id="tab-today" data-panel="today" role="tabpanel">
-            <div class="heroCard">
-                <div class="heroIcon">
-                    <i data-lucide="book-open"></i>
+
+            <!-- Verification banner (hidden by default, shown if owner not yet verified) -->
+            <!-- Email not verified banner (shown until OTP confirmed) -->
+            <div class="emailVerifyBanner" id="emailVerifyBanner" hidden>
+                <div class="verifyBannerIcon"><i data-lucide="mail"></i></div>
+                <div class="verifyBannerBody">
+                    <div class="verifyBannerTitle">Verify your email to publish listings</div>
+                    <div class="verifyBannerSub">We sent a 6-digit code to your email. Verify to unlock publishing.
+                    </div>
                 </div>
-                <div class="heroText">
-                    <h2>You don’t have any reservations</h2>
-                    <p>To get booked, you’ll need to complete and publish your listing.</p>
-                    <button class="btn solid" id="btnCompleteListing" type="button">Complete your listing</button>
+                <a class="verifyBannerCta verifyBannerCta--blue" id="emailVerifyBtn" href="#">
+                    <i data-lucide="mail-check"></i>
+                    Verify email
+                </a>
+            </div>
+
+            <div class="verifyBanner" id="verifyBanner" hidden>
+                <div class="verifyBannerIcon"><i data-lucide="shield-alert"></i></div>
+                <div class="verifyBannerBody">
+                    <div class="verifyBannerTitle">Account pending verification</div>
+                    <div class="verifyBannerSub">Your listings won't be visible to residents until an admin approves
+                        your account. This usually takes 1–2 business days.</div>
+                </div>
+                <a class="verifyBannerCta" href="/Property-Owner/verification/verify.html">
+                    <i data-lucide="shield-check"></i>
+                    Verify now
+                </a>
+            </div>
+
+            <!-- Stat cards -->
+            <div class="todayStats" id="todayStats">
+                <div class="statCard">
+                    <div class="statIcon statIcon--pending"><i data-lucide="clock"></i></div>
+                    <div class="statBody">
+                        <div class="statNum" id="statPending">—</div>
+                        <div class="statLabel">Pending bookings</div>
+                    </div>
+                </div>
+                <div class="statCard">
+                    <div class="statIcon statIcon--approved"><i data-lucide="check-circle-2"></i></div>
+                    <div class="statBody">
+                        <div class="statNum" id="statApproved">—</div>
+                        <div class="statLabel">Approved</div>
+                    </div>
+                </div>
+                <div class="statCard">
+                    <div class="statIcon statIcon--listings"><i data-lucide="home"></i></div>
+                    <div class="statBody">
+                        <div class="statNum" id="statListings">—</div>
+                        <div class="statLabel">Active listings</div>
+                    </div>
+                </div>
+                <div class="statCard">
+                    <div class="statIcon statIcon--occupancy"><i data-lucide="users"></i></div>
+                    <div class="statBody">
+                        <div class="statNum" id="statOccupancy">—</div>
+                        <div class="statLabel">Occupancy rate</div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Today's move-in events -->
+            <div class="todaySection" id="todayEventsSection">
+                <div class="todaySectionHead">
+                    <h3 class="todaySectionTitle">Today's move-ins</h3>
+                    <span class="todayDateLabel" id="todayDateLabel"></span>
+                </div>
+                <div id="todayEventsList"></div>
+            </div>
+
+            <!-- All bookings (merged into Today) -->
+            <div class="todaySection">
+                <div class="todaySectionHead">
+                    <h3 class="todaySectionTitle">Bookings</h3>
+                </div>
+                <div class="bkFilterBar" role="tablist" aria-label="Booking status filter">
+                    <button class="bkFilterBtn active" data-status="ALL" role="tab">All</button>
+                    <button class="bkFilterBtn" data-status="PENDING" role="tab">
+                        Pending <span class="bkFilterCount" id="bkCountPending"></span>
+                    </button>
+                    <button class="bkFilterBtn" data-status="APPROVED" role="tab">Approved</button>
+                    <button class="bkFilterBtn" data-status="REJECTED" role="tab">Rejected</button>
+                    <button class="bkFilterBtn" data-status="CANCELLED" role="tab">Cancelled</button>
+                </div>
+                <div id="bookingsList"></div>
+            </div>
+
+            <!-- Recent activity -->
+            <div class="todaySection">
+                <div class="todaySectionHead">
+                    <h3 class="todaySectionTitle">Recent activity</h3>
+                </div>
+                <div id="todayActivityList"></div>
+            </div>
+
         </section>
 
         <!-- CALENDAR -->
@@ -252,6 +340,8 @@
                     <div class="msgChatWrap" id="msgChatWrap" hidden>
                         <div class="msgChatHeader" id="msgChatHeader"></div>
                         <div class="msgBubbleList" id="msgBubbleList"></div>
+                        <button class="msgJumpBtn isHidden" id="msgJumpBtn" type="button">&#8595; unread</button>
+                        <div class="msgQuickReplies" id="msgQuickReplies"></div>
                         <div class="msgComposer">
                             <textarea class="msgInput" id="msgInput" placeholder="Write a message&#8230;"
                                 rows="1"></textarea>
@@ -268,7 +358,7 @@
                 </div>
 
             </div>
-
+        </section>
     </main>
 
     <!-- Confirm Modal -->

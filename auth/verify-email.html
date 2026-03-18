@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Verify Your Email</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="verify-email.css" />
+</head>
+
+<body>
+
+    <div class="bg" aria-hidden="true">
+        <div class="grid"></div>
+        <div class="glow g1"></div>
+        <div class="glow g2"></div>
+    </div>
+
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo-dot"></span>
+            <span class="brand-text">VISTA<span>-HR</span></span>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <section class="card" id="verifyCard">
+
+            <!-- Icon -->
+            <div class="iconRing">
+                <i data-lucide="mail-check"></i>
+            </div>
+
+            <div class="cardHead">
+                <h1 class="title">Check your email</h1>
+                <p class="sub" id="subText">
+                    We sent a 6-digit code to <strong id="emailDisplay">your email</strong>.<br>
+                    Enter it below to verify your account.
+                </p>
+            </div>
+
+            <!-- OTP inputs -->
+            <div class="otpRow" id="otpRow" role="group" aria-label="One-time password">
+                <input class="otpBox" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code"
+                    aria-label="Digit 1" />
+                <input class="otpBox" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2" />
+                <input class="otpBox" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3" />
+                <span class="otpSep">—</span>
+                <input class="otpBox" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4" />
+                <input class="otpBox" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 5" />
+                <input class="otpBox" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 6" />
+            </div>
+
+            <p class="errMsg" id="errMsg" hidden></p>
+
+            <button class="btnPrimary" id="verifyBtn" type="button" disabled>
+                <span class="btnLabel">Verify email</span>
+                <span class="btnSpinner" hidden></span>
+            </button>
+
+            <div class="resendRow">
+                <span class="resendText" id="resendText">Didn't receive it?</span>
+                <button class="resendBtn" id="resendBtn" type="button" disabled>
+                    Resend code <span id="resendTimer"></span>
+                </button>
+            </div>
+
+        </section>
+
+        <!-- Success state (hidden until verified) -->
+        <section class="card cardSuccess" id="successCard" hidden>
+            <div class="successRing">
+                <i data-lucide="circle-check-big"></i>
+            </div>
+            <h2 class="title">Email verified!</h2>
+            <p class="sub" id="successSub">Your account is ready.</p>
+            <button class="btnPrimary" id="continueBtn" type="button">Continue</button>
+        </section>
+
+    </main>
+
+    <script src="verify-email.js" defer></script>
+</body>
+
+</html>

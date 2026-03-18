@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Identity Verification</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="verify.css" />
+</head>
+
+<body>
+
+    <div class="bg" aria-hidden="true">
+        <div class="grid"></div>
+        <div class="glow g1"></div>
+        <div class="glow g2"></div>
+    </div>
+
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo-dot"></span>
+            <span class="brand-text">VISTA<span>-HR</span></span>
+        </div>
+        <a class="skipLink" href="/Property-Owner/dashboard/property-owner-dashboard.html">
+            Do this later
+        </a>
+    </header>
+
+    <main class="wrap">
+        <div class="stepper">
+            <div class="step done"><span class="stepDot"><i data-lucide="check"></i></span><span>Email</span></div>
+            <div class="stepLine done"></div>
+            <div class="step active"><span class="stepDot"><span>2</span></span><span>Identity</span></div>
+            <div class="stepLine"></div>
+            <div class="step"><span class="stepDot"><span>3</span></span><span>Review</span></div>
+        </div>
+
+        <section class="card" id="kycPendingCard" hidden>
+            <div class="iconRing iconRing--amber"><i data-lucide="clock"></i></div>
+            <h1 class="title">Verification pending</h1>
+            <p class="sub">Your documents are under review. This usually takes 1–2 business days. We'll email you once a
+                decision is made.</p>
+            <a class="btnPrimary" href="/Property-Owner/dashboard/property-owner-dashboard.html">Go to dashboard</a>
+        </section>
+
+        <section class="card" id="kycRejectedCard" hidden>
+            <div class="iconRing iconRing--red"><i data-lucide="x-circle"></i></div>
+            <h1 class="title">Verification not approved</h1>
+            <p class="sub" id="rejectReasonText">Your documents could not be verified. Please re-submit with clearer
+                photos.</p>
+            <button class="btnPrimary" id="resubmitBtn" type="button">Re-submit documents</button>
+        </section>
+
+        <section class="card" id="kycFormCard">
+            <div class="iconRing"><i data-lucide="shield-check"></i></div>
+            <div class="cardHead">
+                <h1 class="title">Verify your identity</h1>
+                <p class="sub">Upload a valid government-issued ID to publish listings on VISTA-HR. Your documents are
+                    kept private and reviewed only by our admin team.</p>
+            </div>
+
+            <div class="infoBox">
+                <i data-lucide="info"></i>
+                <div><strong>Accepted IDs:</strong> PhilSys National ID, Passport, Driver's License, SSS ID, UMID,
+                    Voter's ID, PRC ID.</div>
+            </div>
+
+            <div class="uploadGroup">
+                <label class="uploadLabel"><span class="uploadNum">1</span> Government ID — Front <span
+                        class="required">*</span></label>
+                <div class="dropzone" id="dropFront">
+                    <input type="file" id="inputFront" accept="image/jpeg,image/png,image/webp" hidden />
+                    <div class="dropContent" id="dropContentFront">
+                        <i data-lucide="upload-cloud"></i>
+                        <span class="dropText">Click or drag to upload front of ID</span>
+                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                    </div>
+                    <div class="dropPreview" id="previewFront" hidden>
+                        <img id="previewImgFront" alt="ID front preview" />
+                        <button class="removeBtn" id="removeFront" type="button" aria-label="Remove"><i
+                                data-lucide="x"></i></button>
+                    </div>
+                </div>
+                <small class="fieldErr" id="errFront"></small>
+            </div>
+
+            <div class="uploadGroup">
+                <label class="uploadLabel"><span class="uploadNum">2</span> Government ID — Back <span
+                        class="required">*</span></label>
+                <div class="dropzone" id="dropBack">
+                    <input type="file" id="inputBack" accept="image/jpeg,image/png,image/webp" hidden />
+                    <div class="dropContent" id="dropContentBack">
+                        <i data-lucide="upload-cloud"></i>
+                        <span class="dropText">Click or drag to upload back of ID</span>
+                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                    </div>
+                    <div class="dropPreview" id="previewBack" hidden>
+                        <img id="previewImgBack" alt="ID back preview" />
+                        <button class="removeBtn" id="removeBack" type="button" aria-label="Remove"><i
+                                data-lucide="x"></i></button>
+                    </div>
+                </div>
+                <small class="fieldErr" id="errBack"></small>
+            </div>
+
+            <div class="uploadGroup">
+                <label class="uploadLabel"><span class="uploadNum">3</span> Selfie holding your ID <span
+                        class="optional">(optional but recommended)</span></label>
+                <div class="dropzone" id="dropSelfie">
+                    <input type="file" id="inputSelfie" accept="image/jpeg,image/png,image/webp" hidden />
+                    <div class="dropContent" id="dropContentSelfie">
+                        <i data-lucide="user-check"></i>
+                        <span class="dropText">Click or drag to upload selfie with ID</span>
+                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                    </div>
+                    <div class="dropPreview" id="previewSelfie" hidden>
+                        <img id="previewImgSelfie" alt="Selfie preview" />
+                        <button class="removeBtn" id="removeSelfie" type="button" aria-label="Remove"><i
+                                data-lucide="x"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <p class="globalErr" id="globalErr" hidden></p>
+
+            <button class="btnPrimary" id="submitBtn" type="button" disabled>
+                <span class="btnLabel">Submit for verification</span>
+                <span class="btnSpinner" hidden></span>
+            </button>
+
+            <p class="disclaimer">
+                <i data-lucide="lock"></i>
+                Your documents are encrypted and only visible to VISTA-HR admins. They are never shared with property
+                owners or residents.
+            </p>
+        </section>
+    </main>
+
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="verify.js" defer></script>
+</body>
+
+</html>

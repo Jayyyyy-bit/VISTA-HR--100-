@@ -7,6 +7,7 @@ window.Step4Init = function Step4Init({ nextBtn }) {
 
     const guestInput = document.getElementById("capGuests");
     const guestVal = document.getElementById("capGuestsVal");
+    const rentInput = document.getElementById("capRent");
 
     if (!guestInput || !guestVal) return;
 
@@ -21,7 +22,7 @@ window.Step4Init = function Step4Init({ nextBtn }) {
         SidePanel.setTips({
             selectedLabel: "Capacity",
             tips: [
-                "Guest count affects pricing and search visibility.",
+                "Setting a monthly rent helps residents filter by budget.",
                 "Bathrooms can be set in halves (e.g. 1.5).",
                 "You can adjust this later.",
             ],
@@ -38,6 +39,17 @@ window.Step4Init = function Step4Init({ nextBtn }) {
         guestVal.textContent = cap.guests;
         save();
     });
+
+    // Monthly rent
+    if (rentInput) {
+        if (cap.monthly_rent) rentInput.value = cap.monthly_rent;
+
+        rentInput.addEventListener("input", () => {
+            const val = parseInt(rentInput.value) || null;
+            cap.monthly_rent = val;
+            save();
+        });
+    }
 
     // Steppers
     document.querySelectorAll(".cap-stepper").forEach((wrap) => {

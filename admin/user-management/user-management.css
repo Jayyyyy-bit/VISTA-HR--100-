@@ -357,3 +357,208 @@ th {
         align-items: flex-start;
     }
 }
+
+/* ── Admin view tabs ──────────────────────────────────────── */
+.adminTabBar {
+    display: flex;
+    gap: 4px;
+    padding: 16px 20px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.adminTab {
+    position: relative;
+    padding: 10px 18px 12px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adminTab:hover {
+    color: var(--text);
+}
+
+.adminTab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.adminTabBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 99px;
+}
+
+/* ── Verification filter bar ─────────────────────────────── */
+.verifyFilterBar {
+    display: flex;
+    gap: 8px;
+    padding: 16px 20px;
+}
+
+.verifyFilterBtn {
+    padding: 7px 16px;
+    border-radius: 99px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.verifyFilterBtn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.verifyFilterBtn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+/* ── Verification cards ──────────────────────────────────── */
+.verifyCard {
+    border-top: 1px solid var(--line);
+    padding: 20px;
+    transition: background .12s;
+}
+
+.verifyCard:hover {
+    background: #f8fafc;
+}
+
+.verifyCardTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.verifyCardInfo {
+    flex: 1;
+}
+
+.verifyName {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.verifyEmail {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+.verifyMeta {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.verifyReason {
+    font-size: 12px;
+    color: #b45309;
+    font-weight: 500;
+    margin-top: 6px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: inline-block;
+}
+
+/* Document thumbnails */
+.verifyDocs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.docThumb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    transition: box-shadow .15s;
+    width: 120px;
+}
+
+.docThumb:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+}
+
+.docThumb img {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    display: block;
+}
+
+.docThumb span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 4px;
+}
+
+/* Approve / Reject actions */
+.verifyActions {
+    display: flex;
+    gap: 8px;
+}
+
+.verifyApprove {
+    background: var(--success) !important;
+    font-size: 13px;
+    padding: 8px 18px !important;
+}
+
+.verifyApprove:hover {
+    background: #166534 !important;
+}
+
+.verifyReject {
+    font-size: 13px;
+    padding: 8px 18px !important;
+    color: var(--danger) !important;
+    border: 1px solid var(--danger) !important;
+}
+
+.verifyReject:hover {
+    background: #fef2f2 !important;
+}
+
+.verifyLoading,
+.verifyEmpty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+}

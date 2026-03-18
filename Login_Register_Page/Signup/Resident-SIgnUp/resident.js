@@ -296,7 +296,7 @@ form.addEventListener("submit", async (e) => {
         AuthGuard.saveSession({ user: data.user });
 
         // redirect
-        window.location.href = "./quick_guide.html";
+        window.location.href = '../../../Resident/resident_home.html';
 
 
     } catch (err) {

@@ -57,6 +57,8 @@
             window.location.href = "/auth/login.html";
             return false;
         }
+        // Email verification is soft-gated per action, not at login
+        // Users can browse but booking/publishing is blocked until verified
         return true;
     }
 

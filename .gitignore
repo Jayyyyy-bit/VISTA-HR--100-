@@ -14,3 +14,9 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+
+# in .gitignore
+vista_hr_backend/.env
+vista_hr_backend/.env.*
+!vista_hr_backend/.env.example

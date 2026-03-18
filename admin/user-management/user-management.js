@@ -281,6 +281,208 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.lucide.createIcons();
     }
 
+    // ── Admin view tabs ───────────────────────────────────────
+    const adminTabs = document.querySelectorAll(".adminTab");
+    const viewUsers = document.getElementById("viewUsers");
+    const viewKyc = document.getElementById("viewKyc");
+    const viewStudent = document.getElementById("viewStudent");
+    const kycBadge = document.getElementById("kycBadge");
+    const studentBadge = document.getElementById("studentBadge");
+
+    let currentView = "users";
+
+    adminTabs.forEach(tab => {
+        tab.addEventListener("click", async () => {
+            adminTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            currentView = tab.dataset.view;
+            viewUsers.hidden = currentView !== "users";
+            viewKyc.hidden = currentView !== "kyc";
+            viewStudent.hidden = currentView !== "student";
+
+            if (currentView === "kyc") await loadKyc();
+            if (currentView === "student") await loadStudent();
+        });
+    });
+
+    // Preload badge counts
+    async function refreshBadges() {
+        try {
+            const [kData, sData] = await Promise.all([
+                apiFetch("/admin/kyc?status=PENDING"),
+                apiFetch("/admin/student?status=PENDING"),
+            ]);
+            const kCount = (kData.kyc_applications || []).length;
+            const sCount = (sData.student_applications || []).length;
+            if (kycBadge) { kycBadge.textContent = kCount; kycBadge.hidden = kCount === 0; }
+            if (studentBadge) { studentBadge.textContent = sCount; studentBadge.hidden = sCount === 0; }
+        } catch { }
+    }
+    refreshBadges();
+
+    // ── KYC view ──────────────────────────────────────────────
+    let kycStatusFilter = "PENDING";
+
+    document.querySelectorAll("#viewKyc .verifyFilterBtn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#viewKyc .verifyFilterBtn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            kycStatusFilter = btn.dataset.status;
+            loadKyc();
+        });
+    });
+
+    async function loadKyc() {
+        const list = document.getElementById("kycList");
+        list.innerHTML = `<div class="verifyLoading">Loading…</div>`;
+        try {
+            const data = await apiFetch(`/admin/kyc?status=${kycStatusFilter}`);
+            const items = data.kyc_applications || [];
+            if (!items.length) {
+                list.innerHTML = `<div class="verifyEmpty">No ${kycStatusFilter.toLowerCase()} KYC applications.</div>`;
+                return;
+            }
+            list.innerHTML = items.map(u => kycCardHTML(u)).join("");
+            bindVerifyActions(list, "kyc");
+            if (window.lucide?.createIcons) lucide.createIcons();
+        } catch (err) {
+            list.innerHTML = `<div class="verifyEmpty">Failed to load. ${err.message}</div>`;
+        }
+    }
+
+    function kycCardHTML(u) {
+        const statusCls = { PENDING: "pending", APPROVED: "approved", REJECTED: "rejected" }[u.kyc_status] || "pending";
+        const submitted = u.kyc_submitted_at ? new Date(u.kyc_submitted_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—";
+        const isPending = u.kyc_status === "PENDING";
+        const rejectNote = u.kyc_reject_reason ? `<div class="verifyReason">Reason: ${escHtml(u.kyc_reject_reason)}</div>` : "";
+
+        return `
+        <div class="verifyCard" data-id="${u.id}">
+            <div class="verifyCardTop">
+                <div class="verifyCardInfo">
+                    <div class="verifyName">${escHtml(u.name)}</div>
+                    <div class="verifyEmail">${escHtml(u.email)}</div>
+                    <div class="verifyMeta">Submitted ${submitted}</div>
+                    ${rejectNote}
+                </div>
+                <span class="badge ${statusCls}">${u.kyc_status}</span>
+            </div>
+            <div class="verifyDocs">
+                ${u.kyc_id_front_url ? `<a href="${u.kyc_id_front_url}" target="_blank" class="docThumb"><img src="${u.kyc_id_front_url}" alt="ID Front"/><span>Front</span></a>` : ""}
+                ${u.kyc_id_back_url ? `<a href="${u.kyc_id_back_url}"  target="_blank" class="docThumb"><img src="${u.kyc_id_back_url}"  alt="ID Back"/><span>Back</span></a>` : ""}
+                ${u.kyc_selfie_url ? `<a href="${u.kyc_selfie_url}"   target="_blank" class="docThumb"><img src="${u.kyc_selfie_url}"   alt="Selfie"/><span>Selfie</span></a>` : ""}
+            </div>
+            ${isPending ? `
+            <div class="verifyActions">
+                <button class="btn solid verifyApprove" data-action="kyc-approve" data-id="${u.id}">Approve</button>
+                <button class="btn ghost verifyReject"  data-action="kyc-reject"  data-id="${u.id}">Reject</button>
+            </div>` : ""}
+        </div>`;
+    }
+
+    // ── Student view ──────────────────────────────────────────
+    let studentStatusFilter = "PENDING";
+
+    document.querySelectorAll("#viewStudent .verifyFilterBtn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#viewStudent .verifyFilterBtn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            studentStatusFilter = btn.dataset.status;
+            loadStudent();
+        });
+    });
+
+    async function loadStudent() {
+        const list = document.getElementById("studentList");
+        list.innerHTML = `<div class="verifyLoading">Loading…</div>`;
+        try {
+            const data = await apiFetch(`/admin/student?status=${studentStatusFilter}`);
+            const items = data.student_applications || [];
+            if (!items.length) {
+                list.innerHTML = `<div class="verifyEmpty">No ${studentStatusFilter.toLowerCase()} student applications.</div>`;
+                return;
+            }
+            list.innerHTML = items.map(u => studentCardHTML(u)).join("");
+            bindVerifyActions(list, "student");
+            if (window.lucide?.createIcons) lucide.createIcons();
+        } catch (err) {
+            list.innerHTML = `<div class="verifyEmpty">Failed to load. ${err.message}</div>`;
+        }
+    }
+
+    function studentCardHTML(u) {
+        const statusCls = { PENDING: "pending", APPROVED: "approved", REJECTED: "rejected" }[u.student_status] || "pending";
+        const submitted = u.student_submitted_at ? new Date(u.student_submitted_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—";
+        const isPending = u.student_status === "PENDING";
+        const rejectNote = u.student_reject_reason ? `<div class="verifyReason">Reason: ${escHtml(u.student_reject_reason)}</div>` : "";
+
+        return `
+        <div class="verifyCard" data-id="${u.id}">
+            <div class="verifyCardTop">
+                <div class="verifyCardInfo">
+                    <div class="verifyName">${escHtml(u.name)}</div>
+                    <div class="verifyEmail">${escHtml(u.email)}</div>
+                    <div class="verifyMeta">Submitted ${submitted}</div>
+                    ${rejectNote}
+                </div>
+                <span class="badge ${statusCls}">${u.student_status}</span>
+            </div>
+            <div class="verifyDocs">
+                ${u.student_id_url ? `<a href="${u.student_id_url}"  target="_blank" class="docThumb"><img src="${u.student_id_url}"  alt="School ID"/><span>School ID</span></a>` : ""}
+                ${u.student_cor_url ? `<a href="${u.student_cor_url}" target="_blank" class="docThumb"><img src="${u.student_cor_url}" alt="CoR"/><span>CoR</span></a>` : ""}
+            </div>
+            ${isPending ? `
+            <div class="verifyActions">
+                <button class="btn solid verifyApprove" data-action="student-approve" data-id="${u.id}">Approve</button>
+                <button class="btn ghost verifyReject"  data-action="student-reject"  data-id="${u.id}">Reject</button>
+            </div>` : ""}
+        </div>`;
+    }
+
+    // ── Shared approve/reject handler ─────────────────────────
+    function bindVerifyActions(container, type) {
+        container.querySelectorAll("[data-action]").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = btn.dataset.id;
+                const action = btn.dataset.action;
+
+                if (action.endsWith("-approve")) {
+                    if (!confirm("Approve this application?")) return;
+                    const endpoint = type === "kyc"
+                        ? `/admin/kyc/${id}/approve`
+                        : `/admin/student/${id}/approve`;
+                    try {
+                        await apiFetch(endpoint, { method: "POST" });
+                        if (type === "kyc") loadKyc(); else loadStudent();
+                        refreshBadges();
+                    } catch (err) { alert(err.message); }
+                }
+
+                if (action.endsWith("-reject")) {
+                    const reason = prompt("Enter a reason for rejection (shown to the user):");
+                    if (reason === null) return; // cancelled
+                    const endpoint = type === "kyc"
+                        ? `/admin/kyc/${id}/reject`
+                        : `/admin/student/${id}/reject`;
+                    try {
+                        await apiFetch(endpoint, {
+                            method: "POST",
+                            body: JSON.stringify({ reason: reason.trim() || "Documents were unclear." }),
+                        });
+                        if (type === "kyc") loadKyc(); else loadStudent();
+                        refreshBadges();
+                    } catch (err) { alert(err.message); }
+                }
+            });
+        });
+    }
+
+    function escHtml(str) {
+        return String(str || "")
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
     adminLogoutBtn?.addEventListener("click", async () => {
         await fetch("http://127.0.0.1:5000/api/auth/logout", {
             method: "POST",

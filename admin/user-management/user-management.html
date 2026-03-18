@@ -85,23 +85,60 @@
         <section class="tableCard">
             <div class="tableHead">
                 <h2>User Directory</h2>
-                <p>Demo-ready admin module for progress checking.</p>
+                <p>Manage accounts, review verifications, and control access.</p>
             </div>
 
-            <div class="tableWrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="userTableBody"></tbody>
-                </table>
+            <!-- Tab bar -->
+            <div class="adminTabBar">
+                <button class="adminTab active" data-view="users">Users</button>
+                <button class="adminTab" data-view="kyc">
+                    Owner KYC
+                    <span class="adminTabBadge" id="kycBadge" hidden></span>
+                </button>
+                <button class="adminTab" data-view="student">
+                    Student Verification
+                    <span class="adminTabBadge" id="studentBadge" hidden></span>
+                </button>
             </div>
+
+            <!-- Users view -->
+            <div id="viewUsers">
+                <div class="tableWrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- KYC view -->
+            <div id="viewKyc" hidden>
+                <div class="verifyFilterBar">
+                    <button class="verifyFilterBtn active" data-status="PENDING">Pending</button>
+                    <button class="verifyFilterBtn" data-status="APPROVED">Approved</button>
+                    <button class="verifyFilterBtn" data-status="REJECTED">Rejected</button>
+                </div>
+                <div id="kycList"></div>
+            </div>
+
+            <!-- Student view -->
+            <div id="viewStudent" hidden>
+                <div class="verifyFilterBar">
+                    <button class="verifyFilterBtn active" data-status="PENDING">Pending</button>
+                    <button class="verifyFilterBtn" data-status="APPROVED">Approved</button>
+                    <button class="verifyFilterBtn" data-status="REJECTED">Rejected</button>
+                </div>
+                <div id="studentList"></div>
+            </div>
+
         </section>
     </main>
 

@@ -400,9 +400,52 @@
           }
 
           if (act === "submit") {
+            // Check email verified first
+            const session = window.AuthGuard?.getSession?.();
+            const emailVerified = session?.user?.email_verified === true;
+            const kycStatus = session?.user?.kyc_status || "NONE";
+            const isVerified = session?.user?.is_verified === true;
+
+            if (!emailVerified) {
+              const email = encodeURIComponent(session?.user?.email || "");
+              openModal({
+                title: "Verify your email first",
+                message: "You need to verify your email address before you can publish listings.",
+                confirmText: "Verify email →",
+                cancelText: "Not now",
+                onConfirm: () => {
+                  location.href = `/auth/verify-email.html?email=${email}&role=OWNER`;
+                }
+              });
+              return;
+            }
+
+            if (!isVerified && kycStatus !== "APPROVED") {
+              openModal({
+                title: "Verify your account first",
+                message: "Your listings won't be visible to residents until your identity is approved. Verification takes 1–2 business days.",
+                confirmText: "Verify my identity →",
+                cancelText: "Not now",
+                onConfirm: () => {
+                  location.href = "/Property-Owner/verification/verify.html";
+                },
+                onCancel: async () => {
+                  // Still allow submitting — listing will sit in READY state
+                  try {
+                    await window.ListingStore.openListing(id);
+                    await window.ListingStore.submitForVerification();
+                    await renderListings();
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }
+              });
+              return;
+            }
+
             openModal({
               title: "Publish listing?",
-              message: "If your account is verified, this listing will proceed. If not, you'll be asked to verify first.",
+              message: "This listing will be visible to all residents across Metro Manila.",
               confirmText: "Publish",
               cancelText: "Cancel",
               onConfirm: async () => {
@@ -558,7 +601,7 @@
     // tabs routing 
     function activeTabKey() {
       const h = (location.hash || "").replace("#/", "").trim();
-      return (h === "today" || h === "calendar" || h === "listings" || h === "messages") ? h : "today";
+      return (["today", "calendar", "listings", "messages"].includes(h)) ? h : "today";
     }
 
     function setTab(key) {
@@ -579,6 +622,7 @@
         el.classList.toggle("active", k === key);
       });
 
+      if (key === "today") renderToday();
       if (key === "listings") renderListings();
 
       if (key === "calendar" && window.DashboardCalendar?.render) {
@@ -607,7 +651,7 @@
     document.addEventListener("click", () => openMenu(false));
     profileMenu?.addEventListener("click", (e) => e.stopPropagation());
 
-    menuAccount?.addEventListener("click", () => { openMenu(false); alert("Account settings (later)."); });
+    menuAccount?.addEventListener("click", () => { openMenu(false); location.href = "/auth/account-settings.html"; });
     menuHelp?.addEventListener("click", () => { openMenu(false); alert("Help center (later)."); });
     menuLogout?.addEventListener("click", async () => { openMenu(false); await AuthGuard.logout(); });
 
@@ -652,6 +696,343 @@
       const saved = localStorage.getItem("listingDensity");
       if (saved === "list") setDensity("list");
     } catch { }
+
+    // ===== Today tab =====
+    async function renderToday() {
+      const el = id => document.getElementById(id);
+      let bookings = [];
+      let listings = [];
+      let ownerVerified = true;
+
+      try {
+        const [bData, lData] = await Promise.all([
+          apiFetch("/bookings/for-owner"),
+          apiFetch("/listings/mine"),
+        ]);
+        bookings = bData.bookings || [];
+        listings = lData.listings || [];
+        ownerVerified = lData.owner_verified !== false;
+      } catch (e) {
+        console.error("[today] load failed", e);
+      }
+
+      // ── Email verify banner ──────────────────────────────────────
+      const session = window.AuthGuard?.getSession?.();
+      const emailVerified = session?.user?.email_verified === true;
+      const emailBanner = el("emailVerifyBanner");
+      if (emailBanner) {
+        emailBanner.hidden = emailVerified;
+        if (!emailVerified) {
+          const email = encodeURIComponent(session?.user?.email || "");
+          el("emailVerifyBtn").href = `/auth/verify-email.html?email=${email}&role=OWNER`;
+        }
+      }
+
+      // ── KYC Verification banner ──────────────────────────────────────
+      const banner = el("verifyBanner");
+      if (banner) banner.hidden = !emailVerified || ownerVerified;
+
+      // ── Stat cards ───────────────────────────────────────────────
+      const pending = bookings.filter(b => b.status === "PENDING");
+      const approved = bookings.filter(b => b.status === "APPROVED");
+      const active = listings.filter(l => ["DRAFT", "READY", "PUBLISHED"].includes(l.status));
+
+      // Occupancy: approved bookings / active listings (capped at 100%)
+      const occupancyNum = active.length > 0
+        ? Math.min(100, Math.round((approved.length / active.length) * 100))
+        : null;
+
+      if (el("statPending")) el("statPending").textContent = pending.length;
+      if (el("statApproved")) el("statApproved").textContent = approved.length;
+      if (el("statListings")) el("statListings").textContent = active.length;
+      if (el("statOccupancy")) el("statOccupancy").textContent = occupancyNum !== null ? `${occupancyNum}%` : "—";
+
+      // ── Today's date label ───────────────────────────────────────
+      const todayLabel = el("todayDateLabel");
+      if (todayLabel) {
+        todayLabel.textContent = new Date().toLocaleDateString("en-PH", {
+          weekday: "long", month: "long", day: "numeric"
+        });
+      }
+
+      // ── Today's move-in events ───────────────────────────────────
+      const todayStr = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const moveIns = bookings.filter(b =>
+        b.status === "APPROVED" && b.move_in_date && String(b.move_in_date).slice(0, 10) === todayStr
+      );
+
+      const eventsList = el("todayEventsList");
+      if (eventsList) {
+        if (!moveIns.length) {
+          eventsList.innerHTML = `
+            <div class="todayEventsEmpty">
+              <i data-lucide="calendar-check-2"></i>
+              <span>No move-ins scheduled for today.</span>
+            </div>`;
+        } else {
+          eventsList.innerHTML = `<div class="todayEventCards">${moveIns.map(b => todayEventRow(b)).join("")}</div>`;
+        }
+      }
+
+      // ── Bookings section (full filterable list) ──────────────────
+      const bookingsList = el("bookingsList");
+      if (bookingsList) {
+        _allBookings = bookings;
+
+        // Update pending badge on Today tab
+        const badge = el("bookingsBadge");
+        const pendingCount = bookings.filter(b => b.status === "PENDING");
+        if (badge) {
+          badge.textContent = pendingCount.length;
+          badge.hidden = pendingCount.length === 0;
+        }
+
+        // Update pending count chip on filter bar
+        const countEl = el("bkCountPending");
+        if (countEl) {
+          countEl.textContent = pendingCount.length || "";
+          countEl.style.display = pendingCount.length ? "" : "none";
+        }
+
+        applyBookingFilter();
+      }
+
+      // ── Recent activity: last 5 bookings of any status ───────────
+      const activityList = el("todayActivityList");
+      if (activityList) {
+        // sort by created_at desc, take 5 non-pending (pending already shown above)
+        const recent = [...bookings]
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .filter(b => b.status !== "PENDING")
+          .slice(0, 5);
+
+        if (!recent.length) {
+          activityList.innerHTML = `
+            <div class="todayActivityEmpty">
+              <i data-lucide="activity"></i>
+              <span>No recent activity yet.</span>
+            </div>`;
+        } else {
+          activityList.innerHTML = `<div class="activityFeed">${recent.map(b => activityRowHTML(b)).join("")}</div>`;
+        }
+      }
+
+      lucide.createIcons();
+    }
+
+    function todayEventRow(b) {
+      const listing = b.listing || {};
+      const tenant = b.resident_name || b.resident_email || "Resident";
+
+      return `
+        <div class="todayEventCard todayEvent--in">
+          <div class="todayEventIcon"><i data-lucide="log-in"></i></div>
+          <div class="todayEventBody">
+            <div class="todayEventLabel">Move-in today</div>
+            <div class="todayEventTenant">${escapeHtml(tenant)}</div>
+            <div class="todayEventListing">${escapeHtml(listing.title || "Untitled listing")}</div>
+          </div>
+          <div class="todayEventBadge todayEvent--in">Move-in</div>
+        </div>`;
+    }
+
+    function activityRowHTML(b) {
+      const listing = b.listing || {};
+      const status = b.status || "PENDING";
+      const statusMap = {
+        APPROVED: { cls: "bkStatus--approved", label: "Approved", icon: "check-circle-2" },
+        REJECTED: { cls: "bkStatus--rejected", label: "Rejected", icon: "x-circle" },
+        CANCELLED: { cls: "bkStatus--cancelled", label: "Cancelled", icon: "ban" },
+      };
+      const { cls, label, icon } = statusMap[status] || { cls: "", label: status, icon: "circle" };
+      const tenant = b.resident_name || b.resident_email || "Resident";
+      const timeAgo = relativeTime(b.updated_at || b.created_at);
+
+      return `
+        <div class="activityRow">
+          <div class="activityIcon activityIcon--${status.toLowerCase()}">
+            <i data-lucide="${icon}"></i>
+          </div>
+          <div class="activityBody">
+            <div class="activityMain">
+              <span class="activityTenant">${escapeHtml(tenant)}</span>
+              <span class="activityVerb">booking</span>
+              <span class="bkStatus ${cls}">${label}</span>
+            </div>
+            <div class="activityMeta">${escapeHtml(listing.title || "Untitled listing")} · ${timeAgo}</div>
+          </div>
+        </div>`;
+    }
+
+    function relativeTime(dt) {
+      try {
+        const diff = Date.now() - new Date(dt).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return "Just now";
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        const days = Math.floor(hrs / 24);
+        if (days < 7) return `${days}d ago`;
+        return new Date(dt).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+      } catch {
+        return "";
+      }
+    }
+
+    // ===== Bookings state + filter (lives inside Today tab) =====
+    let _allBookings = [];
+    let _bkStatus = "ALL";
+
+    function applyBookingFilter() {
+      const list = document.getElementById("bookingsList");
+      if (!list) return;
+
+      const filtered = _bkStatus === "ALL"
+        ? _allBookings
+        : _allBookings.filter(b => b.status === _bkStatus);
+
+      if (!filtered.length) {
+        const label = _bkStatus === "ALL" ? "bookings" : `${_bkStatus.toLowerCase()} bookings`;
+        list.innerHTML = `
+          <div class="bkEmpty">
+            <div class="bkEmptyIcon"><i data-lucide="calendar-x-2"></i></div>
+            <div class="bkEmptyTitle">No ${label} yet</div>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      list.innerHTML = filtered.map(b => bookingCardHTML(b)).join("");
+      bindBookingActions(list, () => renderToday());
+      lucide.createIcons();
+    }
+
+    // Filter bar clicks
+    document.querySelectorAll(".bkFilterBtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".bkFilterBtn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        _bkStatus = btn.dataset.status;
+        applyBookingFilter();
+      });
+    });
+
+    // ===== Booking card HTML =====
+    function bookingCardHTML(b) {
+      const listing = b.listing || {};
+      const status = b.status || "PENDING";
+      const isPending = status === "PENDING";
+
+      const statusMap = {
+        PENDING: { cls: "bkStatus--pending", label: "Pending" },
+        APPROVED: { cls: "bkStatus--approved", label: "Approved" },
+        REJECTED: { cls: "bkStatus--rejected", label: "Rejected" },
+        CANCELLED: { cls: "bkStatus--cancelled", label: "Cancelled" },
+      };
+      const { cls, label } = statusMap[status] || statusMap.PENDING;
+
+      const price = listing.price
+        ? `<span class="bkListingPrice">₱${Number(listing.price).toLocaleString()}<span>/mo</span></span>`
+        : "";
+
+      const coverEl = listing.cover
+        ? `<img class="bkListingThumb" src="${escapeHtml(listing.cover)}" alt="">`
+        : `<div class="bkListingThumb bkListingThumb--placeholder"><i data-lucide="home"></i></div>`;
+
+      const moveIn = b.move_in_date
+        ? `<span class="bkMeta"><i data-lucide="calendar"></i>${escapeHtml(b.move_in_date)}</span>`
+        : "";
+
+      const message = b.message
+        ? `<div class="bkMessage">"${escapeHtml(b.message)}"</div>`
+        : "";
+
+      const ownerNote = b.owner_note
+        ? `<div class="bkOwnerNote"><i data-lucide="message-square"></i>${escapeHtml(b.owner_note)}</div>`
+        : "";
+
+      const actions = isPending ? `
+        <div class="bkActions">
+          <button class="btn bkBtn bkBtn--approve" data-booking-id="${b.id}" data-action="approve">
+            <i data-lucide="check"></i> Approve
+          </button>
+          <button class="btn bkBtn bkBtn--reject" data-booking-id="${b.id}" data-action="reject">
+            <i data-lucide="x"></i> Reject
+          </button>
+        </div>` : "";
+
+      return `
+        <div class="bkCard" data-booking-id="${b.id}">
+          <div class="bkCardMain">
+            ${coverEl}
+            <div class="bkCardBody">
+              <div class="bkCardTop">
+                <div class="bkListingName">${escapeHtml(listing.title || "Untitled listing")}</div>
+                <span class="bkStatus ${cls}">${label}</span>
+              </div>
+              <div class="bkListingLoc">${escapeHtml([listing.barangay, listing.city].filter(Boolean).join(", ") || "—")}</div>
+              <div class="bkMetaRow">
+                ${moveIn}
+                <span class="bkMeta"><i data-lucide="clock-3"></i>${escapeHtml(niceDate(b.created_at))}</span>
+              </div>
+              ${message}
+              ${ownerNote}
+            </div>
+            ${price}
+          </div>
+          ${actions}
+        </div>`;
+    }
+
+    // ===== Bind approve/reject buttons =====
+    function bindBookingActions(container, onRefresh) {
+      container.querySelectorAll("[data-action]").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const bookingId = btn.dataset.bookingId;
+          const action = btn.dataset.action;
+
+          if (action === "approve") {
+            openModal({
+              title: "Approve booking?",
+              message: "The resident will be notified that their booking has been approved.",
+              confirmText: "Approve",
+              onConfirm: async () => {
+                try {
+                  await apiFetch(`/bookings/${bookingId}/approve`, { method: "POST" });
+                  await onRefresh();
+                } catch (err) {
+                  alert(err?.error || "Failed to approve booking.");
+                }
+              }
+            });
+          }
+
+          if (action === "reject") {
+            // Use the existing modal — note field via prompt fallback
+            const note = window.prompt("Add a note for the resident (optional):", "") ?? "";
+            openModal({
+              title: "Reject booking?",
+              message: note ? `Note to resident: "${note}"` : "The resident will be notified that their booking was not accepted.",
+              confirmText: "Reject",
+              danger: true,
+              onConfirm: async () => {
+                try {
+                  await apiFetch(`/bookings/${bookingId}/reject`, {
+                    method: "POST",
+                    body: JSON.stringify({ note: note || null }),
+                  });
+                  await onRefresh();
+                } catch (err) {
+                  alert(err?.error || "Failed to reject booking.");
+                }
+              }
+            });
+          }
+        });
+      });
+    }
 
     // Boot
     renderTabs();

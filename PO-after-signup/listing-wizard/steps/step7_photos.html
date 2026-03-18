@@ -1,11 +1,12 @@
 <div class="step-header">
     <div class="step-kicker">Create listing • Step 7</div>
     <h1 class="step-title">Add photos of your place</h1>
-    <p class="step-sub">Upload at least 5 photos. The first (cover) photo appears in search.</p>
+    <p class="step-sub">Upload at least 5 photos. The first (cover) photo appears in search results.</p>
 </div>
 
 <section class="photoShell">
-    <!-- Upload zone -->
+
+    <!-- Regular photos upload zone -->
     <div class="uploadZone" id="uploadZone" tabindex="0">
         <div class="uzTop">
             <i class="uzIc" data-lucide="images"></i>
@@ -14,37 +15,261 @@
                 <div class="uzSub">or click to upload (JPG/PNG/WebP)</div>
             </div>
         </div>
-
         <input id="photoInput" type="file" accept="image/*" multiple hidden />
         <button class="uzBtn" id="uploadBtn" type="button">Choose files</button>
-
         <div class="uzMeta">
             <span id="photoCountLabel">0 / 5 minimum</span>
             <span class="dotSep">•</span>
-            <span>Tip: bright, wide shots get more bookings</span>
+            <span>Tip: bright, wide shots get more inquiries</span>
         </div>
     </div>
 
-    <!-- Thumbs -->
+    <!-- Thumb grid -->
     <div class="thumbGrid" id="thumbGrid"></div>
 
-    <!-- 360 (future-proof) -->
-    <div class="vtCard">
+    <!-- ══ 360° VIRTUAL TOUR SECTION ══ -->
+    <div class="vtCard" id="vtCard">
         <div class="vtHead">
-            <div>
-                <div class="vtTitle">Virtual tour (360)</div>
-                <div class="vtSub">Optional. Add later when enabled.</div>
+            <div class="vtHeadLeft">
+                <div class="vtIconWrap"><i data-lucide="rotate-3d"></i></div>
+                <div>
+                    <div class="vtTitle">360° Virtual Tour <span class="vtOptional">Optional</span></div>
+                    <div class="vtSub">Let residents explore your room before they visit</div>
+                </div>
             </div>
-
-            <button class="vtToggle" id="vtToggle" type="button" aria-pressed="false">
-                <span class="vtKnob"></span>
-            </button>
+            <div class="vtHeadRight">
+                <button class="vtGuideBtn" id="vtGuideBtn" type="button">
+                    <i data-lucide="help-circle"></i>
+                    How to capture
+                </button>
+                <button class="vtToggle" id="vtToggle" type="button" aria-pressed="false">
+                    <span class="vtKnob"></span>
+                </button>
+            </div>
         </div>
 
         <div class="vtBody" id="vtBody" hidden>
-            <label class="vtLabel">360 tour link</label>
-            <input id="vtUrl" class="vtInput" type="url" placeholder="https://..." />
-            <div class="vtHint">For now, you can paste a hosted panorama link. We’ll support 360 uploads later.</div>
+
+            <!-- Upload zone for panorama -->
+            <div class="panoUploadZone" id="panoUploadZone" tabindex="0">
+                <input id="panoInput" type="file" accept="image/*" hidden />
+                <div class="panoUploadInner" id="panoUploadInner">
+                    <i data-lucide="scan"></i>
+                    <div class="panoUploadTitle">Upload your 360° panorama photo</div>
+                    <div class="panoUploadSub">Equirectangular JPG/PNG • Recommended: 4000×2000px or larger</div>
+                    <button class="panoChooseBtn" id="panoChooseBtn" type="button">
+                        <i data-lucide="upload"></i> Choose panorama file
+                    </button>
+                </div>
+                <!-- Preview (shown after upload) -->
+                <div class="panoPreview" id="panoPreview" hidden>
+                    <img id="panoPreviewImg" alt="360° panorama preview" />
+                    <div class="panoPreviewOverlay">
+                        <div class="panoPreviewBadge">
+                            <i data-lucide="rotate-3d"></i> 360° Panorama
+                        </div>
+                        <button class="panoRemoveBtn" id="panoRemoveBtn" type="button">
+                            <i data-lucide="trash-2"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Or paste URL option -->
+            <div class="vtOrRow"><span>or paste a hosted panorama URL</span></div>
+            <input id="vtUrl" class="vtInput" type="url" placeholder="https://... (equirectangular image URL)" />
+            <div class="vtHint">
+                <i data-lucide="info"></i>
+                Don't have a 360° photo yet?
+                <button class="vtHintLink" id="vtGuideLink" type="button">Follow our step-by-step guide</button>
+                — it's free using your smartphone.
+            </div>
         </div>
     </div>
+
 </section>
+
+<!-- ══ HOW TO CAPTURE GUIDE MODAL ══ -->
+<div class="guideOverlay" id="guideOverlay"></div>
+<div class="guideModal" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle">
+
+    <div class="gm-header">
+        <div class="gm-header-left">
+            <div class="gm-icon"><i data-lucide="rotate-3d"></i></div>
+            <div>
+                <h2 class="gm-title" id="guideModalTitle">How to capture a 360° virtual tour</h2>
+                <p class="gm-subtitle">Free using the Google Street View app on your phone</p>
+            </div>
+        </div>
+        <button class="gm-close" id="gmClose" type="button"><i data-lucide="x"></i></button>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="gm-progress">
+        <div class="gm-progress-bar" id="gmProgressBar"></div>
+    </div>
+    <div class="gm-step-counter" id="gmStepCounter">Step 1 of 5</div>
+
+    <!-- Steps container -->
+    <div class="gm-steps" id="gmSteps">
+
+        <!-- Step 1 -->
+        <div class="gm-step active" data-step="1">
+            <div class="gm-step-visual">
+                <div class="gm-step-num">1</div>
+                <div class="gm-step-icon"><i data-lucide="smartphone"></i></div>
+            </div>
+            <div class="gm-step-content">
+                <h3>Download Google Street View</h3>
+                <p>Install the <strong>Google Street View</strong> app on your smartphone — it's completely free.</p>
+                <div class="gm-store-btns">
+                    <a class="gm-store-btn"
+                        href="https://play.google.com/store/apps/details?id=com.google.android.street" target="_blank"
+                        rel="noopener">
+                        <i data-lucide="smartphone"></i> Google Play (Android)
+                    </a>
+                    <a class="gm-store-btn" href="https://apps.apple.com/app/google-street-view/id904418566"
+                        target="_blank" rel="noopener">
+                        <i data-lucide="smartphone"></i> App Store (iPhone)
+                    </a>
+                </div>
+                <div class="gm-tip">
+                    <i data-lucide="lightbulb"></i>
+                    <span>Already have it? You can skip to the next step.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="gm-step" data-step="2">
+            <div class="gm-step-visual">
+                <div class="gm-step-num">2</div>
+                <div class="gm-step-icon"><i data-lucide="home"></i></div>
+            </div>
+            <div class="gm-step-content">
+                <h3>Stand in the center of the room</h3>
+                <p>Go inside the room you want to capture. Stand as close to the <strong>center of the room</strong> as
+                    possible for the best panorama coverage.</p>
+                <div class="gm-checklist">
+                    <div class="gm-check"><i data-lucide="check-circle"></i> Turn on all the lights</div>
+                    <div class="gm-check"><i data-lucide="check-circle"></i> Open curtains/windows for natural light
+                    </div>
+                    <div class="gm-check"><i data-lucide="check-circle"></i> Remove clutter and personal items</div>
+                    <div class="gm-check"><i data-lucide="check-circle"></i> Make the bed and tidy up first</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="gm-step" data-step="3">
+            <div class="gm-step-visual">
+                <div class="gm-step-num">3</div>
+                <div class="gm-step-icon"><i data-lucide="camera"></i></div>
+            </div>
+            <div class="gm-step-content">
+                <h3>Capture the 360° panorama</h3>
+                <p>Open Google Street View, tap the <strong>orange camera button</strong>, then select <strong>"Take a
+                        Photo Sphere."</strong></p>
+                <div class="gm-steps-mini">
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">a</span>
+                        <span>Tap the <strong>+</strong> button at the bottom</span>
+                    </div>
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">b</span>
+                        <span>Select <strong>"Photo Sphere"</strong></span>
+                    </div>
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">c</span>
+                        <span>Follow the orange dot — aim your phone at each dot until it turns blue</span>
+                    </div>
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">d</span>
+                        <span>Cover all directions: left, right, up, down, forward, behind</span>
+                    </div>
+                </div>
+                <div class="gm-tip">
+                    <i data-lucide="lightbulb"></i>
+                    <span>Takes about 1–2 minutes per room. Hold your phone steady for each shot.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="gm-step" data-step="4">
+            <div class="gm-step-visual">
+                <div class="gm-step-num">4</div>
+                <div class="gm-step-icon"><i data-lucide="download"></i></div>
+            </div>
+            <div class="gm-step-content">
+                <h3>Export & save the panorama</h3>
+                <p>After capturing, Google Street View will stitch all photos together automatically into a <strong>360°
+                        equirectangular image.</strong></p>
+                <div class="gm-steps-mini">
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">a</span>
+                        <span>Go to <strong>Private</strong> tab in Street View</span>
+                    </div>
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">b</span>
+                        <span>Tap your new Photo Sphere → tap the <strong>3 dots menu</strong></span>
+                    </div>
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">c</span>
+                        <span>Select <strong>"Export photo"</strong> or <strong>"Save to device"</strong></span>
+                    </div>
+                    <div class="gm-mini-step">
+                        <span class="gm-mini-num">d</span>
+                        <span>The saved image will be in your phone's <strong>Gallery / Photos</strong></span>
+                    </div>
+                </div>
+                <div class="gm-tip">
+                    <i data-lucide="info"></i>
+                    <span>The exported file is the equirectangular panorama — it will look stretched/distorted when
+                        viewed as a regular photo. That's normal!</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="gm-step" data-step="5">
+            <div class="gm-step-visual">
+                <div class="gm-step-num">5</div>
+                <div class="gm-step-icon"><i data-lucide="upload-cloud"></i></div>
+            </div>
+            <div class="gm-step-content">
+                <h3>Upload to VISTA-HR</h3>
+                <p>Transfer the panorama image to your computer, then upload it here using the upload button above.</p>
+                <div class="gm-checklist">
+                    <div class="gm-check"><i data-lucide="check-circle"></i> File size: ideally under 20MB</div>
+                    <div class="gm-check"><i data-lucide="check-circle"></i> Format: JPG or PNG</div>
+                    <div class="gm-check"><i data-lucide="check-circle"></i> Minimum resolution: 4000 × 2000px</div>
+                </div>
+                <div class="gm-tip success">
+                    <i data-lucide="check-circle"></i>
+                    <span>Once uploaded, residents can do a full 360° walkthrough of your room from the VISTA-HR listing
+                        page!</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Navigation -->
+    <div class="gm-nav">
+        <button class="gm-btn-prev" id="gmPrev" type="button" disabled>
+            <i data-lucide="arrow-left"></i> Previous
+        </button>
+        <div class="gm-dots" id="gmDots">
+            <button class="gm-dot active" data-step="1"></button>
+            <button class="gm-dot" data-step="2"></button>
+            <button class="gm-dot" data-step="3"></button>
+            <button class="gm-dot" data-step="4"></button>
+            <button class="gm-dot" data-step="5"></button>
+        </div>
+        <button class="gm-btn-next" id="gmNext" type="button">
+            Next <i data-lucide="arrow-right"></i>
+        </button>
+    </div>
+
+</div>

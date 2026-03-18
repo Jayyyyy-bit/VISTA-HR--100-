@@ -1,0 +1,387 @@
+/* auth/verify-email.css */
+:root {
+    --navy: #1B3F6E;
+    --navy-dark: #142f54;
+    --blue-soft: #e8eef8;
+    --green: #15803d;
+    --green-soft: #dcfce7;
+    --red: #dc2626;
+    --red-soft: #fef2f2;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --card-shadow: 0 20px 60px rgba(15, 23, 42, .10);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--ink);
+    background: #f0f4fb;
+}
+
+/* Background */
+.bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.bg .grid {
+    position: absolute;
+    inset: -200px;
+    background-image:
+        linear-gradient(to right, rgba(27, 63, 110, .05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(27, 63, 110, .05) 1px, transparent 1px);
+    background-size: 44px 44px;
+}
+
+.bg .glow {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(50px);
+    opacity: .18;
+}
+
+.bg .g1 {
+    width: 700px;
+    height: 700px;
+    top: -200px;
+    left: -180px;
+    background: radial-gradient(circle, rgba(27, 63, 110, .7), transparent 65%);
+    animation: drift 14s ease-in-out infinite;
+}
+
+.bg .g2 {
+    width: 600px;
+    height: 600px;
+    bottom: -160px;
+    right: -150px;
+    background: radial-gradient(circle, rgba(96, 165, 250, .6), transparent 65%);
+    animation: drift 16s ease-in-out infinite reverse;
+}
+
+@keyframes drift {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate(20px, 18px) scale(1.04);
+    }
+}
+
+/* Topbar */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, .85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.logo-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--navy);
+}
+
+.brand-text span {
+    font-weight: 400;
+}
+
+/* Wrap */
+.wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 57px);
+    padding: 40px 20px;
+}
+
+/* Card */
+.card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--card-shadow);
+    padding: 48px 44px;
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+/* Icon ring */
+.iconRing {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: var(--blue-soft);
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.iconRing svg {
+    width: 32px;
+    height: 32px;
+    stroke-width: 1.8;
+}
+
+.successRing {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--green-soft);
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    animation: pop .35s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.successRing svg {
+    width: 34px;
+    height: 34px;
+    stroke-width: 2;
+}
+
+@keyframes pop {
+    from {
+        transform: scale(0.4);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Text */
+.cardHead {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 10px;
+}
+
+.sub {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.sub strong {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+/* OTP inputs */
+.otpRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.otpBox {
+    width: 52px;
+    height: 62px;
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    font-size: 1.6rem;
+    font-weight: 800;
+    text-align: center;
+    color: var(--ink);
+    background: #fafafa;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+    -moz-appearance: textfield;
+}
+
+.otpBox::-webkit-outer-spin-button,
+.otpBox::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+.otpBox:focus {
+    border-color: var(--navy);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(27, 63, 110, .1);
+}
+
+.otpBox.filled {
+    border-color: var(--navy);
+    background: var(--blue-soft);
+}
+
+.otpBox.error {
+    border-color: var(--red);
+    background: var(--red-soft);
+    animation: shake .3s ease;
+}
+
+.otpSep {
+    color: var(--line);
+    font-size: 1.2rem;
+    font-weight: 300;
+    margin: 0 2px;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+/* Error msg */
+.errMsg {
+    font-size: 13px;
+    color: var(--red);
+    font-weight: 500;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+/* Primary button */
+.btnPrimary {
+    width: 100%;
+    padding: 15px;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background .15s, transform .1s, opacity .15s;
+    margin-bottom: 20px;
+}
+
+.btnPrimary:hover:not(:disabled) {
+    background: var(--navy-dark);
+    transform: translateY(-1px);
+}
+
+.btnPrimary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btnPrimary:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.btnSpinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, .3);
+    border-top-color: #fff;
+    animation: spin .7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Resend */
+.resendRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.resendText {
+    color: var(--muted);
+}
+
+.resendBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: opacity .15s;
+}
+
+.resendBtn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+/* Success card */
+.cardSuccess {
+    text-align: center;
+}
+
+@media (max-width: 540px) {
+    .card {
+        padding: 36px 24px;
+    }
+
+    .otpBox {
+        width: 44px;
+        height: 54px;
+        font-size: 1.4rem;
+    }
+}

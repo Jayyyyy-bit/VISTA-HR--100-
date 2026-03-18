@@ -623,9 +623,14 @@ async function syncStep8() {
     if (title.length < 3) throw { error: "Title must be at least 3 characters." };
     if (description.length < 10) throw { error: "Description must be at least 10 characters." };
 
+    // Include student discount if owner set it
+    const d8 = readDraft();
+    const cap8 = d8.capacity || {};
+    const studentDiscount = cap8.student_discount_pct ?? null;
+
     return apiFetch(`/listings/${listingId}/step-8`, {
         method: "PATCH",
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ title, description, student_discount_pct: studentDiscount }),
     });
 }
 

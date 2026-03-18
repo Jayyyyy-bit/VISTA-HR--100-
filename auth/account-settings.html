@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Account Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="account-settings.css" />
+</head>
+
+<body>
+
+    <div class="bg" aria-hidden="true">
+        <div class="bg-grid"></div>
+        <div class="bg-glow g1"></div>
+        <div class="bg-glow g2"></div>
+    </div>
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="topbar-inner">
+            <button class="backBtn" id="backBtn" type="button">
+                <i data-lucide="arrow-left"></i>
+                <span>Back</span>
+            </button>
+            <div class="brand">
+                <span class="brandDot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </div>
+            <div style="width:90px"></div><!-- spacer -->
+        </div>
+    </header>
+
+    <main class="pageWrap">
+
+        <div class="pageHeader">
+            <h1 class="pageTitle">Account Settings</h1>
+            <p class="pageSub">Manage your profile and verification status.</p>
+        </div>
+
+        <div class="settingsGrid">
+
+            <!-- ── LEFT: Profile ── -->
+            <section class="settingsCard" id="profileCard">
+                <div class="cardHead">
+                    <div class="cardIcon cardIcon--blue"><i data-lucide="user"></i></div>
+                    <div>
+                        <div class="cardTitle">Profile</div>
+                        <div class="cardSub">Your personal information</div>
+                    </div>
+                </div>
+
+                <!-- Avatar -->
+                <div class="avatarRow">
+                    <div class="avatarCircle" id="avatarCircle">U</div>
+                    <div class="avatarInfo">
+                        <div class="avatarName" id="avatarName">Loading…</div>
+                        <div class="avatarRole" id="avatarRole"></div>
+                    </div>
+                </div>
+
+                <div class="fieldGroup">
+                    <div class="fieldRow">
+                        <div class="field">
+                            <label class="fieldLabel" for="inputFirstName">First name</label>
+                            <input class="fieldInput" id="inputFirstName" type="text" placeholder="First name"
+                                autocomplete="given-name" />
+                        </div>
+                        <div class="field">
+                            <label class="fieldLabel" for="inputLastName">Last name</label>
+                            <input class="fieldInput" id="inputLastName" type="text" placeholder="Last name"
+                                autocomplete="family-name" />
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="fieldLabel" for="inputEmail">Email <span class="fieldLock"><i
+                                    data-lucide="lock"></i> Cannot be changed</span></label>
+                        <input class="fieldInput fieldInput--locked" id="inputEmail" type="email" readonly />
+                    </div>
+                    <div class="field">
+                        <label class="fieldLabel" for="inputPhone">Phone number</label>
+                        <input class="fieldInput" id="inputPhone" type="tel" placeholder="+63 9XX XXX XXXX"
+                            autocomplete="tel" />
+                    </div>
+                </div>
+
+                <div class="fieldFoot">
+                    <p class="saveMsg" id="saveMsg" hidden></p>
+                    <button class="btnPrimary" id="saveProfileBtn" type="button">
+                        <span class="btnLabel">Save changes</span>
+                        <span class="btnSpinner" hidden></span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ── RIGHT: Verification (role-aware) ── -->
+
+            <!-- Owner KYC -->
+            <section class="settingsCard" id="kycCard" hidden>
+                <div class="cardHead">
+                    <div class="cardIcon cardIcon--shield" id="kycCardIcon"><i data-lucide="shield-check"></i></div>
+                    <div>
+                        <div class="cardTitle">Identity Verification</div>
+                        <div class="cardSub">Required to publish listings publicly</div>
+                    </div>
+                </div>
+
+                <!-- NONE state -->
+                <div id="kycStateNone">
+                    <div class="verifyCallout verifyCallout--info">
+                        <i data-lucide="info"></i>
+                        <div>
+                            <strong>Verification is optional</strong> — but your listings won't be visible to residents
+                            until your identity is approved by an admin.
+                        </div>
+                    </div>
+                    <ul class="verifyChecklist">
+                        <li><i data-lucide="check"></i> Create and manage listings right away</li>
+                        <li><i data-lucide="check"></i> Get verified to publish to all residents</li>
+                        <li><i data-lucide="check"></i> One-time process — approved within 1–2 days</li>
+                    </ul>
+                    <a class="btnPrimary" href="/Property-Owner/verification/verify.html" id="kycStartBtn">
+                        <i data-lucide="shield-check"></i>
+                        Verify my identity
+                    </a>
+                </div>
+
+                <!-- PENDING state -->
+                <div id="kycStatePending" hidden>
+                    <div class="verifyStatus verifyStatus--pending">
+                        <div class="vsIcon"><i data-lucide="clock"></i></div>
+                        <div>
+                            <div class="vsTitle">Documents under review</div>
+                            <div class="vsSub">Your ID was submitted and is being reviewed by our admin team. This
+                                usually takes 1–2 business days. We'll email you when a decision is made.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- APPROVED state -->
+                <div id="kycStateApproved" hidden>
+                    <div class="verifyStatus verifyStatus--approved">
+                        <div class="vsIcon"><i data-lucide="shield-check"></i></div>
+                        <div>
+                            <div class="vsTitle">Identity verified</div>
+                            <div class="vsSub">Your account is fully verified. Your published listings are visible to
+                                all residents across Metro Manila.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REJECTED state -->
+                <div id="kycStateRejected" hidden>
+                    <div class="verifyStatus verifyStatus--rejected">
+                        <div class="vsIcon"><i data-lucide="x-circle"></i></div>
+                        <div>
+                            <div class="vsTitle">Verification not approved</div>
+                            <div class="vsSub" id="kycRejectReason">Your documents could not be verified. Please
+                                re-submit with clearer photos.</div>
+                        </div>
+                    </div>
+                    <a class="btnPrimary btnPrimary--outline" href="/Property-Owner/verification/verify.html"
+                        style="margin-top:16px;display:flex">
+                        <i data-lucide="refresh-cw"></i>
+                        Re-submit documents
+                    </a>
+                </div>
+            </section>
+
+            <!-- Resident Student Verification -->
+            <section class="settingsCard" id="studentCard" hidden>
+                <div class="cardHead">
+                    <div class="cardIcon cardIcon--green" id="studentCardIcon"><i data-lucide="graduation-cap"></i>
+                    </div>
+                    <div>
+                        <div class="cardTitle">Student Verification</div>
+                        <div class="cardSub">Unlock discounts on eligible listings</div>
+                    </div>
+                </div>
+
+                <!-- NONE / form state -->
+                <div id="studentStateForm">
+                    <div class="verifyCallout verifyCallout--green">
+                        <i data-lucide="tag"></i>
+                        <div>
+                            Verified students get <strong>exclusive discounts</strong> on listings where the owner has
+                            enabled student pricing.
+                        </div>
+                    </div>
+
+                    <div class="uploadGroup">
+                        <label class="uploadLabel">
+                            <span class="uploadNum">1</span>
+                            School ID <span class="required">*</span>
+                        </label>
+                        <div class="dropzone" id="dropStudentId">
+                            <input type="file" id="inputStudentId" accept="image/jpeg,image/png,image/webp" hidden />
+                            <div class="dropContent" id="dropContentStudentId">
+                                <i data-lucide="id-card"></i>
+                                <span class="dropText">Click or drag to upload your School ID</span>
+                                <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                            </div>
+                            <div class="dropPreview" id="previewStudentId" hidden>
+                                <img id="previewImgStudentId" alt="School ID preview" />
+                                <button class="removeBtn" id="removeStudentId" type="button" aria-label="Remove">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <small class="fieldErr" id="errStudentId"></small>
+                    </div>
+
+                    <div class="uploadGroup">
+                        <label class="uploadLabel">
+                            <span class="uploadNum">2</span>
+                            Certificate of Registration (CoR) <span class="required">*</span>
+                        </label>
+                        <div class="dropzone" id="dropCor">
+                            <input type="file" id="inputCor" accept="image/jpeg,image/png,image/webp" hidden />
+                            <div class="dropContent" id="dropContentCor">
+                                <i data-lucide="file-text"></i>
+                                <span class="dropText">Click or drag to upload your CoR</span>
+                                <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                            </div>
+                            <div class="dropPreview" id="previewCor" hidden>
+                                <img id="previewImgCor" alt="CoR preview" />
+                                <button class="removeBtn" id="removeCor" type="button" aria-label="Remove">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <small class="fieldErr" id="errCor"></small>
+                    </div>
+
+                    <p class="globalErr" id="studentGlobalErr" hidden></p>
+
+                    <button class="btnPrimary" id="submitStudentBtn" type="button" disabled>
+                        <span class="btnLabel">Submit for verification</span>
+                        <span class="btnSpinner" hidden></span>
+                    </button>
+                    <p class="disclaimer">
+                        <i data-lucide="lock"></i>
+                        Your documents are only viewed by VISTA-HR admins for verification purposes.
+                    </p>
+                </div>
+
+                <!-- PENDING state -->
+                <div id="studentStatePending" hidden>
+                    <div class="verifyStatus verifyStatus--pending">
+                        <div class="vsIcon"><i data-lucide="clock"></i></div>
+                        <div>
+                            <div class="vsTitle">Documents under review</div>
+                            <div class="vsSub">Your School ID and CoR are being reviewed. This usually takes 1–2
+                                business days. We'll email you once approved.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- APPROVED state -->
+                <div id="studentStateApproved" hidden>
+                    <div class="verifyStatus verifyStatus--approved">
+                        <div class="vsIcon"><i data-lucide="graduation-cap"></i></div>
+                        <div>
+                            <div class="vsTitle">Student status verified!</div>
+                            <div class="vsSub">You're eligible for student discounts on participating listings. Look for
+                                the <strong style="color:#166534">Student Discount</strong> badge when browsing.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REJECTED state -->
+                <div id="studentStateRejected" hidden>
+                    <div class="verifyStatus verifyStatus--rejected">
+                        <div class="vsIcon"><i data-lucide="x-circle"></i></div>
+                        <div>
+                            <div class="vsTitle">Verification not approved</div>
+                            <div class="vsSub" id="studentRejectReason">Your documents could not be verified. Please
+                                re-submit with clearer photos.</div>
+                        </div>
+                    </div>
+                    <button class="btnPrimary btnPrimary--outline" id="studentResubmitBtn" type="button"
+                        style="margin-top:16px">
+                        <i data-lucide="refresh-cw"></i>
+                        Re-submit documents
+                    </button>
+                </div>
+            </section>
+
+        </div><!-- /settingsGrid -->
+    </main>
+
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/auth/account-settings.js" defer></script>
+</body>
+
+</html>

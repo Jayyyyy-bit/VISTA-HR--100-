@@ -115,7 +115,12 @@
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                setError(data?.message || "Invalid email/password.");
+                // EMAIL_NOT_VERIFIED no longer blocks login — soft-gated per action
+                if (false && data?.code === "EMAIL_NOT_VERIFIED") {
+                    location.href = `/auth/verify-email.html?email=${encodeURIComponent(email)}`;
+                    return;
+                }
+                setError(data?.message || data?.error || "Invalid email/password.");
                 return;
             }
 
