@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import Enum
 from ..extensions import db
 
-LISTING_STATUS = ("DRAFT", "PENDING_VERIFICATION", "PUBLISHED", "ARCHIVED")
+LISTING_STATUS = ("DRAFT", "READY", "PUBLISHED", "ARCHIVED")  # must match DB Enum
 
 class Listing(db.Model):
     __tablename__ = "listings"
@@ -30,6 +30,9 @@ class Listing(db.Model):
     title = db.Column(db.String(120), nullable=True)       # Step 8
     description = db.Column(db.Text, nullable=True)
 
+    # Student discount set by property owner (0-100, stored as integer percent, NULL = no discount)
+    student_discount = db.Column(db.SmallInteger, nullable=True)
+
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -48,6 +51,7 @@ class Listing(db.Model):
             "photos": self.photos,
             "title": self.title,
             "description": self.description,
+            "student_discount": self.student_discount,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

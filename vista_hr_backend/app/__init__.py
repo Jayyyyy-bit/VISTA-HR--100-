@@ -27,12 +27,16 @@ def create_app():
     from .routes.listings import listings_bp
     from .routes.locations import locations_bp
     from .routes.users import users_bp
+    from .routes.bookings import bookings_bp
+    from .routes.kyc import kyc_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(listings_bp, url_prefix="/api")
     app.register_blueprint(locations_bp, url_prefix="/api")
     app.register_blueprint(users_bp, url_prefix="/api")
     app.register_blueprint(uploads_bp, url_prefix="/api")
+    app.register_blueprint(bookings_bp, url_prefix="/api")
+    app.register_blueprint(kyc_bp, url_prefix="/api")
 
 
 
@@ -56,4 +60,3 @@ def create_app():
     
 
     return app
-

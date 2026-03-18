@@ -41,7 +41,10 @@ def _get_token_from_request() -> str | None:
     return None
 
 
+import functools
+
 def require_auth(fn):
+    @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         token = _get_token_from_request()
         if not token:
@@ -68,20 +71,17 @@ def require_auth(fn):
         g.token_payload = payload
         return fn(*args, **kwargs)
 
-    wrapper.__name__ = fn.__name__
     return wrapper
 
 
 def require_role(*roles):
     def decorator(fn):
         @require_auth
+        @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             user = g.current_user
             if user.role not in roles:
                 return json_error("Forbidden", 403)
             return fn(*args, **kwargs)
-
-        wrapper.__name__ = fn.__name__
         return wrapper
-
     return decorator

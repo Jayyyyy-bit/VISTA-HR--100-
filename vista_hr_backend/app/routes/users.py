@@ -23,6 +23,13 @@ def serialize_user(user: User):
     else:
         status = "ACTIVE"
 
+    kyc_val = None
+    stu_val = None
+    if hasattr(user, "kyc_status"):
+        kyc_val = user.kyc_status.value if hasattr(user.kyc_status, "value") else str(user.kyc_status or "NONE")
+    if hasattr(user, "student_status"):
+        stu_val = user.student_status.value if hasattr(user.student_status, "value") else str(user.student_status or "NONE")
+
     return {
         "id": user.id,
         "name": full_name,
@@ -31,6 +38,9 @@ def serialize_user(user: User):
         "is_verified": bool(user.is_verified),
         "is_suspended": bool(getattr(user, "is_suspended", False)),
         "status": status,
+        "kyc_status": kyc_val,
+        "student_status": stu_val,
+        "student_verified": bool(getattr(user, "student_verified", False)),
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,
     }
@@ -130,7 +140,15 @@ def update_user(user_id):
         if current_role == "ADMIN":
             user.is_verified = True
         else:
-            user.is_verified = bool(is_verified)
+            new_verified = bool(is_verified)
+            user.is_verified = new_verified
+            # Keep kyc_status in sync when admin manually verifies/unverifies an owner
+            if current_role == "OWNER":
+                kyc_val = user.kyc_status.value if hasattr(user.kyc_status, "value") else str(user.kyc_status or "NONE")
+                if new_verified and kyc_val not in ("APPROVED",):
+                    user.kyc_status = "APPROVED"
+                elif not new_verified and kyc_val == "APPROVED":
+                    user.kyc_status = "REJECTED"
 
     if is_suspended is not None:
         user.is_suspended = bool(is_suspended)

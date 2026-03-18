@@ -401,6 +401,17 @@ def update_step4(listing_id: int):
     if guests < 1:
         return json_error("Validation failed", 400, fields={"capacity.guests": "Must be at least 1."})
 
+    # Validate monthly_rent (required for listings to show price)
+    monthly_rent_raw = cap.get("monthly_rent")
+    if monthly_rent_raw is not None:
+        try:
+            monthly_rent = int(monthly_rent_raw)
+            if monthly_rent < 500:
+                return json_error("Validation failed", 400, fields={"capacity.monthly_rent": "Minimum rent is ₱500."})
+            cap["monthly_rent"] = monthly_rent
+        except (TypeError, ValueError):
+            return json_error("Validation failed", 400, fields={"capacity.monthly_rent": "Must be a number."})
+
     listing.capacity = cap
     listing.current_step = max(listing.current_step or 1, 4)
     listing.status = "DRAFT"
@@ -512,6 +523,23 @@ def update_step8(listing_id: int):
 
     listing.title = title.strip()
     listing.description = description.strip()
+
+    # Student discount — stored in listing.student_discount (dedicated int column)
+    discount_raw = data.get("student_discount_pct")
+    if discount_raw is not None:
+        if discount_raw in (0, "0", None, ""):
+            listing.student_discount = None
+        else:
+            try:
+                pct = int(discount_raw)
+                if not (1 <= pct <= 50):
+                    return json_error("Validation failed", 400,
+                        fields={"student_discount_pct": "Discount must be between 1 and 50%."})
+                listing.student_discount = pct
+            except (TypeError, ValueError):
+                return json_error("Validation failed", 400,
+                    fields={"student_discount_pct": "Must be a whole number."})
+
     listing.current_step = max(listing.current_step or 1, 8)
 
     # ✅ your rule:
@@ -519,8 +547,10 @@ def update_step8(listing_id: int):
     # finished = READY (if owner not verified)
     user = g.current_user
     if _is_listing_complete(listing):
-        if bool(getattr(user, "is_verified", False)):
-            # you can keep it READY too if you prefer manual publish
+        # Must have email verified before any publish/ready state
+        if not bool(getattr(user, "email_verified", False)):
+            listing.status = "DRAFT"
+        elif bool(getattr(user, "is_verified", False)):
             listing.status = "PUBLISHED"
         else:
             listing.status = "READY"
@@ -544,6 +574,14 @@ def submit_for_verification(listing_id: int):
     if listing.owner_id != user.id:
         return json_error("Forbidden", 403)
 
+    # Soft gate — must verify email before publishing
+    if not bool(getattr(user, "email_verified", False)):
+        return json_error(
+            "Please verify your email before publishing a listing.",
+            403,
+            code="EMAIL_NOT_VERIFIED"
+        )
+
     if not _is_listing_complete(listing):
         return json_error("Listing not complete", 400, fields={"listing": "Complete all steps before submitting."})
 
@@ -562,10 +600,14 @@ def submit_for_verification(listing_id: int):
 
 # =========================
 # Resident feed (PUBLISHED only)
+# Supports: city, type, min_price, max_price, limit
 # =========================
 @listings_bp.get("/listings/feed")
 def resident_feed():
     city = (request.args.get("city") or "").strip().lower()
+    place_type = (request.args.get("type") or "").strip().lower()
+    min_price = request.args.get("min_price", 0, type=int)
+    max_price = request.args.get("max_price", 0, type=int)
     limit = request.args.get("limit", 30, type=int)
     limit = max(1, min(limit, 60))
 
@@ -573,32 +615,59 @@ def resident_feed():
         Listing.query
         .filter(Listing.status == "PUBLISHED")
         .order_by(Listing.updated_at.desc())
-        .limit(60)
+        .limit(200)          # load more, filter in Python since location/price are JSON
         .all()
     )
 
     out = []
     for l in listings:
         d = l.to_dict()
+
+        # Filter: city (JSON field)
         if city:
             loc_city = ((d.get("location") or {}).get("city") or "").strip().lower()
             if city not in loc_city:
                 continue
 
+        # Filter: type
+        if place_type:
+            pt = (d.get("place_type") or "").strip().lower()
+            if pt != place_type:
+                continue
+
+        # Extract price: prefer monthly_rent, fall back to price
+        cap = d.get("capacity") or {}
+        price = cap.get("monthly_rent") or cap.get("price") or None
+
+        # Filter: price range
+        if min_price and (price is None or price < min_price):
+            continue
+        if max_price and (price is None or price > max_price):
+            continue
+
+        # Cover photo
         photos = d.get("photos") or []
-        cover = photos[0] if isinstance(photos, list) and photos else None
+        cover = None
+        if isinstance(photos, list) and photos:
+            cover = photos[0].get("url") if isinstance(photos[0], dict) else photos[0]
 
         out.append({
             "id": d["id"],
             "title": d.get("title") or "Untitled space",
+            "place_type": d.get("place_type") or "",
             "city": (d.get("location") or {}).get("city") or "",
             "barangay": (d.get("location") or {}).get("barangay") or "",
-            "price": (d.get("capacity") or {}).get("price") if isinstance(d.get("capacity"), dict) else None,
+            "price": price,
+            "student_discount": d.get("student_discount") or 0,
             "cover": cover,
             "status": d.get("status"),
+            "capacity": cap,
+            "amenities": d.get("amenities"),
+            "highlights": d.get("highlights"),
+            "description": d.get("description"),
         })
 
         if len(out) >= limit:
             break
 
-    return jsonify({"listings": out}), 200
+    return jsonify({"listings": out, "total": len(out)}), 200
