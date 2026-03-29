@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Account Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="account-settings.css" />
+</head>
+
+<body>
+
+    <header class="topbar">
+        <div class="topbar-inner">
+            <button class="backBtn" id="backBtn" type="button">
+                <i data-lucide="arrow-left"></i>
+                <span>Back</span>
+            </button>
+            <div class="brand">
+                <span class="brandDot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </div>
+            <div class="topbarRight">
+                <div class="topbarAvatar" id="topbarAvatar">U</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="pageShell">
+
+        <aside class="settingsSidebar">
+            <div class="sidebarUser">
+                <div class="sidebarAvatar" id="sidebarAvatar">U</div>
+                <div class="sidebarUserInfo">
+                    <div class="sidebarUserName" id="sidebarUserName">
+                        <span class="skeleton skeleton--name"></span>
+                    </div>
+                    <div class="sidebarUserRole" id="sidebarUserRole">
+                        <span class="skeleton skeleton--role"></span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebarNav">
+                <button class="sidebarNavItem active" data-section="profile" type="button">
+                    <i data-lucide="user"></i><span>Profile</span>
+                </button>
+                <button class="sidebarNavItem" data-section="security" type="button">
+                    <i data-lucide="lock"></i><span>Security</span>
+                </button>
+                <button class="sidebarNavItem" data-section="verification" type="button">
+                    <i data-lucide="shield-check"></i><span>Verification</span>
+                    <span class="sidebarNavBadge" id="verifBadge" hidden></span>
+                </button>
+                <button class="sidebarNavItem" data-section="email" type="button">
+                    <i data-lucide="mail"></i><span>Email</span>
+                    <span class="sidebarNavBadge sidebarNavBadge--warn" id="emailBadge" hidden>!</span>
+                </button>
+            </nav>
+
+            <div class="sidebarFooter">
+                <div class="sidebarFooterItem">
+                    <i data-lucide="shield"></i>
+                    <span>Your data is encrypted and secure.</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="settingsMain">
+
+            <!-- ── PROFILE ─────────────────────────────── -->
+            <section class="settingsPanel active" id="panel-profile">
+                <div class="panelHeader">
+                    <div class="panelHeaderIcon"><i data-lucide="user"></i></div>
+                    <div>
+                        <h2 class="panelTitle">Profile</h2>
+                        <p class="panelSub">Manage your personal information</p>
+                    </div>
+                </div>
+
+                <div class="settingsCard">
+                    <div class="avatarRow">
+                        <div class="avatarCircle" id="avatarCircle">U</div>
+                        <div class="avatarMeta">
+                            <div class="avatarName" id="avatarName"><span class="skeleton skeleton--line"></span></div>
+                            <div class="avatarRole" id="avatarRole"><span class="skeleton skeleton--short"></span></div>
+                        </div>
+                        <div class="avatarBadges" id="avatarBadges"></div>
+                    </div>
+
+                    <div class="fieldGroup">
+                        <div class="fieldRow">
+                            <div class="field">
+                                <label class="fieldLabel" for="inputFirstName">First name</label>
+                                <input class="fieldInput" id="inputFirstName" type="text" placeholder="First name"
+                                    autocomplete="given-name" />
+                            </div>
+                            <div class="field">
+                                <label class="fieldLabel" for="inputLastName">Last name</label>
+                                <input class="fieldInput" id="inputLastName" type="text" placeholder="Last name"
+                                    autocomplete="family-name" />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="fieldLabel" for="inputEmail">
+                                Email
+                                <span class="fieldLock"><i data-lucide="lock"></i> Cannot be changed</span>
+                            </label>
+                            <input class="fieldInput fieldInput--locked" id="inputEmail" type="email" readonly />
+                        </div>
+                        <div class="field">
+                            <label class="fieldLabel" for="inputPhone">Phone number</label>
+                            <input class="fieldInput" id="inputPhone" type="tel" placeholder="+63 9XX XXX XXXX"
+                                autocomplete="tel" />
+                        </div>
+                    </div>
+
+                    <div class="cardFoot">
+                        <p class="saveMsg" id="saveMsg" hidden></p>
+                        <button class="btnPrimary" id="saveProfileBtn" type="button">
+                            <span class="btnLabel">Save changes</span>
+                            <span class="btnSpinner" hidden></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dangerZone">
+                    <div class="dangerZoneHead">
+                        <h3 class="dangerZoneTitle">Danger zone</h3>
+                        <p class="dangerZoneSub">Irreversible and destructive actions</p>
+                    </div>
+                    <div class="dangerZoneRow">
+                        <div>
+                            <div class="dangerZoneLabel">Delete account</div>
+                            <div class="dangerZoneDesc">Permanently remove your account and all associated data. This
+                                cannot be undone.</div>
+                        </div>
+                        <button class="btnDanger" type="button" id="deleteAccountBtn">Delete account</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SECURITY ───────────────────────────── -->
+            <section class="settingsPanel" id="panel-security">
+                <div class="panelHeader">
+                    <div class="panelHeaderIcon"><i data-lucide="lock"></i></div>
+                    <div>
+                        <h2 class="panelTitle">Security</h2>
+                        <p class="panelSub">Update your password and login credentials</p>
+                    </div>
+                </div>
+
+                <div class="infoCallout infoCallout--blue" style="margin-bottom:20px;max-width:580px">
+                    <i data-lucide="info"></i>
+                    <div>Use a strong password with a mix of letters, numbers, and symbols. Avoid reusing passwords from
+                        other sites.</div>
+                </div>
+
+                <div class="settingsCard">
+                    <div class="cardSectionLabel">Change password</div>
+                    <div class="cardSectionSub">You'll be logged in with your new password immediately after saving.
+                    </div>
+
+                    <div class="fieldGroup">
+                        <div class="field">
+                            <label class="fieldLabel" for="inputCurrentPw">Current password</label>
+                            <div class="pwWrap">
+                                <input class="fieldInput" id="inputCurrentPw" type="password"
+                                    placeholder="Enter current password" autocomplete="current-password" />
+                                <button class="pwToggle" data-target="inputCurrentPw" type="button">
+                                    <i data-lucide="eye"></i>
+                                </button>
+                            </div>
+                            <small class="fieldErr" id="errCurrentPw"></small>
+                        </div>
+                        <div class="field">
+                            <label class="fieldLabel" for="inputNewPw">New password</label>
+                            <div class="pwWrap">
+                                <input class="fieldInput" id="inputNewPw" type="password"
+                                    placeholder="At least 8 characters" autocomplete="new-password" />
+                                <button class="pwToggle" data-target="inputNewPw" type="button">
+                                    <i data-lucide="eye"></i>
+                                </button>
+                            </div>
+                            <small class="fieldErr" id="errNewPw"></small>
+                            <div class="pwStrengthWrap" id="pwStrengthWrap" hidden>
+                                <div class="pwStrengthBar">
+                                    <div class="pwStrengthFill" id="pwStrengthFill"></div>
+                                </div>
+                                <span class="pwStrengthLabel" id="pwStrengthLabel"></span>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="fieldLabel" for="inputConfirmPw">Confirm new password</label>
+                            <div class="pwWrap">
+                                <input class="fieldInput" id="inputConfirmPw" type="password"
+                                    placeholder="Repeat new password" autocomplete="new-password" />
+                                <button class="pwToggle" data-target="inputConfirmPw" type="button">
+                                    <i data-lucide="eye"></i>
+                                </button>
+                            </div>
+                            <small class="fieldErr" id="errConfirmPw"></small>
+                        </div>
+                    </div>
+
+                    <div class="cardFoot">
+                        <p class="saveMsg" id="pwSaveMsg" hidden></p>
+                        <button class="btnPrimary" id="changePasswordBtn" type="button">
+                            <span class="btnLabel">Update password</span>
+                            <span class="btnSpinner" hidden></span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── VERIFICATION ───────────────────────── -->
+            <section class="settingsPanel" id="panel-verification">
+                <div class="panelHeader">
+                    <div class="panelHeaderIcon"><i data-lucide="shield-check"></i></div>
+                    <div>
+                        <h2 class="panelTitle">Verification</h2>
+                        <p class="panelSub">Identity and student status verification</p>
+                    </div>
+                </div>
+
+                <!-- Owner KYC -->
+                <div id="kycCard" hidden>
+                    <div class="settingsCard">
+                        <div class="cardSectionLabel">Identity verification</div>
+                        <div class="cardSectionSub">Required to publish listings to all residents</div>
+
+                        <div id="kycStateNone">
+                            <div class="infoCallout">
+                                <i data-lucide="info"></i>
+                                <div><strong>Verification is optional</strong> — but your listings won't be publicly
+                                    visible until your identity is approved by an admin.</div>
+                            </div>
+                            <ul class="checkList">
+                                <li><i data-lucide="check"></i> Create and manage listings right away</li>
+                                <li><i data-lucide="check"></i> Get verified to publish to all residents</li>
+                                <li><i data-lucide="check"></i> One-time process — approved within 1–2 days</li>
+                            </ul>
+                            <a class="btnPrimary" href="/Property-Owner/verification/verify.html">
+                                <i data-lucide="shield-check"></i> Verify my identity
+                            </a>
+                        </div>
+
+                        <div id="kycStatePending" hidden>
+                            <div class="statusBanner statusBanner--pending">
+                                <div class="statusBannerIcon"><i data-lucide="clock"></i></div>
+                                <div>
+                                    <div class="statusBannerTitle">Documents under review</div>
+                                    <div class="statusBannerSub">Your ID was submitted and is being reviewed. Usually
+                                        takes 1–2 business days.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="kycStateApproved" hidden>
+                            <div class="statusBanner statusBanner--approved">
+                                <div class="statusBannerIcon"><i data-lucide="shield-check"></i></div>
+                                <div>
+                                    <div class="statusBannerTitle">Identity verified</div>
+                                    <div class="statusBannerSub">Your account is fully verified. Published listings are
+                                        visible to all residents.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="kycStateRejected" hidden>
+                            <div class="statusBanner statusBanner--rejected">
+                                <div class="statusBannerIcon"><i data-lucide="x-circle"></i></div>
+                                <div>
+                                    <div class="statusBannerTitle">Verification not approved</div>
+                                    <div class="statusBannerSub" id="kycRejectReason">Please re-submit with clearer
+                                        photos.</div>
+                                </div>
+                            </div>
+                            <a class="btnSecondary" href="/Property-Owner/verification/verify.html"
+                                style="margin-top:16px;display:inline-flex;">
+                                <i data-lucide="refresh-cw"></i> Re-submit documents
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resident student verification -->
+                <div id="studentCard" hidden>
+                    <div class="settingsCard">
+                        <div class="cardSectionLabel">Student verification</div>
+                        <div class="cardSectionSub">Unlock discounts on eligible listings</div>
+
+                        <div id="studentStateForm">
+                            <div class="infoCallout infoCallout--green" style="margin-bottom:20px">
+                                <i data-lucide="tag"></i>
+                                <div>Verified students get <strong>exclusive discounts</strong> on listings where the
+                                    owner has enabled student pricing.</div>
+                            </div>
+
+                            <div class="uploadGroup">
+                                <label class="uploadLabel">
+                                    <span class="uploadNum">1</span>
+                                    School ID <span class="required">*</span>
+                                </label>
+                                <div class="dropzone" id="dropStudentId">
+                                    <input type="file" id="inputStudentId" accept="image/jpeg,image/png,image/webp"
+                                        hidden />
+                                    <div class="dropContent" id="dropContentStudentId">
+                                        <i data-lucide="id-card"></i>
+                                        <span class="dropText">Click or drag to upload your School ID</span>
+                                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                    </div>
+                                    <div class="dropPreview" id="previewStudentId" hidden>
+                                        <img id="previewImgStudentId" alt="School ID" />
+                                        <button class="removeBtn" id="removeStudentId" type="button">
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="fieldErr" id="errStudentId"></small>
+                            </div>
+
+                            <div class="uploadGroup">
+                                <label class="uploadLabel">
+                                    <span class="uploadNum">2</span>
+                                    Certificate of Registration (CoR) <span class="required">*</span>
+                                </label>
+                                <div class="dropzone" id="dropCor">
+                                    <input type="file" id="inputCor" accept="image/jpeg,image/png,image/webp" hidden />
+                                    <div class="dropContent" id="dropContentCor">
+                                        <i data-lucide="file-text"></i>
+                                        <span class="dropText">Click or drag to upload your CoR</span>
+                                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                    </div>
+                                    <div class="dropPreview" id="previewCor" hidden>
+                                        <img id="previewImgCor" alt="CoR" />
+                                        <button class="removeBtn" id="removeCor" type="button">
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="fieldErr" id="errCor"></small>
+                            </div>
+
+                            <p class="globalErr" id="studentGlobalErr" hidden></p>
+                            <button class="btnPrimary" id="submitStudentBtn" type="button" disabled>
+                                <span class="btnLabel">Submit for verification</span>
+                                <span class="btnSpinner" hidden></span>
+                            </button>
+                            <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by VISTA-HR
+                                admins.</p>
+                        </div>
+
+                        <div id="studentStatePending" hidden>
+                            <div class="statusBanner statusBanner--pending">
+                                <div class="statusBannerIcon"><i data-lucide="clock"></i></div>
+                                <div>
+                                    <div class="statusBannerTitle">Documents under review</div>
+                                    <div class="statusBannerSub">Usually takes 1–2 business days.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="studentStateApproved" hidden>
+                            <div class="statusBanner statusBanner--approved">
+                                <div class="statusBannerIcon"><i data-lucide="graduation-cap"></i></div>
+                                <div>
+                                    <div class="statusBannerTitle">Student status verified!</div>
+                                    <div class="statusBannerSub">You're eligible for student discounts on participating
+                                        listings.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="studentStateRejected" hidden>
+                            <div class="statusBanner statusBanner--rejected">
+                                <div class="statusBannerIcon"><i data-lucide="x-circle"></i></div>
+                                <div>
+                                    <div class="statusBannerTitle">Verification not approved</div>
+                                    <div class="statusBannerSub" id="studentRejectReason">Please re-submit with clearer
+                                        photos.</div>
+                                </div>
+                            </div>
+                            <button class="btnSecondary" id="studentResubmitBtn" type="button" style="margin-top:16px">
+                                <i data-lucide="refresh-cw"></i> Re-submit documents
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin placeholder -->
+                <div id="adminVerifPlaceholder" hidden>
+                    <div class="emptyState">
+                        <div class="emptyStateIcon"><i data-lucide="shield-check"></i></div>
+                        <div class="emptyStateTitle">No verification required</div>
+                        <div class="emptyStateSub">Admin accounts are verified by default.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── EMAIL ──────────────────────────────── -->
+            <section class="settingsPanel" id="panel-email">
+                <div class="panelHeader">
+                    <div class="panelHeaderIcon"><i data-lucide="mail"></i></div>
+                    <div>
+                        <h2 class="panelTitle">Email</h2>
+                        <p class="panelSub">Verification status for your email address</p>
+                    </div>
+                </div>
+
+                <div class="settingsCard" style="max-width:580px">
+                    <div class="cardSectionLabel">Email verification</div>
+                    <div class="cardSectionSub">Some features are restricted until your email is verified</div>
+
+                    <div id="emailVerifiedState" hidden>
+                        <div class="statusBanner statusBanner--approved">
+                            <div class="statusBannerIcon"><i data-lucide="mail-check"></i></div>
+                            <div>
+                                <div class="statusBannerTitle">Email verified</div>
+                                <div class="statusBannerSub" id="emailVerifiedAddress"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="emailUnverifiedState" hidden>
+                        <div class="statusBanner statusBanner--pending">
+                            <div class="statusBannerIcon"><i data-lucide="mail-warning"></i></div>
+                            <div>
+                                <div class="statusBannerTitle">Email not verified</div>
+                                <div class="statusBannerSub">Verify your email to unlock booking, publishing, and other
+                                    key features.</div>
+                            </div>
+                        </div>
+
+                        <p class="globalErr" id="resendErr" hidden></p>
+                        <p class="saveMsg" id="resendMsg" hidden></p>
+
+                        <!-- Step 1: send code -->
+                        <div id="otpSendStep" style="margin-top:18px;">
+                            <button class="btnPrimary" id="resendOtpBtn" type="button">
+                                <span class="btnLabel">Send verification code</span>
+                                <span class="btnSpinner" hidden></span>
+                            </button>
+                            <p class="disclaimer" style="margin-top:14px">
+                                <i data-lucide="info"></i>
+                                A 6-digit code will be sent to your registered email address.
+                            </p>
+                        </div>
+
+                        <!-- Step 2: enter code (shown after send) -->
+                        <div id="otpEnterStep" hidden style="margin-top:18px;">
+                            <label class="fieldLabel" for="otpCodeInput"
+                                style="display:block;margin-bottom:8px;font-size:13px;font-weight:500;">
+                                Enter the 6-digit code sent to your email
+                            </label>
+                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <input id="otpCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code"
+                                    maxlength="6" placeholder="000000"
+                                    style="width:140px;letter-spacing:0.2em;font-size:18px;font-weight:600;text-align:center;padding:10px 14px;border:1.5px solid rgba(3,3,3,0.15);border-radius:10px;outline:none;font-family:inherit;" />
+                                <button class="btnPrimary" id="verifyOtpBtn" type="button" disabled>
+                                    <span class="btnLabel">Verify email</span>
+                                    <span class="btnSpinner" hidden></span>
+                                </button>
+                            </div>
+                            <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+                                <button class="btnGhost" id="resendOtpAgainBtn" type="button"
+                                    style="font-size:12px;padding:6px 10px;background:none;border:none;cursor:pointer;color:inherit;text-decoration:underline;opacity:0.6;">
+                                    Resend code
+                                </button>
+                                <span id="resendCooldown" hidden style="font-size:12px;opacity:0.5;">Wait <span
+                                        id="cooldownSecs">60</span>s</span>
+                            </div>
+                            <p class="disclaimer" style="margin-top:10px">
+                                <i data-lucide="info"></i>
+                                Check your spam folder if you don't see the email after a few minutes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/auth/account-settings.js" defer></script>
+</body>
+
+</html>

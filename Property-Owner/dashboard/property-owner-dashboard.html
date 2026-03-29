@@ -3,108 +3,445 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VISTA-HR | Property Owner Dashboard</title>
 
+    <!--GOOGLE FONT LINK -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap"
+        rel="stylesheet">
 
-    <!-- ✅ use local lucide to avoid unpkg 404 -->
-    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
-
-    <!-- ✅ reuse wizard vibe -->
-    <link rel="stylesheet" href="/PO-after-signup/listing-wizard/wizard.css" />
-    <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css" />
-
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-calendar.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-messages.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-today.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-today.css">
 </head>
 
 <body>
-    <!-- BG (same vibe) -->
-    <div class="bg" aria-hidden="true">
-        <div class="bg-grid"></div>
-        <div class="glow g1"></div>
-        <div class="glow g2"></div>
-    </div>
 
+    <!--  Topbar  -->
     <header class="topbar">
-        <div class="brand">
-            <span class="logo-box"></span>
-            <span class="brand-text">VISTA<span>-HR</span></span>
-        </div>
+        <div class="topbar-inner">
 
-        <div class="top-actions">
-            <button class="chip" id="btnHelp" type="button">Help</button>
-            <button class="chip primary" id="btnNewListing" type="button">Create listing</button>
-        </div>
-    </header>
+            <a class="brand" href="/Property-Owner/dashboard/property-owner-dashboard.html">
+                <span class="brandDot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </a>
 
-    <main class="dash">
-        <div class="dashShell">
-            <div class="dashHead">
-                <div>
-                    <div class="dashKicker">Property owner</div>
-                    <h1 class="dashTitle">Dashboard</h1>
-                    <p class="dashSub">Manage your listings, bookings, and messages.</p>
-                </div>
+            <nav class="dashTabs" role="tablist" aria-label="Dashboard tabs">
+                <button class="dashTab active" data-tab="today" role="tab" aria-selected="true">
+                    Today
+                </button>
+                <button class="dashTab" data-tab="calendar" role="tab" aria-selected="false">Calendar</button>
+                <button class="dashTab" data-tab="listings" role="tab" aria-selected="false">Listings</button>
+                <button class="dashTab" data-tab="messages" role="tab" aria-selected="false">Messages</button>
+            </nav>
 
-                <div class="dashTabs" role="tablist">
-                    <button class="dashTab isActive" data-tab="listings" type="button">
-                        <i data-lucide="home"></i><span>Listings</span>
+
+            <div class="rightTools">
+                <button class="btn ghost" id="switchResidentBtn" type="button">Switch to Resident</button>
+
+                <div class="notif-wrap" id="notifWrap">
+                    <button class="notif-btn" id="notifBtn" aria-label="Notifications">
+                        <i data-lucide="bell"></i>
+                        <span class="notif-badge" id="notifBadge" hidden>0</span>
                     </button>
-                    <button class="dashTab" data-tab="calendar" type="button">
-                        <i data-lucide="calendar-days"></i><span>Calendar</span>
-                    </button>
-                    <button class="dashTab" data-tab="messages" type="button">
-                        <i data-lucide="messages-square"></i><span>Messages</span>
-                    </button>
-                    <span class="dashIndicator" id="dashIndicator"></span>
-                </div>
-            </div>
-
-            <!-- Listings -->
-            <section class="dashPanel isActive" id="tab-listings">
-                <div class="panelTop">
-                    <div class="panelTitle">Your listings</div>
-                    <div class="panelActions">
-                        <button class="btn ghost" id="btnClearDraft" type="button">Clear draft</button>
-                        <button class="btn solid" id="btnContinue" type="button">Continue</button>
+                    <div class="notif-panel" id="notifPanel" hidden>
+                        <div class="notif-head">
+                            <span>Notifications</span>
+                            <button class="notif-mark-read" id="notifMarkRead">Mark all read</button>
+                        </div>
+                        <div class="notif-list" id="notifList"></div>
                     </div>
                 </div>
 
-                <div class="listingGrid" id="listingGrid"></div>
-            </section>
+                <button class="avatarBtn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                    <span class="avatarCircle" id="avatarCircle">O</span>
+                </button>
 
-            <!-- Calendar -->
-            <section class="dashPanel" id="tab-calendar">
-                <div class="emptyState">
-                    <div class="emptyIcon"><i data-lucide="calendar-days"></i></div>
-                    <div class="emptyTitle">Calendar (next)</div>
-                    <div class="emptySub">We’ll show booked dates per listing here (mock first, backend later).</div>
+                <div class="profileMenu" id="profileMenu" aria-hidden="true">
+                    <button class="menuItem" id="menuAccount" type="button">
+                        <i data-lucide="user"></i><span>Account</span>
+                    </button>
+                    <button class="menuItem" id="menuHelp" type="button">
+                        <i data-lucide="help-circle"></i><span>Help</span>
+                    </button>
+                    <div class="menuSep"></div>
+                    <button class="menuItem danger" id="menuLogout" type="button">
+                        <i data-lucide="log-out"></i><span>Logout</span>
+                    </button>
                 </div>
-            </section>
+            </div>
 
-            <!-- Messages -->
-            <section class="dashPanel" id="tab-messages">
-                <div class="emptyState">
-                    <div class="emptyIcon"><i data-lucide="messages-square"></i></div>
-                    <div class="emptyTitle">Messages (next)</div>
-                    <div class="emptySub">We’ll add inbox + chat UI here (mock first, realtime later).</div>
-                </div>
-            </section>
         </div>
+    </header>
+
+    <!--  Main -->
+    <main class="dashMain">
+
+        <!-- TODAY -->
+        <section class="tabPanel active" id="tab-today" data-panel="today" role="tabpanel">
+
+            <!-- Alert toasts (dismissible bubbles, only shown when needed) -->
+            <div class="td-toasts" id="tdAlertsWrap" hidden>
+                <div class="td-toast td-toast--blue" id="emailVerifyBanner" hidden>
+                    <i data-lucide="mail" class="td-toast-icon"></i>
+                    <div class="td-toast-body">
+                        <span class="td-toast-title">Verify your email</span>
+                        <span class="td-toast-sub">to unlock publishing</span>
+                    </div>
+                    <a class="td-toast-cta" id="emailVerifyBtn" href="#">Verify →</a>
+                    <button class="td-toast-close" data-dismiss="emailVerifyBanner" aria-label="Dismiss">✕</button>
+                </div>
+                <div class="td-toast td-toast--amber" id="verifyBanner" hidden>
+                    <i data-lucide="shield-alert" class="td-toast-icon"></i>
+                    <div class="td-toast-body">
+                        <span class="td-toast-title">Identity pending</span>
+                        <span class="td-toast-sub">Listings hidden until approved</span>
+                    </div>
+                    <a class="td-toast-cta" href="/Property-Owner/verification/verify.html">Verify →</a>
+                    <button class="td-toast-close" data-dismiss="verifyBanner" aria-label="Dismiss">✕</button>
+                </div>
+            </div>
+
+            <!-- Two-column layout -->
+            <div class="td-shell">
+
+                <!-- LEFT: main content -->
+                <div class="td-main">
+
+                    <!-- Greeting + date on same row -->
+                    <div class="td-greeting-row">
+                        <h2 class="td-greeting-name" id="todayGreeting">Good morning</h2>
+                        <div class="td-greeting-date">
+                            <i data-lucide="calendar"></i>
+                            <span id="todayDateLabel"></span>
+                        </div>
+                    </div>
+
+                    <!-- Inline stats bar -->
+                    <div class="td-stats-bar" id="todayStats">
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--pending"><i data-lucide="clock"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statPending">—</div>
+                                <div class="td-stat-label">Pending</div>
+                                <div class="td-stat-sub" id="statPendingSub">awaiting review</div>
+                            </div>
+                        </div>
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--approved"><i data-lucide="check-circle-2"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statApproved">—</div>
+                                <div class="td-stat-label">Approved</div>
+                                <div class="td-stat-sub">active tenants</div>
+                            </div>
+                        </div>
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--listings"><i data-lucide="home"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statListings">—</div>
+                                <div class="td-stat-label">Listings</div>
+                                <div class="td-stat-sub">on platform</div>
+                            </div>
+                        </div>
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--occupancy"><i data-lucide="percent"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statOccupancy">—</div>
+                                <div class="td-stat-label">Occupancy</div>
+                                <div class="td-stat-sub">of capacity filled</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7-day chart -->
+                    <div class="td-chart-card">
+                        <div class="td-chart-head">
+                            <div>
+                                <div class="td-chart-title">Performance</div>
+                                <div class="td-chart-sub">Booking activity &amp; occupancy — last 7 days</div>
+                            </div>
+                        </div>
+                        <div class="td-chart-wrap">
+                            <canvas id="todayChartCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Bookings task list -->
+                    <div>
+                        <div class="td-section-head" style="margin-bottom:12px">
+                            <h3 class="td-section-title">Move-in Requests</h3>
+                            <div class="bkFilterBar" role="tablist">
+                                <button class="bkFilterBtn active" data-status="ALL" role="tab">All</button>
+                                <button class="bkFilterBtn" data-status="PENDING" role="tab">Pending <span
+                                        class="bkFilterCount" id="bkCountPending"></span></button>
+                                <button class="bkFilterBtn" data-status="APPROVED" role="tab">Approved</button>
+                                <button class="bkFilterBtn" data-status="REJECTED" role="tab">Rejected</button>
+                                <button class="bkFilterBtn" data-status="CANCELLED" role="tab">Cancelled</button>
+                            </div>
+                        </div>
+                        <div id="bookingsList"></div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT: sidebar -->
+                <div class="td-sidebar">
+
+                    <div class="td-owner-card">
+                        <div class="td-owner-avatar" id="sidebarAvatar">O</div>
+                        <div class="td-owner-name" id="sidebarOwnerName">—</div>
+                        <div class="td-owner-role">Property Owner</div>
+                        <div class="td-owner-badges" id="sidebarBadges"></div>
+                    </div>
+
+                    <div class="td-side-card">
+                        <div class="td-side-head">
+                            <span class="td-side-title">Today's move-ins</span>
+                            <span class="td-side-date" id="todayDateLabel2"></span>
+                        </div>
+                        <div id="todayEventsList"></div>
+                    </div>
+
+                    <div class="td-side-card">
+                        <div class="td-side-head">
+                            <span class="td-side-title">Recent activity</span>
+                        </div>
+                        <div id="todayActivityList"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+        <!-- CALENDAR -->
+        <section class="tabPanel" id="tab-calendar" data-panel="calendar" role="tabpanel">
+            <div class="calendarPage calendarPage--fixed" id="calendarPage">
+
+                <!-- CENTER: main grid -->
+                <div class="calendarCenterPanel">
+                    <div class="calendarCenterHeader">
+
+                        <button class="btn ghost calendarTodayBtn" id="calTodayBtn" type="button">Today</button>
+                    </div>
+                    <div class="calendarMainCard calendarMainScroll">
+                        <div class="calendarWeekdays" id="calendarWeekdays"></div>
+                        <div class="calendarGrid" id="calendarGrid"></div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: mini cal + filters + daily overview -->
+                <div class="calendarRightPanel">
+
+                    <!-- Mini calendar -->
+                    <div class="calendarMiniCalCard">
+                        <div class="calendarMiniCalHeader">
+                            <button class="calendarMiniNavBtn" id="calPrevBtn" type="button"
+                                aria-label="Previous month">&#8249;</button>
+                            <div class="calendarMonthLabel" id="calendarMonthLabel">Month Year</div>
+                            <button class="calendarMiniNavBtn" id="calNextBtn" type="button"
+                                aria-label="Next month">&#8250;</button>
+                            <div class="calendarMonthPicker" id="calendarMonthPicker" hidden></div>
+                        </div>
+                        <div class="calendarMiniGrid" id="calendarMiniGrid"></div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="calendarFiltersCard">
+                        <div class="calendarFiltersLabel">Filters</div>
+                        <div class="calendarFilterGroup">
+                            <div class="calendarFilterGroupLabel">Unit</div>
+                            <select class="calendarSelect" id="calendarUnitFilter">
+                                <option value="all">All units</option>
+                            </select>
+                        </div>
+                        <div class="calendarFilterGroup">
+                            <div class="calendarFilterGroupLabel">Status</div>
+                            <select class="calendarSelect" id="calendarStatusFilter">
+                                <option value="all">All statuses</option>
+                                <option value="AVAILABLE">Available</option>
+                                <option value="RESERVED">Reserved</option>
+                                <option value="MOVED_IN">Moved in</option>
+                                <option value="OCCUPIED">Occupied</option>
+                                <option value="MOVE_OUT">Move out</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <!-- Daily overview -->
+                    <div class="calendarSidePanel" id="calendarSidePanel">
+                        <div class="calendarInspector" id="calendarInspector">
+                            <div class="calendarInspectorOverview" id="calendarInspectorOverview">
+                                <div class="calendarSideCard calendarOverviewCard">
+                                    <div class="calendarSideHead">
+                                        <h3 class="calendarSideTitle">Daily overview</h3>
+                                        <div class="calendarSelectedMeta" id="calendarSelectedMeta">Select a date</div>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Total stays</span>
+                                        <strong id="calendarDailyTotal">&#8212;</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Availability</span>
+                                        <strong id="calendarAvailabilityStatus">&#8212;</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Reserved</span>
+                                        <strong id="calendarDailyReserved">&#8212;</strong>
+                                    </div>
+                                    <div class="calendarInfoRow">
+                                        <span>Occupied / moved in</span>
+                                        <strong id="calendarDailyOccupied">&#8212;</strong>
+                                    </div>
+                                </div>
+                                <div class="calendarSideCard">
+                                    <div class="calendarSideHead">
+                                        <h3 class="calendarSideTitle">Warnings &amp; conflicts</h3>
+                                    </div>
+                                    <div class="calendarStackList" id="calendarWarnings">
+                                        <div class="calendarEmptyNote">No conflicts detected.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="calendarInspectorDetail" id="calendarInspectorDetail" hidden></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- hidden stubs so JS does not break -->
+                <div hidden>
+                    <div id="calendarSelectedDate"></div>
+                    <div id="calendarUpcomingActions"></div>
+                    <div id="calendarDayEvents"></div>
+                    <div id="summaryAvailable">0</div>
+                    <div id="summaryReserved">0</div>
+                    <div id="summaryOccupied">0</div>
+                    <div id="summaryMoveIn">0</div>
+                    <div id="summaryMoveOut">0</div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- LISTINGS -->
+        <section class="tabPanel" id="tab-listings" data-panel="listings" role="tabpanel">
+            <div class="listingsHeader">
+                <div class="pageIntro">
+                    <h2 class="pageTitle">Your listings</h2>
+                    <p class="pageSub">Manage drafts, ready spaces, and recent updates.</p>
+                </div>
+
+                <div class="headerActions">
+                    <div class="densityToggle" id="densityToggle" role="group" aria-label="View density">
+                        <button class="densityBtn active" id="densityGrid" type="button" aria-pressed="true"
+                            title="Grid view">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <rect x="1" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                                <rect x="8.5" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                                <rect x="1" y="8.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                                <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
+                            </svg>
+                        </button>
+                        <button class="densityBtn" id="densityList" type="button" aria-pressed="false"
+                            title="List view">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <rect x="1" y="2" width="13" height="2.2" rx="1.1" fill="currentColor" />
+                                <rect x="1" y="6.4" width="13" height="2.2" rx="1.1" fill="currentColor" />
+                                <rect x="1" y="10.8" width="13" height="2.2" rx="1.1" fill="currentColor" />
+                            </svg>
+                        </button>
+                    </div>
+                    <button class="btn solid primaryCta" id="btnNewListing" type="button">Create listing</button>
+                </div>
+            </div>
+
+            <div class="listingGrid" id="listingGrid"></div>
+        </section>
+
+        <!-- MESSAGES -->
+        <section class="tabPanel" id="tab-messages" data-panel="messages" role="tabpanel">
+            <div class="msgShell">
+
+                <!-- LEFT: conversation list -->
+                <div class="msgSidebar">
+                    <div class="msgSidebarHead">
+                        <h2 class="msgSidebarTitle">Messages</h2>
+                        <span class="msgUnreadPill" id="msgUnreadPill">3</span>
+                    </div>
+                    <div class="msgSearchWrap">
+                        <i data-lucide="search" class="msgSearchIcon"></i>
+                        <input class="msgSearchInput" id="msgSearchInput" type="text"
+                            placeholder="Search conversations&#8230;" autocomplete="off">
+                    </div>
+                    <div class="msgThreadList" id="msgThreadList"></div>
+                </div>
+
+                <!-- CENTER: chat area -->
+                <div class="msgMain" id="msgMain">
+                    <div class="msgMainEmpty" id="msgMainEmpty">
+                        <i data-lucide="message-square"
+                            style="width:36px;height:36px;stroke-width:1.4;color:rgba(27,63,110,0.22)"></i>
+                        <p>Select a conversation to start messaging</p>
+                    </div>
+                    <div class="msgChatWrap" id="msgChatWrap" hidden>
+                        <div class="msgChatHeader" id="msgChatHeader"></div>
+                        <div class="msgBubbleList" id="msgBubbleList"></div>
+                        <button class="msgJumpBtn isHidden" id="msgJumpBtn" type="button">&#8595; unread</button>
+                        <div class="msgQuickReplies" id="msgQuickReplies"></div>
+                        <div class="msgComposer">
+                            <textarea class="msgInput" id="msgInput" placeholder="Write a message&#8230;"
+                                rows="1"></textarea>
+                            <button class="msgSendBtn" id="msgSendBtn" type="button" aria-label="Send">
+                                <i data-lucide="send"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: tenant info panel -->
+                <div class="msgInfoPanel" id="msgInfoPanel" hidden>
+                    <div class="msgInfoInner" id="msgInfoInner"></div>
+                </div>
+
+            </div>
+        </section>
     </main>
 
-    <!-- ✅ IMPORTANT: load the same store.js used by wizard -->
-    <!-- lucide (LOCAL) -->
-    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
+    <!-- Confirm Modal -->
+    <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
+        <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <h3 class="modalTitle" id="modalTitle">Confirm</h3>
+            <p class="modalMsg" id="modalMessage"></p>
+            <div class="modalActions">
+                <button class="btn ghost" id="modalCancel" type="button">Cancel</button>
+                <button class="btn solid" id="modalConfirm" type="button">Confirm</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- IMPORTANT: load ListingStore -->
-    <script src="/PO-after-signup/listing-wizard/core/store.js"></script>
-    <script src="property-owner-dashboard.js"></script>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/PO-after-signup/listing-wizard/core/store.js" defer></script>
+    <script src="property-owner-dashboard.js" defer></script>
+    <script src="dashboard-calendar.js" defer></script>
+    <script src="dashboard-messages.js" defer></script>
+    <script src="dashboard-today.js" defer></script>
+    <script src="dashboard-today.js" defer></script>
 
 
-    </script>
 </body>
 
 </html>

@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>VISTA-HR · Listing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/Resident/listing_detail.css" />
+</head>
+
+<body>
+
+    <!-- TOPBAR -->
+    <header class="ld-bar">
+        <div class="ld-bar-in">
+            <a class="ld-brand" href="/Resident/resident_home.html"><span class="ld-dot"></span>VISTA<b>-HR</b></a>
+            <div class="ld-bar-right">
+                <button class="ld-topbtn" id="ldShareBtn"><i data-lucide="share-2"></i><span>Share</span></button>
+                <button class="ld-topbtn" id="ldSaveBtn"><i data-lucide="heart"></i><span>Save</span></button>
+            </div>
+        </div>
+    </header>
+
+    <!-- SCROLL NAV -->
+    <nav class="ld-scroll-nav" id="ldScrollNav" hidden>
+        <div class="ld-scroll-nav-in">
+            <a class="ld-snav-link active" href="#ldPhotosWrap" data-target="ldPhotosWrap">Photos</a>
+            <a class="ld-snav-link" href="#ldAmenSec" data-target="ldAmenSec">Amenities</a>
+            <a class="ld-snav-link" href="#ldRevSec" data-target="ldRevSec">Reviews</a>
+            <a class="ld-snav-link" href="#ldMapSec" data-target="ldMapSec">Location</a>
+        </div>
+    </nav>
+
+    <!-- PHOTO AREA -->
+    <div class="ld-photos-wrap" id="ldPhotosWrap">
+        <div class="ld-photo-grid" id="ldPhotoGrid">
+            <!-- Left: big hero photo -->
+            <div class="ld-photo-main" id="ldPhotoMain">
+                <div class="ld-ph-placeholder"><i data-lucide="home"></i></div>
+            </div>
+            <!-- Right: 2x2 grid of 4 smaller photos -->
+            <div class="ld-photo-right">
+                <div class="ld-photo-side" id="ldPhotoSide1">
+                    <div class="ld-ph-placeholder"><i data-lucide="home"></i></div>
+                </div>
+                <div class="ld-photo-side" id="ldPhotoSide2">
+                    <div class="ld-ph-placeholder"><i data-lucide="home"></i></div>
+                </div>
+                <div class="ld-photo-side" id="ldPhotoSide3">
+                    <div class="ld-ph-placeholder"><i data-lucide="home"></i></div>
+                </div>
+                <div class="ld-photo-side" id="ldPhotoSide4">
+                    <div class="ld-ph-placeholder"><i data-lucide="home"></i></div>
+                    <button class="ld-showall" id="ldShowAll" hidden><i data-lucide="grid-2x2"></i> Show all
+                        photos</button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile slideshow -->
+        <div class="ld-mob-slides" id="ldMobSlides">
+            <div class="ld-slides-track" id="ldSlidesTrack"></div>
+            <button class="ld-slide-btn prev" id="ldSlidePrev"><i data-lucide="chevron-left"></i></button>
+            <button class="ld-slide-btn next" id="ldSlideNext"><i data-lucide="chevron-right"></i></button>
+            <div class="ld-slide-counter" id="ldSlideCounter"></div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="ld-main">
+        <div class="ld-layout">
+
+            <!-- ── LEFT COL ── -->
+            <div class="ld-left">
+
+                <!-- Title & meta -->
+                <div class="ld-hero">
+                    <h1 class="ld-title" id="ldTitle">Loading…</h1>
+                    <div class="ld-badges" id="ldBadges"></div>
+                    <div class="ld-meta">
+                        <div class="ld-loc" id="ldLoc"><i data-lucide="map-pin"></i><span id="ldLocTxt"></span></div>
+                        <div class="ld-rating-row" id="ldRatingRow" hidden>
+                            <span class="ld-sep">·</span>
+                            <span class="ld-stars-sm" id="ldStarsSm"></span>
+                            <a class="ld-rev-link" id="ldRevLink" href="#ldRevSec"></a>
+                        </div>
+                    </div>
+                </div>
+                <hr class="ld-hr">
+
+                <!-- Host -->
+                <div class="ld-host-row" id="ldHostRow">
+                    <div class="ld-host-av" id="ldHostAv">P</div>
+                    <div class="ld-host-info">
+                        <div class="ld-host-name" id="ldHostName">Property Owner</div>
+                        <div class="ld-host-since" id="ldHostSince"></div>
+                    </div>
+                    <!-- message via booking card only -->
+                </div>
+                <hr class="ld-hr">
+
+                <!-- Room breakdown -->
+                <div class="ld-room-breakdown" id="ldRoomBreakdown"></div>
+                <hr class="ld-hr">
+
+                <!-- Description -->
+                <div class="ld-desc-wrap">
+                    <p class="ld-desc clamped" id="ldDesc"></p>
+                    <button class="ld-show-more" id="ldShowMore" hidden>Show more <i
+                            data-lucide="chevron-right"></i></button>
+                </div>
+                <hr class="ld-hr">
+
+                <!-- Virtual Tour -->
+                <section id="ldTourSec" hidden>
+                    <h2 class="ld-sh">360° Virtual Tour</h2>
+                    <div class="ld-tour-box" id="ldTourBox">
+                        <div class="ld-tour-cover" id="ldTourCover">
+                            <i data-lucide="rotate-3d"></i>
+                            <p>Explore this space in 360°</p>
+                            <button class="ld-tour-btn" id="ldTourLaunch">Launch tour</button>
+                        </div>
+                        <div id="ldPannellum" class="ld-pannellum" hidden></div>
+                    </div>
+                </section>
+                <div id="ldTourHr" hidden>
+                    <hr class="ld-hr">
+                </div>
+
+                <!-- Highlights -->
+                <section id="ldHighSec" hidden>
+                    <h2 class="ld-sh">Highlights</h2>
+                    <div class="ld-highlights" id="ldHighlights"></div>
+                    <hr class="ld-hr">
+                </section>
+
+                <!-- Amenities -->
+                <section id="ldAmenSec" hidden>
+                    <h2 class="ld-sh">What's included</h2>
+                    <div class="ld-amen-grid" id="ldAmenGrid"></div>
+                    <button class="ld-show-all-amen" id="ldShowAllAmen" hidden></button>
+                    <hr class="ld-hr">
+                </section>
+
+                <!-- Map -->
+                <section id="ldMapSec">
+                    <h2 class="ld-sh">Location</h2>
+                    <div class="ld-map-wrap">
+                        <div id="ldMap" class="ld-map"></div>
+                    </div>
+                    <p class="ld-map-note" id="ldMapNote"></p>
+                    <button class="ld-dir-btn" id="ldDirBtn" hidden><i data-lucide="navigation"></i> Get
+                        directions</button>
+                </section>
+                <hr class="ld-hr">
+
+                <!-- Reviews -->
+                <section id="ldRevSec">
+                    <div class="ld-rev-head">
+                        <h2 class="ld-sh" id="ldRevTitle">Reviews</h2>
+                        <button class="ld-write-rev" id="ldWriteRev" hidden><i data-lucide="pencil-line"></i> Write a
+                            review</button>
+                    </div>
+                    <div class="ld-rev-summary" id="ldRevSummary" hidden></div>
+                    <div class="ld-rev-grid" id="ldRevGrid"></div>
+                    <button class="ld-load-more-btn" id="ldLoadMore" hidden>Show more reviews</button>
+                </section>
+                <hr class="ld-hr">
+
+                <!-- Similar listings -->
+                <section id="ldSimilarSec" hidden>
+                    <h2 class="ld-sh">Similar listings nearby</h2>
+                    <div class="ld-similar-row" id="ldSimilarRow"></div>
+                </section>
+
+            </div><!-- /left -->
+
+            <!-- ── RIGHT COL — BOOKING CARD ── -->
+            <div class="ld-right">
+                <div class="ld-book-card">
+                    <div class="ld-book-price" id="ldBookPrice"></div>
+                    <div class="ld-book-rating" id="ldBookRating" hidden></div>
+
+                    <!-- Date picker inline -->
+                    <div class="ld-book-dates">
+                        <label class="ld-date-lbl">Move-in date</label>
+                        <input type="date" id="ldMoveIn" class="ld-date-inp">
+                    </div>
+
+                    <button class="ld-btn-reserve" id="ldReserveBtn">Reserve now</button>
+                    <button class="ld-btn-message" id="ldCardMsgBtn" hidden>
+                        <i data-lucide="message-circle"></i> Message the owner
+                    </button>
+                    <p class="ld-book-note">You won't be charged yet.</p>
+                </div>
+            </div>
+
+        </div><!-- /layout -->
+    </main>
+
+    <!-- MOBILE FOOTER -->
+    <div class="ld-mob-bar" id="ldMobBar">
+        <div class="ld-mob-price" id="ldMobPrice"></div>
+        <div class="ld-mob-actions">
+            <button class="ld-btn-message mob" id="ldMobMsgBtn" hidden><i data-lucide="message-circle"></i></button>
+            <button class="ld-btn-reserve mob" id="ldMobReserveBtn">Reserve now</button>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div class="ld-lb" id="ldLb" hidden>
+        <div class="ld-lb-top">
+            <button class="ld-lb-close" id="ldLbClose"><i data-lucide="x"></i> Close</button>
+            <span class="ld-lb-ctr" id="ldLbCtr"></span>
+            <div></div>
+        </div>
+        <div class="ld-lb-mid">
+            <button class="ld-lb-nav" id="ldLbPrev"><i data-lucide="chevron-left"></i></button>
+            <img class="ld-lb-img" id="ldLbImg" src="" alt="">
+            <button class="ld-lb-nav" id="ldLbNext"><i data-lucide="chevron-right"></i></button>
+        </div>
+        <div class="ld-lb-strip" id="ldLbStrip"></div>
+    </div>
+
+    <!-- MESSAGE MODAL -->
+    <div class="ld-ov" id="msgOv" hidden></div>
+    <div class="ld-modal" id="msgModal" hidden>
+        <div class="ld-modal-hd">
+            <h3>Message the owner</h3><button class="ld-modal-x" id="msgClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="ld-modal-bd">
+            <textarea id="msgText" class="ld-ta" rows="5" placeholder="Hi! I'm interested in this listing…"
+                maxlength="1000"></textarea>
+            <div class="ld-char-ct"><span id="msgCt">0</span>/1000</div>
+            <p class="ld-err" id="msgErr" hidden></p>
+        </div>
+        <div class="ld-modal-ft">
+            <button class="ld-btn-ghost" id="msgCancel">Cancel</button>
+            <button class="ld-btn-primary" id="msgSend"><span id="msgLbl">Send message</span><span class="ld-spin"
+                    id="msgSpin" hidden></span></button>
+        </div>
+    </div>
+
+    <!-- BOOKING MODAL -->
+    <div class="ld-ov" id="bmOv" hidden></div>
+    <div class="ld-modal bm" id="bmModal" hidden>
+        <div class="ld-modal-hd"><button class="ld-modal-x" id="bmClose"><i data-lucide="x"></i></button>
+            <h3>Request to book</h3>
+        </div>
+        <div class="bm-snap" id="bmSnap"></div>
+        <div class="ld-modal-bd" id="bmBd">
+            <div class="ld-field"><label class="ld-lbl" for="bmDate">Move-in date <span
+                        class="ld-opt">(optional)</span></label><input type="date" id="bmDate" class="ld-date-inp full">
+            </div>
+            <div class="ld-field"><label class="ld-lbl" for="bmNote">Message to owner <span
+                        class="ld-opt">(optional)</span></label><textarea id="bmNote" class="ld-ta" rows="3"
+                    placeholder="Hi, I'm interested…"></textarea></div>
+            <p class="ld-err" id="bmErr" hidden></p>
+        </div>
+        <div class="bm-ok" id="bmOk" hidden>
+            <div class="bm-ok-ic"><i data-lucide="check-circle-2"></i></div>
+            <h4>Booking request sent!</h4>
+            <p>The owner will get back to you soon.</p>
+        </div>
+        <div class="ld-modal-ft" id="bmFt">
+            <button class="ld-btn-ghost" id="bmCancel">Cancel</button>
+            <button class="ld-btn-primary" id="bmSend"><span id="bmLbl">Send request</span><span class="ld-spin"
+                    id="bmSpin" hidden></span></button>
+        </div>
+    </div>
+
+    <!-- REVIEW MODAL -->
+    <div class="ld-ov" id="rvOv" hidden></div>
+    <div class="ld-modal" id="rvModal" hidden>
+        <div class="ld-modal-hd">
+            <h3>Write a review</h3><button class="ld-modal-x" id="rvClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="ld-modal-bd">
+            <div class="ld-star-row" id="ldStarRow">
+                <button data-s="1"><i data-lucide="star"></i></button><button data-s="2"><i
+                        data-lucide="star"></i></button>
+                <button data-s="3"><i data-lucide="star"></i></button><button data-s="4"><i
+                        data-lucide="star"></i></button>
+                <button data-s="5"><i data-lucide="star"></i></button>
+            </div>
+            <p class="ld-star-lbl" id="rvLbl">Tap a star to rate</p>
+            <textarea id="rvText" class="ld-ta" rows="4" placeholder="Tell others about your stay… (optional)"
+                maxlength="1000"></textarea>
+            <div class="ld-char-ct"><span id="rvCt">0</span>/1000</div>
+            <p class="ld-err" id="rvErr" hidden></p>
+        </div>
+        <div class="ld-modal-ft">
+            <button class="ld-btn-ghost" id="rvCancel">Cancel</button>
+            <button class="ld-btn-primary" id="rvSend" disabled><span id="rvLbl2">Submit review</span><span
+                    class="ld-spin" id="rvSpin" hidden></span></button>
+        </div>
+    </div>
+
+    <!-- DESCRIPTION MODAL -->
+    <div class="ld-ov" id="descOv" hidden></div>
+    <div class="ld-modal desc-modal" id="descModal" hidden>
+        <div class="ld-modal-hd">
+            <h3>About this space</h3>
+            <button class="ld-modal-x" id="descClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="ld-modal-bd desc-modal-bd" id="descModalBody"></div>
+    </div>
+
+    <!-- AMENITIES MODAL -->
+    <div class="ld-ov" id="amenOv" hidden></div>
+    <div class="ld-modal amen-modal" id="amenModal" hidden>
+        <div class="ld-modal-hd">
+            <h3>What's included</h3>
+            <button class="ld-modal-x" id="amenClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="ld-modal-bd amen-modal-bd" id="amenModalBody"></div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="ld-toast" id="ldToast"></div>
+
+    <script src="/auth/sessionGuard.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/Resident/listing_detail.js"></script>
+</body>
+
+</html>

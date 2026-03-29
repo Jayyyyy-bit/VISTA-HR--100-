@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Enum
 from ..extensions import db
 
-LISTING_STATUS = ("DRAFT", "PENDING_VERIFICATION", "PUBLISHED", "ARCHIVED")
+LISTING_STATUS = ("DRAFT", "READY", "PUBLISHED", "ARCHIVED")  # must match DB Enum
 
 class Listing(db.Model):
     __tablename__ = "listings"
@@ -11,9 +11,11 @@ class Listing(db.Model):
 
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    status = db.Column(Enum(*LISTING_STATUS, name="listing_status"),
-                       nullable=False, default="DRAFT", server_default="DRAFT", index=True)
-
+    status = db.Column(
+    db.Enum("DRAFT", "READY", "PUBLISHED", "ARCHIVED", name="listing_status"),
+    nullable=False,
+    default="DRAFT",
+)
     current_step = db.Column(db.SmallInteger, nullable=False, default=1, server_default="1")
 
     # Wizard columns
@@ -28,8 +30,11 @@ class Listing(db.Model):
     title = db.Column(db.String(120), nullable=True)       # Step 8
     description = db.Column(db.Text, nullable=True)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Student discount set by property owner (0-100, stored as integer percent, NULL = no discount)
+    student_discount = db.Column(db.SmallInteger, nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -46,4 +51,7 @@ class Listing(db.Model):
             "photos": self.photos,
             "title": self.title,
             "description": self.description,
+            "student_discount": self.student_discount,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

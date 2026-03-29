@@ -1,209 +1,499 @@
-// steps/step7.js
+// step7_photos.js — Photos + 360° Panorama Upload + Guide Modal
 
 window.Step7Init = function Step7Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
 
+    // ── Regular photo elements ──
     const uploadZone = document.getElementById("uploadZone");
     const photoInput = document.getElementById("photoInput");
     const uploadBtn = document.getElementById("uploadBtn");
     const thumbGrid = document.getElementById("thumbGrid");
     const photoCountLabel = document.getElementById("photoCountLabel");
 
+    // ── VT elements ──
     const vtToggle = document.getElementById("vtToggle");
     const vtBody = document.getElementById("vtBody");
     const vtUrl = document.getElementById("vtUrl");
+    const vtGuideBtn = document.getElementById("vtGuideBtn");
+    const vtGuideLink = document.getElementById("vtGuideLink");
+
+    // ── Panorama upload elements ──
+    const panoInput = document.getElementById("panoInput");
+    const panoChooseBtn = document.getElementById("panoChooseBtn");
+    const panoUploadZone = document.getElementById("panoUploadZone");
+    const panoUploadInner = document.getElementById("panoUploadInner");
+    const panoPreview = document.getElementById("panoPreview");
+    const panoPreviewImg = document.getElementById("panoPreviewImg");
+    const panoRemoveBtn = document.getElementById("panoRemoveBtn");
+
+    // ── Guide modal elements ──
+    const guideOverlay = document.getElementById("guideOverlay");
+    const guideModal = document.getElementById("guideModal");
+    const gmClose = document.getElementById("gmClose");
+    const gmPrev = document.getElementById("gmPrev");
+    const gmNext = document.getElementById("gmNext");
+    const gmStepCounter = document.getElementById("gmStepCounter");
+    const gmProgressBar = document.getElementById("gmProgressBar");
 
     const MIN_PHOTOS = 5;
+    const API_BASE = "http://127.0.0.1:5000/api";
+    let guideStep = 1;
+    const GUIDE_TOTAL = 5;
 
-    if (!thumbGrid || !photoInput) {
-        console.error("[Step7] Missing required elements (#thumbGrid or #photoInput).");
-        return;
-    }
-
+    // ────────────────────────────────────────
+    //  STORE HELPERS
+    // ────────────────────────────────────────
     const uid = () => "ph_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
 
     function read() {
         const d = ListingStore.readDraft();
         return {
             photos: Array.isArray(d.photos) ? d.photos : [],
-            vt: d.virtualTour || { enabled: false, panoUrl: "" },
+            vt: d.virtualTour || { enabled: false, panoUrl: "", panoPublicId: "" },
         };
     }
 
-    function savePhotos(photos) {
-        ListingStore.saveDraft({ photos });
-    }
-
-    function saveVT(vt) {
-        ListingStore.saveDraft({ virtualTour: vt });
-    }
+    function savePhotos(photos) { ListingStore.saveDraft({ photos }); }
+    function saveVT(vt) { ListingStore.saveDraft({ virtualTour: vt }); }
 
     function ensureCover(photos) {
         if (!photos.length) return photos;
-        const hasCover = photos.some((p) => p.isCover);
-        if (hasCover) return photos;
+        if (photos.some(p => p?.isCover)) return photos;
         return photos.map((p, i) => ({ ...p, isCover: i === 0 }));
     }
 
     function setCover(id) {
         const { photos } = read();
-        const next = photos.map((p) => ({ ...p, isCover: p.id === id }));
-        savePhotos(next);
+        savePhotos(photos.map(p => ({ ...p, isCover: p.id === id })));
         render();
     }
 
     function removePhoto(id) {
         const { photos } = read();
-        let next = photos.filter((p) => p.id !== id);
-        next = ensureCover(next);
-        savePhotos(next);
+        savePhotos(ensureCover(photos.filter(p => p.id !== id)));
         render();
     }
 
-    async function filesToPhotos(fileList) {
+    // ────────────────────────────────────────
+    //  CLOUDINARY UPLOAD (regular photos)
+    // ────────────────────────────────────────
+    function setUploading(on) {
+        if (uploadBtn) uploadBtn.disabled = !!on;
+        if (photoInput) photoInput.disabled = !!on;
+        if (nextBtn) nextBtn.disabled = !!on;
+        uploadZone?.classList.toggle("isUploading", !!on);
+        if (uploadBtn) {
+            uploadBtn.dataset._orig = uploadBtn.dataset._orig || uploadBtn.textContent;
+            uploadBtn.textContent = on ? "Uploading…" : uploadBtn.dataset._orig;
+        }
+    }
+
+    async function getUploadSignature() {
+        const res = await fetch(`${API_BASE}/uploads/sign`, {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder: "vista_hr/listings" }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw data;
+        return data;
+    }
+
+    async function uploadOneToCloudinary(file) {
+        const sig = await getUploadSignature();
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("api_key", sig.apiKey);
+        fd.append("timestamp", sig.timestamp);
+        fd.append("signature", sig.signature);
+        fd.append("folder", sig.folder);
+
+        const res = await fetch(
+            `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+            { method: "POST", body: fd }
+        );
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) throw out;
+
+        return {
+            id: uid(), url: out.secure_url,
+            public_id: out.public_id, name: file.name || "photo",
+            isCover: false, width: out.width, height: out.height,
+        };
+    }
+
+    const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per photo
+    const MAX_PHOTOS = 20;
+
+    function showUploadError(msg) {
+        // Show inline error below upload zone instead of alert()
+        let errEl = document.getElementById("photoUploadErr");
+        if (!errEl) {
+            errEl = document.createElement("p");
+            errEl.id = "photoUploadErr";
+            errEl.style.cssText = "color:#dc2626;font-size:12px;margin-top:8px;font-weight:500;";
+            uploadZone?.insertAdjacentElement("afterend", errEl);
+        }
+        errEl.textContent = msg;
+        errEl.hidden = false;
+        setTimeout(() => { if (errEl) errEl.hidden = true; }, 5000);
+    }
+
+    function validateFiles(fileList) {
+        const { photos } = read();
         const files = Array.from(fileList || []);
-        const out = [];
+        const valid = [];
+        const errors = [];
 
         for (const f of files) {
-            if (!f.type.startsWith("image/")) continue;
-
-            const url = await new Promise((resolve) => {
-                const r = new FileReader();
-                r.onload = () => resolve(r.result);
-                r.readAsDataURL(f);
-            });
-
-            out.push({ id: uid(), url, name: f.name || "photo", isCover: false });
+            if (!ALLOWED_TYPES.has(f.type)) {
+                errors.push(`"${f.name}" is not an image. Only JPG, PNG, and WEBP are allowed.`);
+                continue;
+            }
+            if (f.size > MAX_FILE_SIZE) {
+                errors.push(`"${f.name}" is too large. Maximum size is 10 MB per photo.`);
+                continue;
+            }
+            if (photos.length + valid.length >= MAX_PHOTOS) {
+                errors.push(`Maximum ${MAX_PHOTOS} photos allowed. Extra files were skipped.`);
+                break;
+            }
+            valid.push(f);
         }
 
-        return out;
+        if (errors.length) showUploadError(errors[0]);
+        return valid;
     }
 
     async function addFiles(fileList) {
         const { photos } = read();
-        const added = await filesToPhotos(fileList);
-        let next = ensureCover([...photos, ...added]);
-        savePhotos(next);
-        render();
+        const files = validateFiles(fileList);
+        if (!files.length) return; // all rejected — error already shown
+
+        setUploading(true);
+        try {
+            // Parallel upload — all files upload simultaneously instead of one by one
+            const added = await Promise.all(files.map(f => uploadOneToCloudinary(f)));
+            savePhotos(ensureCover([...photos, ...added]));
+            render();
+        } catch (e) {
+            console.error("[Step7] upload failed", e);
+            showUploadError(e?.message || e?.error?.message || "Upload failed. Please try again.");
+        } finally {
+            setUploading(false);
+            updateNextAndSide();
+        }
+    }
+
+    // ────────────────────────────────────────
+    //  PANORAMA UPLOAD
+    // ────────────────────────────────────────
+    function setPanoUploading(on) {
+        if (panoChooseBtn) {
+            panoChooseBtn.disabled = !!on;
+            panoChooseBtn.textContent = on ? "Uploading 360° image…" : "Choose panorama file";
+        }
+        panoUploadZone?.classList.toggle("isUploading", !!on);
+    }
+
+    const MAX_PANO_SIZE = 50 * 1024 * 1024; // 50 MB for panoramas (equirectangular images are large)
+
+    async function uploadPanorama(file) {
+        if (!ALLOWED_TYPES.has(file.type)) {
+            alert("Please choose a JPG, PNG, or WEBP image file for the panorama.");
+            return;
+        }
+        if (file.size > MAX_PANO_SIZE) {
+            alert("Panorama file is too large. Maximum size is 50 MB.");
+            return;
+        }
+
+        setPanoUploading(true);
+        try {
+            const sig = await getUploadSignature();
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("api_key", sig.apiKey);
+            fd.append("timestamp", sig.timestamp);
+            fd.append("signature", sig.signature);
+            fd.append("folder", sig.folder + "/panoramas");
+
+            const res = await fetch(
+                `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+                { method: "POST", body: fd }
+            );
+            const out = await res.json().catch(() => ({}));
+            if (!res.ok) throw out;
+
+            const { vt } = read();
+            saveVT({ ...vt, panoUrl: out.secure_url, panoPublicId: out.public_id });
+
+            // Show preview
+            renderPanoPreview(out.secure_url);
+
+            // Clear URL input if set
+            if (vtUrl) vtUrl.value = "";
+
+        } catch (e) {
+            console.error("[Step7] panorama upload failed", e);
+            alert("Panorama upload failed. Please try again.");
+        } finally {
+            setPanoUploading(false);
+        }
+    }
+
+    function renderPanoPreview(url) {
+        if (!url) {
+            if (panoUploadInner) panoUploadInner.hidden = false;
+            if (panoPreview) panoPreview.hidden = true;
+            return;
+        }
+        if (panoPreviewImg) panoPreviewImg.src = url;
+        if (panoUploadInner) panoUploadInner.hidden = true;
+        if (panoPreview) panoPreview.hidden = false;
+    }
+
+    function removePanorama() {
+        const { vt } = read();
+        saveVT({ ...vt, panoUrl: "", panoPublicId: "" });
+        if (vtUrl) vtUrl.value = "";
+        renderPanoPreview("");
+    }
+
+    // ────────────────────────────────────────
+    //  RENDER
+    // ────────────────────────────────────────
+    const TIPS_DISMISS_KEY = "vista_tips_dismissed_step7";
+
+    function isTipsDismissed() {
+        try { return localStorage.getItem(TIPS_DISMISS_KEY) === "1"; } catch { return false; }
+    }
+
+    function markTipsDismissed() {
+        try { localStorage.setItem(TIPS_DISMISS_KEY, "1"); } catch { }
     }
 
     function updateNextAndSide() {
         const { photos } = read();
         const count = photos.length;
-
         if (photoCountLabel) photoCountLabel.textContent = `${count} / ${MIN_PHOTOS} minimum`;
         if (nextBtn) nextBtn.disabled = count < MIN_PHOTOS;
 
-        SidePanel.setTips({
-            selectedLabel: "Photos",
-            tips: [
-                "Use bright photos: living area, sleeping area, bathroom, and entrance.",
-                "Set a strong cover photo—this shows in search results.",
-                "Add a 360 tour later for extra approval points.",
-            ],
-        });
-        SidePanel.refresh();
+        // Only show the bottom tips strip if user hasn't dismissed it before
+        if (!isTipsDismissed()) {
+            SidePanel.setTips({
+                selectedLabel: "Photos & Virtual Tour",
+                tips: [
+                    "Use bright photos: living area, bedroom, bathroom, and entrance.",
+                    "Set a strong cover photo — this shows in search results.",
+                    "A 360° virtual tour increases resident inquiries by up to 40%.",
+                    "Use the Google Street View app (free) to capture a 360° panorama.",
+                ],
+            });
+        } else {
+            // Still update the side panel progress, just skip the bottom strip
+            SidePanel.refresh();
+        }
     }
 
     function render() {
         const { photos, vt } = read();
 
-        thumbGrid.innerHTML = photos
-            .map((p) => {
-                const cover = p.isCover ? `<div class="coverTag">Cover</div>` : "";
-                return `
-          <div class="thumb">
-            ${cover}
-            <img src="${p.url}" alt="${p.name}" />
-            <div class="thumbBar">
-              <button class="tBtn" type="button" data-act="cover" data-id="${p.id}">Set cover</button>
-              <button class="tBtn danger" type="button" data-act="remove" data-id="${p.id}">Remove</button>
-            </div>
-          </div>
-        `;
-            })
-            .join("");
+        // ── Thumb grid ──
+        thumbGrid.innerHTML = photos.map(p => {
+            const src = typeof p === "string" ? p : p?.url;
+            const name = typeof p === "string" ? "photo" : (p?.name || "photo");
+            const cover = (typeof p !== "string" && p?.isCover)
+                ? `<div class="coverTag">Cover</div>` : "";
+            const pid = typeof p === "string" ? null : p?.id;
 
-        // bind thumb actions
-        thumbGrid.querySelectorAll("[data-act]").forEach((btn) => {
+            return `
+              <div class="thumb">
+                ${cover}
+                <img src="${src || ""}" alt="${name}" />
+                <div class="thumbBar">
+                  ${pid ? `<button class="tBtn" type="button" data-act="cover" data-id="${pid}">Set cover</button>` : ""}
+                  ${pid ? `<button class="tBtn danger" type="button" data-act="remove" data-id="${pid}">Remove</button>` : ""}
+                </div>
+              </div>`;
+        }).join("");
+
+        thumbGrid.querySelectorAll("[data-act]").forEach(btn => {
             btn.addEventListener("click", () => {
-                const id = btn.dataset.id;
-                const act = btn.dataset.act;
-                if (act === "cover") setCover(id);
-                if (act === "remove") removePhoto(id);
+                if (btn.dataset.act === "cover") setCover(btn.dataset.id);
+                if (btn.dataset.act === "remove") removePhoto(btn.dataset.id);
             });
         });
 
-        // VT UI
+        // ── VT toggle ──
         const on = !!vt.enabled;
-        if (vtToggle) {
-            vtToggle.setAttribute("aria-pressed", on ? "true" : "false");
-            vtToggle.classList.toggle("on", on);
-        }
+        vtToggle?.setAttribute("aria-pressed", on ? "true" : "false");
+        vtToggle?.classList.toggle("on", on);
         if (vtBody) vtBody.hidden = !on;
-        if (vtUrl) vtUrl.value = vt.panoUrl || "";
 
-        if (window.lucide?.createIcons) window.lucide.createIcons();
+        // ── Panorama preview ──
+        renderPanoPreview(vt.panoUrl || "");
+        if (vtUrl) vtUrl.value = (!vt.panoUrl && vt.panoUrl !== undefined) ? "" : "";
 
+        window.lucide?.createIcons?.();
         updateNextAndSide();
     }
 
-    // Upload behaviors
-    if (uploadBtn && photoInput) uploadBtn.addEventListener("click", () => photoInput.click());
+    // ────────────────────────────────────────
+    //  GUIDE MODAL
+    // ────────────────────────────────────────
+    function openGuide(startStep = 1) {
+        guideStep = startStep;
+        guideModal?.classList.add("open");
+        guideOverlay?.classList.add("open");
+        document.body.style.overflow = "hidden";
+        renderGuideStep();
+        window.lucide?.createIcons?.();
+    }
 
-    if (uploadZone && photoInput) {
-        uploadZone.addEventListener("click", (e) => {
-            if (e.target.closest("#uploadBtn")) return;
-            photoInput.click();
+    function closeGuide() {
+        guideModal?.classList.remove("open");
+        guideOverlay?.classList.remove("open");
+        document.body.style.overflow = "";
+    }
+
+    function renderGuideStep() {
+        // Show/hide steps
+        document.querySelectorAll(".gm-step").forEach(s => {
+            s.classList.toggle("active", parseInt(s.dataset.step) === guideStep);
         });
 
-        uploadZone.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" || e.key === " ") photoInput.click();
+        // Update dots
+        document.querySelectorAll(".gm-dot").forEach(d => {
+            d.classList.toggle("active", parseInt(d.dataset.step) === guideStep);
         });
 
-        uploadZone.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            uploadZone.classList.add("drag");
-        });
+        // Update counter
+        if (gmStepCounter) gmStepCounter.textContent = `Step ${guideStep} of ${GUIDE_TOTAL}`;
+
+        // Update progress bar
+        if (gmProgressBar) {
+            gmProgressBar.style.width = `${(guideStep / GUIDE_TOTAL) * 100}%`;
+        }
+
+        // Prev/Next buttons
+        if (gmPrev) gmPrev.disabled = guideStep === 1;
+        if (gmNext) {
+            if (guideStep === GUIDE_TOTAL) {
+                gmNext.innerHTML = `Got it! <i data-lucide="check"></i>`;
+                gmNext.classList.add("done");
+            } else {
+                gmNext.innerHTML = `Next <i data-lucide="arrow-right"></i>`;
+                gmNext.classList.remove("done");
+            }
+        }
+
+        window.lucide?.createIcons?.();
+    }
+
+    // ────────────────────────────────────────
+    //  EVENT BINDINGS
+    // ────────────────────────────────────────
+
+    // Regular photo upload
+    uploadBtn?.addEventListener("click", () => photoInput?.click());
+    photoInput?.addEventListener("change", async () => {
+        await addFiles(photoInput.files);
+        photoInput.value = "";
+    });
+
+    if (uploadZone) {
+        uploadZone.addEventListener("click", (e) => { if (!e.target.closest("#uploadBtn")) photoInput?.click(); });
+        uploadZone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") photoInput?.click(); });
+        uploadZone.addEventListener("dragover", (e) => { e.preventDefault(); uploadZone.classList.add("drag"); });
         uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag"));
-        uploadZone.addEventListener("drop", (e) => {
-            e.preventDefault();
-            uploadZone.classList.remove("drag");
-            addFiles(e.dataTransfer.files);
-        });
+        uploadZone.addEventListener("drop", (e) => { e.preventDefault(); uploadZone.classList.remove("drag"); addFiles(e.dataTransfer.files); });
     }
 
-    if (photoInput) {
-        photoInput.addEventListener("change", async () => {
-            await addFiles(photoInput.files);
-            photoInput.value = "";
-        });
-    }
+    // VT toggle
+    vtToggle?.addEventListener("click", () => {
+        const { vt } = read();
+        saveVT({ ...vt, enabled: !vt.enabled });
+        render();
+    });
 
-    // Virtual tour toggle
-    if (vtToggle) {
-        vtToggle.addEventListener("click", () => {
-            const { vt } = read();
-            saveVT({ ...vt, enabled: !vt.enabled });
-            render();
-        });
-    }
-
-    if (vtUrl) {
-        vtUrl.addEventListener("input", () => {
-            const { vt } = read();
+    // VT URL input
+    vtUrl?.addEventListener("input", () => {
+        const { vt } = read();
+        // If URL is typed, clear uploaded panorama to avoid conflict
+        if (vtUrl.value.trim() && vt.panoUrl && vt.panoUrl !== vtUrl.value.trim()) {
+            saveVT({ ...vt, panoUrl: vtUrl.value.trim(), panoPublicId: "" });
+            renderPanoPreview(vtUrl.value.trim());
+        } else {
             saveVT({ ...vt, panoUrl: vtUrl.value.trim() });
-            SidePanel.refresh();
+        }
+    });
+
+    // Panorama upload
+    panoChooseBtn?.addEventListener("click", () => panoInput?.click());
+    panoUploadZone?.addEventListener("click", (e) => {
+        if (!e.target.closest("#panoChooseBtn") && !e.target.closest("#panoPreview")) panoInput?.click();
+    });
+    panoInput?.addEventListener("change", async () => {
+        if (panoInput.files[0]) await uploadPanorama(panoInput.files[0]);
+        panoInput.value = "";
+    });
+    panoRemoveBtn?.addEventListener("click", removePanorama);
+
+    // Pano drag & drop
+    if (panoUploadZone) {
+        panoUploadZone.addEventListener("dragover", (e) => { e.preventDefault(); panoUploadZone.classList.add("drag"); });
+        panoUploadZone.addEventListener("dragleave", () => panoUploadZone.classList.remove("drag"));
+        panoUploadZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            panoUploadZone.classList.remove("drag");
+            const file = e.dataTransfer.files[0];
+            if (file) uploadPanorama(file);
         });
     }
 
-    // normalize cover once
-    const d = ListingStore.readDraft();
-    if (Array.isArray(d.photos)) ListingStore.saveDraft({ photos: ensureCover(d.photos) });
+    // Guide buttons
+    vtGuideBtn?.addEventListener("click", () => openGuide(1));
+    vtGuideLink?.addEventListener("click", () => { openGuide(1); });
+    gmClose?.addEventListener("click", closeGuide);
+    guideOverlay?.addEventListener("click", closeGuide);
 
-    // initial render
+    gmPrev?.addEventListener("click", () => {
+        if (guideStep > 1) { guideStep--; renderGuideStep(); }
+    });
+
+    gmNext?.addEventListener("click", () => {
+        if (guideStep < GUIDE_TOTAL) {
+            guideStep++;
+            renderGuideStep();
+        } else {
+            closeGuide();
+            // After guide, focus the upload button
+            setTimeout(() => panoChooseBtn?.focus(), 300);
+        }
+    });
+
+    // Dot nav
+    document.querySelectorAll(".gm-dot").forEach(dot => {
+        dot.addEventListener("click", () => {
+            guideStep = parseInt(dot.dataset.step);
+            renderGuideStep();
+        });
+    });
+
+    // Keyboard nav inside modal
+    guideModal?.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") gmNext?.click();
+        if (e.key === "ArrowLeft") gmPrev?.click();
+        if (e.key === "Escape") closeGuide();
+    });
+
+    // ────────────────────────────────────────
+    //  INIT
+    // ────────────────────────────────────────
+    const draft = ListingStore.readDraft();
+    if (Array.isArray(draft.photos)) ListingStore.saveDraft({ photos: ensureCover(draft.photos) });
+
     render();
-
-    // ✅ Sync Step 7 to backend on Next
-
 };

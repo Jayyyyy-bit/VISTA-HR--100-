@@ -1,328 +1,611 @@
+/* ============================================================
+   VISTA-HR · roles.css — Full rewrite
+   Premium warm surface · amber + navy · Instrument Serif
+   No blue · No blobs · No grid · Hover scale + blur effect
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* ── Tokens ── */
 :root {
-    --ink: #0c1322;
-    --muted: #6a7688;
-    --line: #e6eefc;
-    --blue: #2F6BFF;
-    --blue2: #6aa7ff;
-    --radius: 22px;
-    --shadow: 0 18px 60px rgba(12, 19, 34, .10);
+    --ink: #0c0e14;
+    --ink-80: rgba(12, 14, 20, .80);
+    --ink-60: rgba(12, 14, 20, .60);
+    --ink-40: rgba(12, 14, 20, .40);
+    --ink-12: rgba(12, 14, 20, .12);
+    --ink-06: rgba(12, 14, 20, .06);
+
+    --amber: #C8882A;
+    --amber-dark: #7A4F18;
+    --amber-light: #FDF3E3;
+    --amber-border: rgba(200, 136, 42, .35);
+    --amber-ring: rgba(200, 136, 42, .18);
+
+    --navy: #1B3A5C;
+    --navy-light: #EEF4FC;
+    --navy-border: rgba(27, 58, 92, .30);
+    --navy-ring: rgba(27, 58, 92, .12);
+
+    --surface: #F7F4EE;
+    --white: #ffffff;
+    --success: #1A6B45;
+    --danger: #C0392B;
+
+    --radius-xl: 26px;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+
+    --shadow-card: 0 16px 48px rgba(12, 14, 20, .09), 0 2px 8px rgba(12, 14, 20, .05);
+    --shadow-hover-owner: 0 32px 80px rgba(200, 136, 42, .18), 0 8px 28px rgba(12, 14, 20, .10);
+    --shadow-hover-resident: 0 32px 80px rgba(27, 58, 92, .16), 0 8px 28px rgba(12, 14, 20, .10);
 }
 
-* {
+/* ── Reset ── */
+*,
+*::before,
+*::after {
     box-sizing: border-box
 }
 
+html,
 body {
-    margin: 0;
-    font-family: Inter, system-ui;
-    color: var(--ink);
-    min-height: 100vh;
-    background:
-        radial-gradient(900px 520px at 18% 22%, rgba(47, 107, 255, .16), transparent 60%),
-        radial-gradient(700px 420px at 80% 28%, rgba(106, 167, 255, .14), transparent 60%),
-        linear-gradient(180deg, #eef5ff, #f7f9fe);
+    height: 100%;
+    margin: 0
 }
 
+body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    min-height: 100vh;
+    background: var(--surface);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+/* ── Background — clean warm surface only ── */
 .bg {
     position: fixed;
     inset: 0;
     z-index: -1;
-    overflow: hidden
+    background: var(--surface)
 }
 
-.blob {
-    position: absolute;
-    border-radius: 999px;
-    filter: blur(44px);
-    opacity: .55
+.bg .blob,
+.bg .b1,
+.bg .b2,
+.bg .grid {
+    display: none
 }
 
-.b1 {
-    width: 420px;
-    height: 420px;
-    left: -140px;
-    top: 160px;
-    background: rgba(47, 107, 255, .25)
-}
-
-.b2 {
-    width: 520px;
-    height: 520px;
-    right: -200px;
-    top: 120px;
-    background: rgba(106, 167, 255, .22)
-}
-
-.grid {
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(rgba(230, 238, 252, .6) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(230, 238, 252, .6) 1px, transparent 1px);
-    background-size: 90px 90px;
-    opacity: .14;
-}
-
+/* ── Mini header ── */
 .mini-header {
-    padding: 18px 22px;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .mini-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .mini-logo {
-    width: 38px;
-    height: 38px;
-    border-radius: 14px;
-    background: #e8f0ff;
-    border: 1px solid var(--line);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--amber-light);
+    border: 1px solid var(--amber-border);
     display: grid;
     place-items: center;
+    color: var(--amber);
+}
+
+.mini-logo svg,
+.mini-logo i {
+    width: 16px;
+    height: 16px
 }
 
 .mini-text {
-    font-weight: 900;
-    letter-spacing: .2px
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: .1px;
+    color: var(--ink);
 }
 
 .mini-text span {
-    color: var(--blue)
+    color: var(--amber)
 }
 
+/* ── Layout ── */
 .wrap {
-    width: min(1100px, 92vw);
-    margin: 10px auto 40px;
-    padding: 10px 0 30px;
+    width: min(920px, 94vw);
+    margin: 0 auto 56px;
+    padding: 0;
 }
 
+/* ── Hero ── */
 .hero {
     text-align: center;
-    margin-top: 10px;
+    margin-top: 16px;
+    margin-bottom: 28px;
 }
 
 .pill {
     display: inline-flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
-    padding: 8px 12px;
+    padding: 6px 14px;
     border-radius: 999px;
-    background: #ffffffb5;
-    border: 1px solid var(--line);
-    color: rgba(12, 19, 34, .65);
+    background: var(--white);
+    border: 1px solid var(--ink-12);
+    font-size: 11px;
     font-weight: 800;
-    font-size: 12px;
+    color: var(--ink-60);
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.pill svg,
+.pill i {
+    width: 13px;
+    height: 13px;
+    color: var(--amber)
 }
 
 .hero h1 {
-    margin: 14px 0 8px;
-    font-size: clamp(30px, 4vw, 56px);
-    letter-spacing: -1px;
-    line-height: 1.08;
-    font-weight: 900;
+    margin: 0 0 8px;
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(28px, 3.2vw, 40px);
+    font-weight: 400;
+    letter-spacing: -.4px;
+    line-height: 1.1;
+    color: var(--ink);
+}
+
+.hero h1 em {
+    font-style: italic;
+    color: var(--amber)
 }
 
 .hero h1 span {
-    background: linear-gradient(135deg, var(--blue), var(--blue2));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    font-style: italic;
+    color: var(--amber)
 }
 
 .sub {
     margin: 0;
-    color: rgba(12, 19, 34, .55);
-    font-weight: 700;
+    font-size: 13px;
+    color: var(--ink-60);
+    font-weight: 500;
+    line-height: 1.55;
+    max-width: 380px;
+    margin: 0 auto;
 }
 
+/* ── Cards container — perspective for 3D tilt ── */
 .cards {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 18px;
-    margin: 36px auto 24px;
+    margin-bottom: 24px;
+    perspective: 1400px;
+    /* Blur effect layer — set on body via JS */
 }
 
+/* ── Role card ── */
 .role-card {
-    background: rgba(255, 255, 255, .70);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 18px 18px 16px;
-    backdrop-filter: blur(12px);
+    background: var(--white);
+    border: 1.5px solid var(--ink-12);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
     cursor: pointer;
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    overflow: hidden;
     outline: none;
+    position: relative;
+    /* entrance animation */
+    opacity: 0;
+    transform: translateY(24px) scale(.97);
+    transition:
+        transform .32s cubic-bezier(.2, .9, .2, 1),
+        box-shadow .32s ease,
+        border-color .32s ease,
+        opacity .32s ease;
+    will-change: transform, box-shadow;
 }
 
+/* Entrance — triggered by JS adding .visible, or CSS animation */
+.role-card {
+    animation: cardIn .55s cubic-bezier(.2, .9, .2, 1) both
+}
+
+.role-card:nth-child(1) {
+    animation-delay: .14s
+}
+
+.role-card:nth-child(2) {
+    animation-delay: .24s
+}
+
+@keyframes cardIn {
+    from {
+        opacity: 0;
+        transform: translateY(28px) scale(.97)
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1)
+    }
+}
+
+/* Hover — scale up + colored shadow */
 .role-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(47, 107, 255, .25);
-    box-shadow: 0 22px 70px rgba(12, 19, 34, .12);
+    transform: translateY(-10px) scale(1.04);
+}
+
+.role-card.owner:hover {
+    border-color: var(--amber-border);
+    box-shadow: var(--shadow-hover-owner);
+}
+
+.role-card.resident:hover {
+    border-color: var(--navy-border);
+    box-shadow: var(--shadow-hover-resident);
 }
 
 .role-card:focus-visible {
-    box-shadow: 0 0 0 5px rgba(47, 107, 255, .14), var(--shadow);
+    outline: 3px solid var(--amber);
+    outline-offset: 3px;
 }
 
-.role-head {
-    display: grid;
-    grid-template-columns: 56px 1fr 44px;
-    gap: 14px;
-    align-items: start;
+/* ── Background blur effect on non-hovered card ── */
+/* Applied via JS: when .cards has .hover-owner, the resident card blurs */
+.cards.hover-owner .role-card.resident,
+.cards.hover-resident .role-card.owner {
+    filter: blur(3px) brightness(.95);
+    transform: scale(.965);
+    opacity: .80;
+    transition:
+        filter .28s ease,
+        transform .28s ease,
+        opacity .28s ease;
 }
 
-.icon-wrap {
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
-    border: 1px solid var(--line);
-    display: grid;
-    place-items: center;
-    background: rgba(255, 255, 255, .85);
-}
-
-.icon-wrap.owner {
-    background: rgba(47, 107, 255, .10);
-}
-
-.icon-wrap.resident {
-    background: rgba(106, 167, 255, .12);
-}
-
-.role-title h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 900;
-}
-
-.role-title p {
-    margin: 6px 0 0;
-    color: rgba(12, 19, 34, .55);
-    font-weight: 650;
-    line-height: 1.35;
-    font-size: 13px;
-    max-width: 520px;
-}
-
-.go {
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
-    border: 1px solid rgba(12, 19, 34, .08);
-    background: rgba(255, 255, 255, .85);
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    transition: transform .16s ease, background .16s ease, border-color .16s ease;
-}
-
-.role-card:hover .go {
-    transform: translateX(2px);
-    border-color: rgba(47, 107, 255, .25);
-}
-
-.go i {
-    opacity: .75
-}
-
-.chips {
+/* ── Card visual / illustration area ── */
+.card-visual {
+    height: 240px;
+    position: relative;
+    overflow: hidden;
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 14px;
-}
-
-.chip {
-    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-radius: 999px;
+    justify-content: center;
+}
+
+.card-visual.owner {
+    background: linear-gradient(145deg, #FAEEDA 0%, #F5D5A0 55%, #EEC070 100%)
+}
+
+.card-visual.resident {
+    background: linear-gradient(145deg, #E8F1FB 0%, #C8DEFA 55%, #A8C8F5 100%)
+}
+
+.card-illus {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Floating stat pills on visual ── */
+.vis-stat {
+    position: absolute;
+    top: 14px;
+    right: 16px;
     background: rgba(255, 255, 255, .90);
-    border: 1px solid rgba(230, 238, 252, .95);
-    color: rgba(12, 19, 34, .65);
-    font-weight: 750;
-    font-size: 12px;
+    border: 1px solid rgba(255, 255, 255, .95);
+    border-radius: var(--radius-md);
+    padding: 8px 13px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
-.chip i {
-    opacity: .7
+.vs-num {
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--ink);
 }
 
+.owner .vs-num {
+    color: var(--amber-dark)
+}
+
+.resident .vs-num {
+    color: var(--navy)
+}
+
+.vs-lbl {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--ink-40);
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    margin-top: 3px;
+}
+
+/* Badge on visual bottom-left */
+.vis-badge {
+    position: absolute;
+    bottom: 14px;
+    left: 16px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.vis-badge.owner {
+    background: rgba(200, 136, 42, .18);
+    color: var(--amber-dark);
+    border: 1px solid rgba(200, 136, 42, .3)
+}
+
+.vis-badge.resident {
+    background: rgba(27, 58, 92, .12);
+    color: var(--navy);
+    border: 1px solid rgba(27, 58, 92, .25)
+}
+
+/* Float animations on stat pills */
+@keyframes float-a {
+
+    0%,
+    100% {
+        transform: translateY(0)
+    }
+
+    50% {
+        transform: translateY(-7px)
+    }
+}
+
+@keyframes float-b {
+
+    0%,
+    100% {
+        transform: translateY(0)
+    }
+
+    50% {
+        transform: translateY(-5px)
+    }
+}
+
+.float-a {
+    animation: float-a 4s ease-in-out infinite
+}
+
+.float-b {
+    animation: float-b 3.5s 1s ease-in-out infinite
+}
+
+/* ── Card body ── */
+.card-body {
+    padding: 24px 24px 22px;
+    background: var(--white);
+}
+
+.card-role {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.card-role.owner {
+    color: var(--amber)
+}
+
+.card-role.resident {
+    color: var(--navy)
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+    color: var(--ink);
+}
+
+.card-desc {
+    font-size: 13px;
+    color: var(--ink-60);
+    font-weight: 500;
+    line-height: 1.6;
+    margin-bottom: 18px;
+}
+
+/* ── Feature rows ── */
+.feats {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-bottom: 20px;
+}
+
+.feat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-80);
+}
+
+.feat-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.feat-icon svg,
+.feat-icon i {
+    width: 14px;
+    height: 14px
+}
+
+.feat-icon.owner {
+    background: var(--amber-light);
+    color: var(--amber)
+}
+
+.feat-icon.resident {
+    background: var(--navy-light);
+    color: var(--navy)
+}
+
+/* ── CTA button ── */
+.card-cta {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: .1px;
+    transition: opacity .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.card-cta svg,
+.card-cta i {
+    width: 15px;
+    height: 15px
+}
+
+.card-cta.owner {
+    background: var(--amber);
+    color: var(--white);
+    box-shadow: 0 4px 18px rgba(200, 136, 42, .28);
+}
+
+.card-cta.owner:hover {
+    opacity: .92;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(200, 136, 42, .38);
+}
+
+.card-cta.resident {
+    background: var(--navy);
+    color: var(--white);
+    box-shadow: 0 4px 18px rgba(27, 58, 92, .22);
+}
+
+.card-cta.resident:hover {
+    opacity: .92;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(27, 58, 92, .32);
+}
+
+/* ── Footer row ── */
 .footer-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .back {
     display: inline-flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
-    padding: 10px 16px;
+    padding: 9px 16px;
     border-radius: 999px;
-    border: 1px solid rgba(12, 19, 34, .10);
-    background: rgba(255, 255, 255, .75);
+    border: 1px solid var(--ink-12);
+    background: var(--white);
     cursor: pointer;
-    font-weight: 900;
-    color: rgba(12, 19, 34, .75);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-60);
+    transition: border-color .15s ease, color .15s ease;
 }
 
 .back:hover {
-    border-color: rgba(47, 107, 255, .22);
+    border-color: var(--ink-40);
+    color: var(--ink)
+}
+
+.back svg,
+.back i {
+    width: 14px;
+    height: 14px
 }
 
 .small-note {
     margin: 0;
-    color: rgba(12, 19, 34, .45);
-    font-weight: 700;
+    color: var(--ink-40);
+    font-weight: 600;
     font-size: 12px;
 }
 
-@media (max-width: 940px) {
-    .cards {
-        grid-template-columns: 1fr
-    }
-
-    .footer-row {
-        flex-direction: column;
-        gap: 14px;
-        justify-content: center
-    }
-}
-
-/* ===== Page transition (slideshow vibe) ===== */
+/* ── Page transition overlay ── */
 .page-transition {
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 9999;
     opacity: 0;
-    transform: translateX(12px) scale(1.01);
-    transition: opacity .35s ease, transform .45s ease;
-    background:
-        radial-gradient(900px 520px at 18% 22%, rgba(47, 107, 255, .16), transparent 60%),
-        radial-gradient(700px 420px at 80% 28%, rgba(106, 167, 255, .14), transparent 60%),
-        linear-gradient(180deg, #eef5ff, #f7f9fe);
+    background: var(--surface);
+    transition: opacity .28s ease;
 }
 
-/* enter animation */
-body.page-enter .page-transition {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-}
-
-/* exit animation */
+body.page-enter .page-transition,
 body.page-exit .page-transition {
-    opacity: 1;
-    transform: translateX(-18px) scale(1.02);
+    opacity: 1
 }
 
-/* Optional: soften content movement */
-body.page-exit main,
-body.page-exit .card {
-    transform: translateX(-10px);
-    transition: transform .35s ease;
+/* ── Responsive ── */
+@media (max-width: 680px) {
+    .cards {
+        grid-template-columns: 1fr;
+        perspective: none
+    }
+
+    .hero h1 {
+        font-size: 34px
+    }
+
+    .card-visual {
+        height: 180px
+    }
+
+    /* On mobile no blur effect — too heavy */
+    .cards.hover-owner .role-card.resident,
+    .cards.hover-resident .role-card.owner {
+        filter: none;
+        transform: none;
+        opacity: 1;
+    }
 }

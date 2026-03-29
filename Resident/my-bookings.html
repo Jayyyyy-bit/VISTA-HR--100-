@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR · My Bookings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="my-bookings.css" />
+</head>
+
+<body>
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="backBtn" href="./resident_home.html">
+                <i data-lucide="arrow-left"></i>
+                <span>Browse</span>
+            </a>
+            <div class="brand">
+                <span class="brandDot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </div>
+            <div class="topbar-right">
+                <button class="avatarBtn" id="profileBtn">
+                    <span class="avatarCircle" id="avatarCircle">R</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="pageWrap">
+
+        <!-- Page header -->
+        <div class="pageHeader">
+            <div>
+                <h1 class="pageTitle">My Bookings</h1>
+                <p class="pageSub" id="pageSub">Loading your booking history…</p>
+            </div>
+        </div>
+
+        <!-- Status filter tabs -->
+        <div class="filterBar" id="filterBar" role="tablist">
+            <button class="filterTab active" data-status="ALL">All</button>
+            <button class="filterTab" data-status="PENDING">
+                Pending
+                <span class="tabCount" id="countPending" hidden></span>
+            </button>
+            <button class="filterTab" data-status="APPROVED">Approved</button>
+            <button class="filterTab" data-status="ACTIVE">Active</button>
+            <button class="filterTab" data-status="COMPLETED">Completed</button>
+            <button class="filterTab" data-status="REJECTED">Rejected</button>
+            <button class="filterTab" data-status="CANCELLED">Cancelled</button>
+        </div>
+
+        <!-- Booking list -->
+        <div id="bookingList"></div>
+
+    </main>
+
+    <!-- Cancel confirm modal -->
+    <div class="modalOverlay" id="modalOverlay" hidden>
+        <div class="modalCard">
+            <div class="modalHead">
+                <div class="modalIcon"><i data-lucide="alert-triangle"></i></div>
+                <div>
+                    <div class="modalTitle">Cancel booking?</div>
+                    <div class="modalSub" id="modalSub">This will cancel your pending request.</div>
+                </div>
+            </div>
+            <div class="modalActions">
+                <button class="modalBtn modalBtn--ghost" id="modalCancel">Keep it</button>
+                <button class="modalBtn modalBtn--danger" id="modalConfirm">Yes, cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../auth/sessionGuard.js" defer></script>
+    <script src="./my-bookings.js" defer></script>
+</body>
+
+</html>

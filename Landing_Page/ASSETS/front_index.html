@@ -5,355 +5,239 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VISTA-HR | Find Your Stay in Metro Manila</title>
-
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
         rel="stylesheet" />
-
-    <!-- Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="auth.css">
     <link rel="stylesheet" href="front_style.css" />
 </head>
 
-<body class="min-h-screen">
+<body>
 
-    <!-- Background -->
-    <div class="bg-ambient"></div>
+    <!-- ══ SIDE DOTS NAV ══ -->
+    <nav class="section-dots" id="sectionDots">
+        <button class="dot active" data-section="0"></button>
+        <button class="dot" data-section="1"></button>
+        <button class="dot" data-section="2"></button>
+        <button class="dot" data-section="3"></button>
+        <button class="dot" data-section="4"></button>
+    </nav>
 
-    <!-- NAV -->
-    <header class="site-header">
+    <!-- ══ NAV ══ -->
+    <header class="site-header" id="siteHeader">
         <nav class="nav-container">
             <a class="brand" href="#">
-                <span class="brand-icon">
-                    <i data-lucide="building-2" class="w-5 h-5"></i>
-                </span>
-                <span class="brand-text">VISTA<span>-HR</span></span>
+                <span class="brand-mark"></span>
+                <span class="brand-text">VISTA<b>-HR</b></span>
             </a>
-
             <div class="nav-links">
-                <a href="#featured">Featured</a>
-                <a href="#tours">Virtual Tours</a>
-                <a href="#how">How it Works</a>
+                <a href="#" data-goto="1">Listings</a>
+                <a href="#" data-goto="2">Virtual Tours</a>
+                <a href="#" data-goto="3">How it Works</a>
             </div>
-
             <div class="nav-actions">
-
-                <button id="getStartedBtn"
-                    class="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-full hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
-                    Get Started
-                </button>
-
+                <button id="loginBtn" class="btn-ghost">Log In</button>
+                <button id="getStartedBtn" class="btn-pill">Get Started</button>
             </div>
         </nav>
     </header>
 
-    <!-- HERO -->
-    <main>
-        <section class="hero">
-            <div class="hero-inner">
+    <!-- ══ FULLPAGE WRAPPER ══ -->
+    <div class="fp-wrapper" id="fpWrapper">
 
-                <div class="hero-badge reveal">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    <span>Student-friendly rentals with 360° tours</span>
-                </div>
+        <!-- ── 0 · HERO (cream) ── -->
+        <section class="fp-slide slide-cream" data-index="0">
+            <div class="slide-inner hero-layout">
 
-                <h1 class="hero-title reveal">
-                    Find your next stay in
-                    <span class="accent">Metro Manila</span>
-                </h1>
-
-                <p class="hero-subtitle reveal">
-                    Explore verified boarding houses and dorms near UE & MCU with real-time availability —
-                    plus immersive <b>360° virtual tours</b>.
-                </p>
-
-                <!-- Search -->
-
-
-                <!-- Trust Row -->
-                <div class="trust-row reveal">
-                    <div class="trust-pill">
-                        <i data-lucide="shield-check" class="w-4 h-4"></i>
-                        Verified listings
+                <div class="hero-text">
+                    <div class="eyebrow">
+                        <span class="eyebrow-dot"></span>
+                        Student rentals · Metro Manila
                     </div>
-                    <div class="trust-pill">
-                        <i data-lucide="rotate-3d" class="w-4 h-4"></i>
-                        360° tours
-                    </div>
-                    <div class="trust-pill">
-                        <i data-lucide="clock" class="w-4 h-4"></i>
-                        Real-time availability
-                    </div>
-                </div>
-            </div>
 
-            <!-- Hero Visual -->
-            <div class="hero-visual reveal">
-                <div class="visual-card">
-                    <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200"
-                        alt="Room" />
-                    <div class="visual-overlay">
-                        <div class="visual-chip">
-                            <i data-lucide="star" class="w-4 h-4"></i>
-                            <span><b>4.9</b> top-rated near UE</span>
-                        </div>
-                        <div class="visual-chip">
-                            <i data-lucide="map-pin" class="w-4 h-4"></i>
-                            <span>Metro Manila</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+                    <h1 class="hero-title">
+                        <span class="line-wrap"><span class="line l1">Find your</span></span>
+                        <span class="line-wrap"><span class="line l2 italic-accent">perfect stay</span></span>
+                        <span class="line-wrap"><span class="line l3">in Metro Manila.</span></span>
+                    </h1>
 
-        <!-- FEATURED -->
-        <section id="featured" class="section">
-            <div class="section-head reveal">
-                <h2>Featured listings</h2>
-                <p>Hand-picked spaces near major universities.</p>
-            </div>
-
-            <div class="cards-grid">
-                <!-- Card -->
-                <article class="listing reveal">
-                    <div class="listing-img">
-                        <img src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=1200"
-                            alt="Listing" />
-                        <span class="tag">New</span>
-                        <button class="tour-btn" title="360° Tour Available">
-                            <i data-lucide="rotate-3d" class="w-5 h-5"></i>
-                        </button>
-                    </div>git
-                    <div class="listing-body">
-                        <div class="listing-top">
-                            <h3>Morning Star Residence</h3>
-                            <span class="price">₱5,500<span>/mo</span></span>
-                        </div>
-                        <p class="meta"><i data-lucide="map-pin" class="w-4 h-4"></i> 200m from UE Caloocan</p>
-                        <div class="status available"><span></span> Available now</div>
-                    </div>
-                </article>
-
-                <article class="listing reveal">
-                    <div class="listing-img">
-                        <img src="https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=1200"
-                            alt="Listing" />
-                        <button class="tour-btn" title="360° Tour Available">
-                            <i data-lucide="rotate-3d" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                    <div class="listing-body">
-                        <div class="listing-top">
-                            <h3>The Scholar’s Nest</h3>
-                            <span class="price">₱4,200<span>/mo</span></span>
-                        </div>
-                        <p class="meta"><i data-lucide="map-pin" class="w-4 h-4"></i> Near MCU Monumento</p>
-                        <div class="status available"><span></span> 2 units left</div>
-                    </div>
-                </article>
-
-                <article class="listing reveal">
-                    <div class="listing-img">
-                        <img src="https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&q=80&w=1200"
-                            alt="Listing" />
-                    </div>
-                    <div class="listing-body">
-                        <div class="listing-top">
-                            <h3>Grand Loft Caloocan</h3>
-                            <span class="price">₱8,000<span>/mo</span></span>
-                        </div>
-                        <p class="meta"><i data-lucide="map-pin" class="w-4 h-4"></i> Grace Park East</p>
-                        <div class="status booked">Fully booked</div>
-                    </div>
-                </article>
-
-                <article class="listing reveal">
-                    <div class="listing-img">
-                        <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=1200"
-                            alt="Listing" />
-                        <button class="tour-btn" title="360° Tour Available">
-                            <i data-lucide="rotate-3d" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                    <div class="listing-body">
-                        <div class="listing-top">
-                            <h3>Safe Haven Dorms</h3>
-                            <span class="price">₱3,500<span>/mo</span></span>
-                        </div>
-                        <p class="meta"><i data-lucide="map-pin" class="w-4 h-4"></i> Bagong Barrio</p>
-                        <div class="status available"><span></span> Available</div>
-                    </div>
-                </article>
-            </div>
-        </section>
-
-        <!-- 360 TOURS -->
-        <section id="tours" class="section alt">
-            <div class="section-head reveal">
-                <h2>Virtual tours that feel real</h2>
-                <p>Less travel. More certainty. Better decisions.</p>
-            </div>
-
-            <div class="tour-showcase">
-                <div class="tour-left reveal">
-                    <h3>Preview before you commute</h3>
-                    <p>
-                        Our 360° viewer helps students check layout, lighting, space, and condition
-                        — even on mobile.
+                    <p class="hero-sub">
+                        Browse verified boarding houses and dorms near UE &amp; MCU —
+                        with <strong>real-time availability</strong> and immersive 360° virtual tours.
                     </p>
 
+                    <div class="hero-ctas">
+                        <button class="btn-primary" id="heroBrowseBtn">
+                            Browse Listings <i data-lucide="arrow-right"></i>
+                        </button>
+                        <button class="btn-outline-ink" id="heroTourBtn">
+                            <i data-lucide="rotate-3d"></i> Take a virtual tour
+                        </button>
+                    </div>
+
+                    <div class="trust-chips">
+                        <span class="trust-chip"><i data-lucide="shield-check"></i>Verified</span>
+                        <span class="trust-chip"><i data-lucide="rotate-3d"></i>360° tours</span>
+                        <span class="trust-chip"><i data-lucide="zap"></i>Real-time</span>
+                    </div>
+                </div>
+
+                <div class="hero-visual">
+                    <div class="visual-card" id="visualCard">
+                        <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200"
+                            alt="Room" />
+                        <div class="visual-overlay">
+                            <div class="visual-chip"><i data-lucide="star"></i><span><b>4.9</b> near UE</span></div>
+                            <div class="visual-chip"><i data-lucide="map-pin"></i><span>Metro Manila</span></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="stats-bar" id="heroStats">
+                <div class="stat"><span class="stat-n" id="statListings">—</span><span class="stat-l">Active
+                        listings</span></div>
+                <div class="stat-div"></div>
+                <div class="stat"><span class="stat-n" id="statOwners">—</span><span class="stat-l">Verified
+                        owners</span></div>
+                <div class="stat-div"></div>
+                <div class="stat"><span class="stat-n">5+</span><span class="stat-l">Cities covered</span></div>
+                <div class="stat-div"></div>
+                <div class="stat"><span class="stat-n">100%</span><span class="stat-l">Free to browse</span></div>
+            </div>
+
+            <button class="scroll-cue" id="scrollHint">
+                <i data-lucide="chevrons-down"></i>
+            </button>
+        </section>
+
+        <!-- ── 1 · FEATURED (white) ── -->
+        <section class="fp-slide slide-white" data-index="1">
+            <div class="slide-inner">
+                <div class="section-head">
+                    <span class="section-tag">Featured listings</span>
+                    <h2 class="section-title">Hand-picked spaces near<br><em>major universities</em></h2>
+                </div>
+                <div class="cards-grid" id="featuredGrid"></div>
+                <div class="section-foot">
+                    <button class="btn-see-all" id="seeAllBtn">
+                        See all listings <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── 2 · VIRTUAL TOURS (beige) ── -->
+        <section class="fp-slide slide-beige" data-index="2">
+            <div class="slide-inner split-layout">
+                <div class="split-text">
+                    <span class="section-tag">Virtual Tours</span>
+                    <h2 class="section-title">Preview before<br><em>you commute</em></h2>
+                    <p class="section-desc">
+                        Our 360° viewer lets students inspect layout, lighting, space, and
+                        condition — even on mobile. No need to travel just to look at a room.
+                    </p>
                     <div class="feature-list">
                         <div class="feature">
-                            <i data-lucide="scan-eye" class="w-5 h-5"></i>
-                            <div>
-                                <b>4K clarity</b>
-                                <span>See details like ventilation and room size.</span>
-                            </div>
+                            <div class="feat-icon"><i data-lucide="scan-eye"></i></div>
+                            <div><b>4K clarity</b><span>See ventilation, room size, and natural light.</span></div>
                         </div>
-
                         <div class="feature">
-                            <i data-lucide="badge-check" class="w-5 h-5"></i>
-                            <div>
-                                <b>Verified owners</b>
-                                <span>Safer rentals for students.</span>
-                            </div>
+                            <div class="feat-icon"><i data-lucide="badge-check"></i></div>
+                            <div><b>Verified owners</b><span>Safer rentals for students.</span></div>
                         </div>
-
                         <div class="feature">
-                            <i data-lucide="bell" class="w-5 h-5"></i>
-                            <div>
-                                <b>Smart alerts</b>
-                                <span>Instant notifications for availability.</span>
-                            </div>
+                            <div class="feat-icon"><i data-lucide="bell"></i></div>
+                            <div><b>Smart alerts</b><span>Instant notifications on availability.</span></div>
                         </div>
                     </div>
                 </div>
-
-                <div class="tour-right reveal">
+                <div class="split-media">
                     <div class="tour-card">
                         <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1200"
-                            alt="Tour Preview" />
-                        <div class="tour-floating">
-                            <div class="pulse-dot"></div>
-                            <span>360° Tour Available</span>
+                            alt="Tour" />
+                        <div class="tour-badge">
+                            <div class="pulse-ring"></div>360° Tour Available
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- HOW -->
-        <section id="how" class="section">
-            <div class="section-head reveal">
-                <h2>How it works</h2>
-                <p>Fast. Simple. Student-first.</p>
-            </div>
-
-            <div class="steps">
-                <div class="step reveal">
-                    <div class="step-num">01</div>
-                    <div class="step-body">
-                        <h3>Search & Filter</h3>
-                        <p>Filter by location, price, room type, and amenities.</p>
-                    </div>
+        <!-- ── 3 · HOW IT WORKS (cream) ── -->
+        <section class="fp-slide slide-cream" data-index="3">
+            <div class="slide-inner">
+                <div class="section-head">
+                    <span class="section-tag">How it works</span>
+                    <h2 class="section-title">Fast. Simple.<br><em>Student-first.</em></h2>
                 </div>
-
-                <div class="step reveal">
-                    <div class="step-num">02</div>
-                    <div class="step-body">
-                        <h3>Take a Virtual Tour</h3>
-                        <p>Inspect the room remotely in seconds — no commute needed.</p>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-num">01</div>
+                        <div class="step-body">
+                            <h3>Search &amp; Filter</h3>
+                            <p>Filter by location, price, room type, and amenities.</p>
+                        </div>
                     </div>
-                </div>
-
-                <div class="step reveal">
-                    <div class="step-num">03</div>
-                    <div class="step-body">
-                        <h3>Reserve / Inquire</h3>
-                        <p>Send inquiry or book directly with secure messaging.</p>
+                    <div class="step">
+                        <div class="step-num">02</div>
+                        <div class="step-body">
+                            <h3>Take a Virtual Tour</h3>
+                            <p>Inspect the room remotely in seconds — no commute needed.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">03</div>
+                        <div class="step-body">
+                            <h3>Reserve &amp; Move In</h3>
+                            <p>Send an inquiry or book directly. Get notified instantly.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- CTA -->
-        <section class="cta reveal">
-            <div class="cta-inner">
-                <h2>Are you a property owner?</h2>
-                <p>
-                    Automate boarding house management: occupancy, inquiries, reports —
-                    all in one platform.
+        <!-- ── 4 · CTA + FOOTER (navy dark) ── -->
+        <section class="fp-slide slide-navy" data-index="4">
+            <div class="slide-inner centered">
+                <span class="section-tag light">For Property Owners</span>
+                <h2 class="cta-title">Manage smarter.<br><em>Earn more.</em></h2>
+                <p class="cta-desc">
+                    Automate boarding house management: occupancy tracking, tenant inquiries,
+                    real-time calendar, and reports — all in one platform.
                 </p>
-
-                <div class="cta-actions">
-                    <button class="btn-primary big">Become a Property Owner</button>
-                    <button class="btn-outline big">Schedule a Demo</button>
+                <div class="cta-btns">
+                    <button class="btn-light" id="ownerCtaBtn">
+                        Become a Property Owner <i data-lucide="arrow-right"></i>
+                    </button>
+                    <button class="btn-ghost-light" id="demoCta">Schedule a Demo</button>
                 </div>
             </div>
+
+            <footer class="page-footer">
+                <div class="footer-inner">
+                    <div class="footer-brand">
+                        <span class="brand-mark small"></span>
+                        <div>
+                            <b>VISTA-HR</b>
+                            <span>Student rentals in Metro Manila</span>
+                        </div>
+                    </div>
+                    <div class="footer-links">
+                        <a href="#">About</a><a href="#">Support</a><a href="#">Privacy</a><a href="#">Facebook</a><a
+                            href="#">Instagram</a>
+                    </div>
+                    <p class="footer-copy">© 2026 VISTA-HR · University of Caloocan City · CCS 111</p>
+                </div>
+            </footer>
         </section>
 
-        <!-- FOOTER -->
-        <footer class="footer">
-            <div class="footer-inner">
-                <div class="footer-brand">
-                    <div class="brand-icon small">
-                        <i data-lucide="building-2" class="w-4 h-4"></i>
-                    </div>
-                    <div>
-                        <b>VISTA-HR</b>
-                        <p>Student rentals in Metro Manila — with transparency and tech.</p>
-                    </div>
-                </div>
-
-                <div class="footer-links">
-                    <div>
-                        <h4>Platform</h4>
-                        <a href="#featured">Featured</a>
-                        <a href="#tours">Virtual Tours</a>
-                        <a href="#how">How it Works</a>
-                    </div>
-
-                    <div>
-                        <h4>Company</h4>
-                        <a href="#">About</a>
-                        <a href="#">Support</a>
-                        <a href="#">Privacy</a>
-                    </div>
-
-                    <div>
-                        <h4>Social</h4>
-                        <a href="#">Facebook</a>
-                        <a href="#">Instagram</a>
-                        <a href="#">Twitter</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="footer-bottom">
-                © 2024 VISTA-HR Metro Manila. All rights reserved.
-            </div>
-        </footer>
-    </main>
-
-    </section>
     </div>
-
-    </div>
-    </div>
-
 
     <script src="front_script.js"></script>
-    <script src="auth.js"></script>
-
 </body>
 
 </html>

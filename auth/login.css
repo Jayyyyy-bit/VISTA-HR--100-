@@ -1,113 +1,87 @@
+/* ============================================================
+   VISTA-HR · login.css
+   Design system: amber brand · warm surface · ink type
+   No grid backgrounds · No blue · No backdrop-filter cards
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* ── Tokens ── */
 :root {
-    --ink: #0c1322;
-    --muted: rgba(12, 19, 34, .60);
-    --line: rgba(12, 19, 34, .10);
-    --blue: #1f5dff;
-    --blue2: #6aa7ff;
-    --radius-xl: 22px;
-    --radius-lg: 18px;
-    --shadow: 0 18px 55px rgba(12, 19, 34, .10);
-    --shadow2: 0 12px 30px rgba(12, 19, 34, .10);
+    --ink: #0c0e14;
+    --ink-80: rgba(12, 14, 20, .80);
+    --ink-60: rgba(12, 14, 20, .60);
+    --ink-40: rgba(12, 14, 20, .40);
+    --ink-12: rgba(12, 14, 20, .12);
+    --ink-06: rgba(12, 14, 20, .06);
+
+    --amber: #C8882A;
+    --amber-dark: #7A4F18;
+    --amber-light: #FDF3E3;
+    --amber-ring: rgba(200, 136, 42, .18);
+    --amber-border: rgba(200, 136, 42, .35);
+
+    --surface: #F7F4EE;
+    --white: #ffffff;
+
+    --success: #1A6B45;
+    --danger: #C0392B;
+
+    --radius-xl: 24px;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+
+    --shadow-card: 0 16px 48px rgba(12, 14, 20, .09), 0 2px 8px rgba(12, 14, 20, .05);
 }
 
-* {
+/* ── Reset ── */
+*,
+*::before,
+*::after {
     box-sizing: border-box
 }
 
 html,
 body {
-    height: 100%
+    height: 100%;
+    margin: 0
 }
 
 body {
-    margin: 0;
-    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
     color: var(--ink);
-    background: #fff;
+    background: var(--surface);
+    -webkit-font-smoothing: antialiased;
 }
 
-/* ===== Background (alive) ===== */
+/* ── Background — clean warm surface, no grid, no glows ── */
 .bg {
     position: fixed;
     inset: 0;
     z-index: -1;
-    overflow: hidden
+    background: var(--surface);
 }
 
-.bg .grid {
-    position: absolute;
-    inset: -200px;
-    background-image:
-        linear-gradient(to right, rgba(12, 19, 34, .06) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(12, 19, 34, .06) 1px, transparent 1px);
-    background-size: 48px 48px;
-    opacity: .55;
-}
-
-.bg .glow {
-    position: absolute;
-    width: 900px;
-    height: 900px;
-    border-radius: 999px;
-    filter: blur(44px);
-    opacity: .24;
-    transform: translate3d(0, 0, 0);
-    animation: floaty 10s ease-in-out infinite;
-}
-
-.bg .g1 {
-    left: -260px;
-    top: -260px;
-    background: radial-gradient(circle, rgba(31, 93, 255, .65), transparent 60%);
-    animation-duration: 11.5s;
-}
-
-.bg .g2 {
-    right: -320px;
-    top: -200px;
-    background: radial-gradient(circle, rgba(106, 167, 255, .55), transparent 60%);
-    animation-duration: 12.5s;
-    animation-delay: -2s;
-}
-
+/* Hide the old grid and glow elements if they exist in HTML */
+.bg .grid,
+.bg .glow,
+.bg .g1,
+.bg .g2,
 .bg .g3 {
-    left: 20%;
-    bottom: -420px;
-    background: radial-gradient(circle, rgba(31, 93, 255, .35), transparent 62%);
-    width: 1100px;
-    height: 1100px;
-    animation-duration: 13.5s;
-    animation-delay: -4s;
+    display: none;
 }
 
-@keyframes floaty {
-    0% {
-        transform: translate(-6px, 0px) scale(1);
-    }
-
-    35% {
-        transform: translate(18px, 16px) scale(1.02);
-    }
-
-    65% {
-        transform: translate(-10px, 22px) scale(0.99);
-    }
-
-    100% {
-        transform: translate(-6px, 0px) scale(1);
-    }
-}
-
-/* ===== Topbar ===== */
+/* ── Topbar ── */
 .topbar {
-    height: 64px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 22px;
-    border-bottom: 1px solid rgba(12, 19, 34, .08);
-    background: rgba(255, 255, 255, .82);
-    backdrop-filter: blur(10px);
+    padding: 0 24px;
+    border-bottom: 1px solid var(--ink-12);
+    background: var(--surface);
     position: sticky;
     top: 0;
     z-index: 30;
@@ -116,116 +90,131 @@ body {
 .brand {
     display: flex;
     align-items: center;
-    gap: 12px
+    gap: 10px;
 }
 
 .logo-box {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 4px;
-    background: #111
+    background: var(--amber);
 }
 
 .brand-text {
-    font-weight: 900;
-    letter-spacing: .2px
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: .1px;
+    color: var(--ink);
 }
 
+/* The "-HR" part in the HTML uses a <span> */
 .brand-text span {
-    color: var(--blue)
+    color: var(--amber);
 }
 
 .top-actions {
     display: flex;
-    gap: 10px
+    gap: 8px;
 }
 
 .chip {
-    border: 1px solid rgba(12, 19, 34, .12);
-    background: #fff;
-    padding: 9px 12px;
+    border: 1px solid var(--ink-12);
+    background: var(--white);
+    padding: 8px 14px;
     border-radius: 999px;
-    font-weight: 800;
-    color: rgba(12, 19, 34, .72);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-60);
     cursor: pointer;
-    transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+    transition: border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 
 .chip:hover {
+    border-color: var(--amber-border);
+    color: var(--ink);
+    box-shadow: 0 4px 12px rgba(12, 14, 20, .07);
     transform: translateY(-1px);
-    border-color: rgba(31, 93, 255, .22);
-    box-shadow: 0 12px 22px rgba(12, 19, 34, .08);
 }
 
-/* ===== Layout ===== */
+/* ── Layout ── */
 .wrap {
-    min-height: calc(100vh - 64px);
+    min-height: calc(100vh - 60px);
     display: grid;
     place-items: center;
-    padding: 28px 18px;
+    padding: 32px 18px;
 }
 
+/* ── Card ── */
 .card {
-    width: min(520px, 94vw);
+    width: min(480px, 94vw);
     border-radius: var(--radius-xl);
-    border: 1px solid rgba(12, 19, 34, .10);
-    background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(245, 248, 255, .88));
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(10px);
-    padding: 22px;
+    border: 1px solid var(--ink-12);
+    background: var(--white);
+    box-shadow: var(--shadow-card);
+    padding: 28px;
 }
 
 .cardHead {
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(12, 19, 34, .08);
-    margin-bottom: 14px
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--ink-06);
+    margin-bottom: 18px;
 }
 
+/* ── Eyebrow pill ── */
 .pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 5px 11px;
     border-radius: 999px;
-    border: 1px solid rgba(12, 19, 34, .10);
-    background: rgba(255, 255, 255, .75);
-    font-weight: 900;
-    font-size: 12px;
-    color: rgba(12, 19, 34, .70);
-    margin-bottom: 12px;
+    border: 1px solid var(--ink-12);
+    background: var(--surface);
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--ink-60);
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
 }
 
 .pill svg {
-    width: 16px;
-    height: 16px
+    width: 13px;
+    height: 13px;
+    color: var(--amber);
 }
 
+/* ── Headings ── */
 .title {
     margin: 0;
-    font-size: 28px;
-    font-weight: 950;
-    letter-spacing: -.4px;
+    font-family: 'Instrument Serif', serif;
+    font-size: 30px;
+    font-weight: 400;
+    letter-spacing: -.3px;
+    line-height: 1.15;
+    color: var(--ink);
 }
 
 .sub {
     margin: 8px 0 0;
     font-size: 13px;
-    font-weight: 750;
-    color: rgba(12, 19, 34, .55);
+    font-weight: 500;
+    color: var(--ink-60);
+    line-height: 1.5;
 }
 
-/* ===== Tabs ===== */
+/* ── Role tabs (if used) ── */
 .tabs {
     position: relative;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin: 14px 0 10px;
-    padding: 6px;
-    border-radius: 16px;
-    border: 1px solid rgba(12, 19, 34, .10);
-    background: rgba(255, 255, 255, .70);
-    overflow: hidden;
+    gap: 4px;
+    margin: 16px 0 12px;
+    padding: 4px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--ink-12);
+    background: var(--surface);
 }
 
 .tab {
@@ -233,93 +222,96 @@ body {
     z-index: 2;
     border: none;
     background: transparent;
-    padding: 11px 12px;
-    border-radius: 14px;
-    font-weight: 900;
-    color: rgba(12, 19, 34, .70);
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-60);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    transition: transform .15s ease, color .15s ease;
+    gap: 7px;
+    transition: color .15s ease;
 }
 
 .tab svg {
-    width: 18px;
-    height: 18px
-}
-
-.tab:hover {
-    transform: translateY(-1px)
+    width: 16px;
+    height: 16px
 }
 
 .tab.isActive {
-    color: rgba(12, 19, 34, .90)
+    color: var(--ink)
 }
 
 .tabIndicator {
     position: absolute;
-    top: 6px;
-    bottom: 6px;
-    left: 6px;
-    width: calc(50% - 10px);
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(31, 93, 255, .16), rgba(106, 167, 255, .12));
-    border: 1px solid rgba(31, 93, 255, .22);
-    box-shadow: 0 14px 26px rgba(31, 93, 255, .12);
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 8px);
+    border-radius: var(--radius-md);
+    background: var(--white);
+    border: 1px solid var(--ink-12);
+    box-shadow: 0 2px 6px rgba(12, 14, 20, .07);
     transform: translateX(0);
-    transition: transform 320ms cubic-bezier(.2, .9, .2, 1);
+    transition: transform 300ms cubic-bezier(.2, .9, .2, 1);
 }
 
-/* ===== Form ===== */
+/* ── Form ── */
 .form {
-    margin-top: 10px;
+    margin-top: 4px;
     display: grid;
-    gap: 12px
+    gap: 14px;
 }
 
 .field {
     display: flex;
     flex-direction: column;
-    gap: 8px
+    gap: 6px;
 }
 
 .field label {
-    font-size: 12px;
-    font-weight: 850;
-    color: rgba(12, 19, 34, .60);
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--ink-60);
+    letter-spacing: .3px;
+    text-transform: uppercase;
 }
 
 .inputWrap {
     display: flex;
     align-items: center;
     gap: 10px;
-    border-radius: 14px;
-    border: 1px solid rgba(12, 19, 34, .14);
-    background: rgba(255, 255, 255, .92);
-    padding: 12px 12px;
-    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--ink-12);
+    background: var(--surface);
+    padding: 11px 13px;
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
 .inputWrap:hover {
+    border-color: rgba(12, 14, 20, .22);
     transform: translateY(-1px);
-    border-color: rgba(12, 19, 34, .18)
 }
 
 .inputWrap:focus-within {
-    border-color: rgba(31, 93, 255, .65);
-    box-shadow: 0 0 0 4px rgba(31, 93, 255, .12);
+    border-color: var(--amber-border);
+    box-shadow: 0 0 0 3px var(--amber-ring);
     transform: translateY(-1px);
+    background: var(--white);
 }
 
 .inIc {
-    opacity: .75
+    opacity: .45;
+    flex-shrink: 0
 }
 
 .inIc svg {
-    width: 18px;
-    height: 18px
+    width: 16px;
+    height: 16px;
+    display: block
 }
 
 input {
@@ -327,36 +319,40 @@ input {
     outline: none;
     background: transparent;
     width: 100%;
-    font: inherit;
-    font-weight: 750;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--ink);
+    caret-color: var(--amber);
 }
 
 input::placeholder {
-    color: rgba(12, 19, 34, .38)
+    color: var(--ink-40)
 }
 
 .ghostIcon {
     border: none;
     background: transparent;
     cursor: pointer;
-    opacity: .70;
-    padding: 4px 6px;
-    border-radius: 10px;
-    transition: transform .14s ease, opacity .14s ease, background .14s ease;
+    opacity: .45;
+    padding: 3px 5px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    transition: opacity .14s ease, background .14s ease;
 }
 
 .ghostIcon:hover {
-    opacity: 1;
-    transform: translateY(-1px);
-    background: rgba(12, 19, 34, .06);
+    opacity: .85;
+    background: var(--ink-06);
 }
 
 .ghostIcon svg {
-    width: 18px;
-    height: 18px
+    width: 16px;
+    height: 16px;
+    display: block
 }
 
+/* ── Row: remember me + forgot ── */
 .row {
     display: flex;
     align-items: center;
@@ -367,41 +363,51 @@ input::placeholder {
 .check {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-weight: 800;
+    gap: 7px;
     font-size: 12px;
-    color: rgba(12, 19, 34, .62);
+    font-weight: 600;
+    color: var(--ink-60);
     user-select: none;
+    cursor: pointer;
 }
 
 .check input {
     width: 14px;
-    height: 14px
+    height: 14px;
+    accent-color: var(--amber);
+    cursor: pointer;
 }
 
 .link {
     border: none;
     background: transparent;
     cursor: pointer;
-    font-weight: 900;
+    font-family: inherit;
     font-size: 12px;
-    color: rgba(31, 93, 255, .85);
+    font-weight: 700;
+    color: var(--amber-dark);
     padding: 0;
+    text-decoration: none;
+    transition: color .14s ease;
 }
 
 .link:hover {
-    text-decoration: underline
+    color: var(--amber);
+    text-decoration: underline;
 }
 
+/* ── Error ── */
 .error {
-    min-height: 18px;
+    min-height: 16px;
     font-size: 12px;
-    font-weight: 850;
-    color: rgba(220, 38, 38, .92);
+    font-weight: 700;
+    color: var(--danger);
+    line-height: 1.4;
 }
 
+/* ── Shake animation (on bad submit) ── */
 .shake {
-    animation: shake .32s ease-in-out
+    animation: shake .30s ease-in-out
 }
 
 @keyframes shake {
@@ -409,15 +415,15 @@ input::placeholder {
         transform: translateX(0)
     }
 
-    25% {
-        transform: translateX(-6px)
+    22% {
+        transform: translateX(-7px)
     }
 
-    50% {
+    55% {
         transform: translateX(6px)
     }
 
-    75% {
+    78% {
         transform: translateX(-4px)
     }
 
@@ -426,37 +432,450 @@ input::placeholder {
     }
 }
 
+/* ── Primary CTA button ── */
 .primary {
     border: none;
     width: 100%;
-    border-radius: 14px;
-    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    padding: 13px 16px;
     cursor: pointer;
-    font-weight: 950;
-    color: #fff;
-    background: linear-gradient(135deg, var(--blue), var(--blue2));
-    box-shadow: 0 14px 26px rgba(31, 93, 255, .18);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--white);
+    background: var(--amber);
+    box-shadow: 0 4px 16px rgba(200, 136, 42, .28);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    transition: transform .15s ease, filter .15s ease;
+    gap: 8px;
+    transition: opacity .15s ease, transform .15s ease, box-shadow .15s ease;
+    letter-spacing: .1px;
 }
 
 .primary:hover {
+    opacity: .92;
     transform: translateY(-1px);
-    filter: brightness(1.02)
+    box-shadow: 0 8px 24px rgba(200, 136, 42, .32);
+}
+
+.primary:active {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.primary:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .primary svg {
-    width: 18px;
-    height: 18px
+    width: 16px;
+    height: 16px
 }
 
+/* ── Fine print ── */
 .fine {
-    margin-top: 6px;
+    margin-top: 8px;
     text-align: center;
     font-size: 12px;
-    font-weight: 800;
-    color: rgba(12, 19, 34, .60);
+    font-weight: 600;
+    color: var(--ink-60);
+}
+
+.fine .link {
+    font-size: 12px
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+    .card {
+        padding: 20px
+    }
+
+    .title {
+        font-size: 26px
+    }
+
+    .topbar {
+        padding: 0 16px
+    }
+}
+
+
+/* ── FORGOT PASSWORD MODAL — Meta-style ───────────────── */
+.fp-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    z-index: 400;
+    backdrop-filter: blur(3px);
+}
+
+.fp-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(420px, calc(100vw - 24px));
+    background: #fff;
+    border-radius: 16px;
+    z-index: 401;
+    padding: 28px 28px 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+}
+
+.fp-back-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 4px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    transition: background 120ms;
+}
+
+.fp-back-icon:hover {
+    background: #f3f4f6;
+}
+
+.fp-back-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.fp-head {
+    margin-bottom: 20px;
+}
+
+.fp-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 5px;
+}
+
+.fp-sub {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.fp-field {
+    margin-bottom: 12px;
+}
+
+.fp-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 140ms;
+    color: #111;
+}
+
+.fp-input:focus {
+    border-color: #1B3F6E;
+}
+
+.fp-pw-wrap {
+    position: relative;
+}
+
+.fp-pw-wrap .fp-input {
+    padding-right: 44px;
+}
+
+.fp-eye {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 4px;
+}
+
+.fp-eye svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Account confirmation card */
+.fp-account-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    background: #f9fafb;
+}
+
+.fp-account-av {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #1B3F6E;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fp-account-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+}
+
+.fp-account-role {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: capitalize;
+    margin-top: 2px;
+}
+
+/* Send method options */
+.fp-send-options {
+    margin-bottom: 14px;
+}
+
+.fp-send-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.fp-option-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1.5px solid #1B3F6E;
+    border-radius: 10px;
+    cursor: pointer;
+    background: rgba(27, 63, 110, .04);
+}
+
+.fp-option-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(27, 63, 110, .1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #1B3F6E;
+}
+
+.fp-option-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.fp-option-info {
+    flex: 1;
+}
+
+.fp-option-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+    display: block;
+}
+
+.fp-option-masked {
+    font-size: 13px;
+    color: #6b7280;
+    display: block;
+}
+
+.fp-radio {
+    accent-color: #1B3F6E;
+    width: 18px;
+    height: 18px;
+}
+
+.fp-not-you {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 16px;
+}
+
+.fp-link-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1B3F6E;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* OTP boxes */
+.fp-otp-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.fp-otp-box {
+    width: 46px;
+    height: 54px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1B3F6E;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 140ms;
+}
+
+.fp-otp-box:focus {
+    border-color: #1B3F6E;
+    background: #f0f4ff;
+}
+
+.fp-resend-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #6b7280;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.fp-countdown {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.fp-err {
+    font-size: 13px;
+    color: #dc2626;
+    background: #fef2f2;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+}
+
+.fp-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 4px;
+}
+
+.fp-cancel {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #374151;
+}
+
+.fp-submit {
+    padding: 10px 22px;
+    border-radius: 8px;
+    background: #1B3F6E;
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 120ms;
+}
+
+.fp-submit:hover {
+    background: #0f2a45;
+}
+
+.fp-submit:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.fp-submit.full {
+    width: 100%;
+    justify-content: center;
+}
+
+.fp-spin {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .3);
+    border-top-color: #fff;
+    animation: fp-spin .7s linear infinite;
+}
+
+@keyframes fp-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.fp-success {
+    text-align: center;
+    padding: 8px 0 4px;
+}
+
+.fp-success-ic {
+    color: #16a34a;
+    margin-bottom: 14px;
+}
+
+.fp-success-ic svg {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto;
+}
+
+.fp-success .fp-title {
+    margin-bottom: 8px;
+}
+
+.fp-success .fp-sub {
+    margin-bottom: 24px;
+}
+
+@media (max-width: 480px) {
+    .fp-modal {
+        padding: 20px 18px;
+    }
+
+    .fp-otp-box {
+        width: 40px;
+        height: 48px;
+        font-size: 20px;
+    }
 }

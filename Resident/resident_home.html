@@ -1,36 +1,352 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Resident Home</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="./resident_home.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>VISTA-HR · Find your home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/Resident/resident_home.css" />
 </head>
 
 <body>
 
-    <!-- Auth guard -->
-    <script src="../auth/sessionGuard.js"></script>
-    <script>
-        if (!window.requireResident()) throw new Error("Unauthorized");
-    </script>
+    <!-- ══ TOPBAR ══ -->
+    <header class="topbar" id="topbar">
+        <div class="topbar-inner">
 
-    <!-- Top bar -->
-    <header class="topbar">
-        <div class="logo">VISTA-HR</div>
+            <!-- Brand -->
+            <a class="brand" href="#">
+                <span class="brand-mark"></span>
+                <span>VISTA<b>-HR</b></span>
+            </a>
 
-        <div class="searchBox">
-            <input type="text" placeholder="Search by city or property" />
-            <button type="button">🔍</button>
+            <!-- Airbnb-style search pill -->
+            <div class="search-pill" id="searchPill">
+                <button class="sp-seg" id="spWhere" type="button">
+                    <span class="sp-label">Where</span>
+                    <span class="sp-val" id="spWhereVal">Search destinations</span>
+                </button>
+                <div class="sp-div"></div>
+                <button class="sp-seg" id="spType" type="button">
+                    <span class="sp-label">Type</span>
+                    <span class="sp-val" id="spTypeVal">Any type</span>
+                </button>
+                <div class="sp-div"></div>
+                <button class="sp-seg" id="spBudget" type="button">
+                    <span class="sp-label">Budget</span>
+                    <span class="sp-val" id="spBudgetVal">Add budget</span>
+                </button>
+                <button class="sp-btn" id="searchBtn" aria-label="Search">
+                    <i data-lucide="search"></i>
+                </button>
+            </div>
+
+            <!-- Right: user -->
+            <div class="topbar-right">
+
+                <!-- Notification Bell -->
+                <div class="notif-wrap" id="notifWrap">
+                    <button class="notif-btn" id="notifBtn" aria-label="Notifications">
+                        <i data-lucide="bell"></i>
+                        <span class="notif-badge" id="notifBadge" hidden>0</span>
+                    </button>
+                    <div class="notif-panel" id="notifPanel" hidden>
+                        <div class="notif-head">
+                            <span>Notifications</span>
+                            <button class="notif-mark-read" id="notifMarkRead">Mark all read</button>
+                        </div>
+                        <div class="notif-list" id="notifList"></div>
+                    </div>
+                </div>
+
+                <!-- Avatar + dropdown (separate from bell) -->
+                <div class="profile-wrap" id="profileWrap">
+                    <button class="user-menu-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                        <i data-lucide="menu" class="umenu-icon"></i>
+                        <span class="avatar" id="avatarEl">R</span>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown" aria-hidden="true">
+                        <div class="ud-user">
+                            <div class="ud-avatar" id="udAvatar">R</div>
+                            <div>
+                                <div class="ud-name" id="udName">Resident</div>
+                                <div class="ud-email" id="udEmail"></div>
+                            </div>
+                        </div>
+                        <div class="ud-sep"></div>
+                        <button class="ud-item" id="udBookings"><i data-lucide="calendar-check"></i>My bookings</button>
+                        <button class="ud-item" id="udMessages"><i data-lucide="message-square"></i>Messages</button>
+                        <button class="ud-item" id="udSaved"><i data-lucide="heart"></i>Saved listings</button>
+                        <button class="ud-item" id="udProfile"><i data-lucide="user"></i>Profile</button>
+                        <div class="ud-sep"></div>
+                        <button class="ud-item ud-logout" id="udLogout"><i data-lucide="log-out"></i>Log out</button>
+                    </div>
+                </div>
+
+            </div>
+
         </div>
-
-        <button id="logoutBtn" class="ghostBtn" type="button">Logout</button>
     </header>
 
-    <main class="container" id="sections"></main>
+    <!-- ══ CATEGORY ICON BAR (like Airbnb) ══ -->
+    <div class="cat-bar" id="catBar">
+        <div class="cat-bar-inner">
+            <button class="cat-item active" data-type="">
+                <div class="cat-icon"><i data-lucide="layout-grid"></i></div>
+                <span>All</span>
+            </button>
+            <button class="cat-item" data-type="Room">
+                <div class="cat-icon"><i data-lucide="door-open"></i></div>
+                <span>Room</span>
+            </button>
+            <button class="cat-item" data-type="Boarding House">
+                <div class="cat-icon"><i data-lucide="home"></i></div>
+                <span>Boarding House</span>
+            </button>
+            <button class="cat-item" data-type="Apartment">
+                <div class="cat-icon"><i data-lucide="building"></i></div>
+                <span>Apartment</span>
+            </button>
+            <button class="cat-item" data-type="Condo">
+                <div class="cat-icon"><i data-lucide="building-2"></i></div>
+                <span>Condo</span>
+            </button>
+            <button class="cat-item" data-type="Bedspace">
+                <div class="cat-icon"><i data-lucide="bed"></i></div>
+                <span>Bedspace</span>
+            </button>
+        </div>
 
-    <script src="./resident_home.js"></script>
+        <!-- Filter toggle -->
+        <div class="cat-bar-right">
+            <button class="filter-btn" id="filterToggle">
+                <i data-lucide="sliders-horizontal"></i>
+                <span>Filters</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ MAIN ══ -->
+    <main class="main" id="mainContent">
+
+        <!-- ── All listings grid (default view) ── -->
+        <div class="section-block" id="defaultView">
+
+            <!-- Row: Near UE Caloocan -->
+            <section class="listing-row" id="rowUE">
+                <div class="row-head">
+                    <h2 class="row-title">Near UE Caloocan</h2>
+                    <button class="row-see-all" data-city="Caloocan">Show all <i data-lucide="arrow-right"></i></button>
+                </div>
+                <div class="row-scroll" id="scrollUE">
+                    <!-- cards injected -->
+                </div>
+            </section>
+
+            <!-- Row: Budget picks under ₱4k -->
+            <section class="listing-row" id="rowBudget">
+                <div class="row-head">
+                    <h2 class="row-title">Budget picks · Under ₱4,000</h2>
+                    <button class="row-see-all" data-maxprice="4000">Show all <i data-lucide="arrow-right"></i></button>
+                </div>
+                <div class="row-scroll" id="scrollBudget">
+                    <!-- cards injected -->
+                </div>
+            </section>
+
+            <!-- Row: With 360° Virtual Tour -->
+            <section class="listing-row" id="rowTour">
+                <div class="row-head">
+                    <h2 class="row-title">With 360° Virtual Tour</h2>
+                    <button class="row-see-all" data-tour="true">Show all <i data-lucide="arrow-right"></i></button>
+                </div>
+                <div class="row-scroll" id="scrollTour">
+                    <!-- cards injected -->
+                </div>
+            </section>
+
+            <!-- Row: Available now -->
+            <section class="listing-row" id="rowAvail">
+                <div class="row-head">
+                    <h2 class="row-title">Available now</h2>
+                    <button class="row-see-all" data-available="true">Show all <i
+                            data-lucide="arrow-right"></i></button>
+                </div>
+                <div class="row-scroll" id="scrollAvail">
+                    <!-- cards injected -->
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ── Filtered / search results grid ── -->
+        <div class="section-block" id="filteredView" hidden>
+            <div class="filtered-head">
+                <h2 class="filtered-title" id="filteredTitle">All listings</h2>
+                <span class="filtered-count" id="filteredCount"></span>
+            </div>
+            <div class="listing-grid" id="listingGrid"></div>
+            <div class="load-more-wrap" id="loadMoreWrap" hidden>
+                <button class="load-more-btn" id="loadMoreBtn">Show more</button>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" id="emptyState" hidden>
+            <div class="es-icon"><i data-lucide="search-x"></i></div>
+            <h3>No listings found</h3>
+            <p>Try adjusting your filters.</p>
+            <button class="es-clear" id="esClear">Clear filters</button>
+        </div>
+
+    </main>
+
+    <!-- ══ LISTING DETAIL DRAWER ══ -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="detail-drawer" id="detailDrawer" aria-hidden="true">
+        <div class="dd-inner" id="ddInner"></div>
+    </aside>
+
+    <!-- ══ SEARCH DROPDOWN ══ -->
+    <div class="search-drop" id="searchDrop" hidden>
+        <div class="sdrop-section" id="sdWhere">
+            <p class="sdrop-label">Search by city</p>
+            <div class="sdrop-chips" id="sdCityChips"></div>
+        </div>
+        <div class="sdrop-sep"></div>
+        <div class="sdrop-section" id="sdBudgetSec" hidden>
+            <p class="sdrop-label">Monthly budget</p>
+            <div class="sdrop-price-row">
+                <div class="sdp">
+                    <label>Min</label>
+                    <input type="number" id="sdMin" placeholder="₱0" min="0" step="500">
+                </div>
+                <span class="sdp-dash">–</span>
+                <div class="sdp">
+                    <label>Max</label>
+                    <input type="number" id="sdMax" placeholder="₱20,000" min="0" step="500">
+                </div>
+            </div>
+            <div class="sdrop-presets">
+                <button class="preset-btn" data-min="0" data-max="3000">Under ₱3k</button>
+                <button class="preset-btn" data-min="3000" data-max="6000">₱3k–6k</button>
+                <button class="preset-btn" data-min="6000" data-max="12000">₱6k–12k</button>
+                <button class="preset-btn" data-min="12000" data-max="">₱12k+</button>
+            </div>
+        </div>
+        <div class="sdrop-actions">
+            <button class="sdrop-clear" id="sdropClear">Clear all</button>
+            <button class="sdrop-search" id="sdropSearch"><i data-lucide="search"></i>Search</button>
+        </div>
+    </div>
+
+    <!-- ══ FILTER PANEL (slide from right) ══ -->
+    <div class="filter-overlay" id="filterOverlay"></div>
+    <aside class="filter-panel" id="filterPanel">
+        <div class="fp-head">
+            <h3>Filters</h3>
+            <button class="fp-close" id="fpClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="fp-body">
+            <div class="fp-section">
+                <label class="fp-label">Property type</label>
+                <div class="fp-type-grid">
+                    <button class="fp-type-btn active" data-type="">All</button>
+                    <button class="fp-type-btn" data-type="Room">Room</button>
+                    <button class="fp-type-btn" data-type="Boarding House">Boarding House</button>
+                    <button class="fp-type-btn" data-type="Apartment">Apartment</button>
+                    <button class="fp-type-btn" data-type="Condo">Condo</button>
+                    <button class="fp-type-btn" data-type="Bedspace">Bedspace</button>
+                </div>
+            </div>
+            <div class="fp-sep"></div>
+            <div class="fp-section">
+                <label class="fp-label">Price range (monthly)</label>
+                <div class="fp-price-row">
+                    <div class="fp-price-field"><label>Min</label><input type="number" id="fpMin" placeholder="₱0">
+                    </div>
+                    <span>–</span>
+                    <div class="fp-price-field"><label>Max</label><input type="number" id="fpMax" placeholder="Any">
+                    </div>
+                </div>
+            </div>
+            <div class="fp-sep"></div>
+            <div class="fp-section">
+                <label class="fp-label">Availability</label>
+                <div class="fp-toggle-row">
+                    <span>Available now only</span>
+                    <button class="fp-toggle" id="fpAvailToggle" role="switch" aria-checked="false">
+                        <span class="fp-toggle-thumb"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="fp-sep"></div>
+            <div class="fp-section">
+                <label class="fp-label">Features</label>
+                <div class="fp-toggle-row">
+                    <span>360° Virtual tour</span>
+                    <button class="fp-toggle" id="fpTourToggle" role="switch" aria-checked="false">
+                        <span class="fp-toggle-thumb"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="fp-foot">
+            <button class="fp-reset" id="fpReset">Clear all</button>
+            <button class="fp-apply" id="fpApply">Show results</button>
+        </div>
+    </aside>
+
+    <!-- ══ BOOKING MODAL ══ -->
+    <div class="bm-overlay" id="bmOverlay" hidden></div>
+    <div class="bm-modal" id="bmModal" aria-modal="true" role="dialog" aria-labelledby="bmTitle" hidden>
+        <div class="bm-header">
+            <button class="bm-close" id="bmClose" aria-label="Close"><i data-lucide="x"></i></button>
+            <h3 class="bm-title" id="bmTitle">Request to book</h3>
+        </div>
+
+        <!-- Listing snapshot -->
+        <div class="bm-listing" id="bmListing"></div>
+
+        <!-- Form -->
+        <div class="bm-body" id="bmBody">
+            <div class="bm-field">
+                <label class="bm-label" for="bmMoveIn">Move-in date <span class="bm-optional">(optional)</span></label>
+                <input type="date" id="bmMoveIn" class="bm-input">
+            </div>
+            <div class="bm-field">
+                <label class="bm-label" for="bmMessage">Message to owner <span
+                        class="bm-optional">(optional)</span></label>
+                <textarea id="bmMessage" class="bm-textarea" rows="3"
+                    placeholder="Hi, I'm interested in this listing. I'm a student at..."></textarea>
+            </div>
+            <div class="bm-error" id="bmError" hidden></div>
+        </div>
+
+        <!-- Success state -->
+        <div class="bm-success" id="bmSuccess" hidden>
+            <div class="bm-success-icon"><i data-lucide="check-circle-2"></i></div>
+            <h4>Booking request sent!</h4>
+            <p>The owner has been notified. You'll hear back soon.</p>
+        </div>
+
+        <div class="bm-footer" id="bmFooter">
+            <button class="bm-cancel" id="bmCancel">Cancel</button>
+            <button class="bm-submit" id="bmSubmit">
+                <span id="bmSubmitLabel">Send request</span>
+                <span class="bm-spinner" id="bmSpinner" hidden></span>
+            </button>
+        </div>
+    </div>
+
+    <script src="/auth/sessionGuard.js"></script>
+    <script src="/Resident/resident_home.js"></script>
 </body>
 
 </html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/admin/user-management/user-management.css" />
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand">
+                <div class="brand-dot"></div>
+                <span>VISTA<b>-HR</b></span>
+            </div>
+            <div class="admin-pill">Admin</div>
+        </div>
+        <nav class="sidenav">
+            <a class="sidenav-item active" data-view="overview" href="#">
+                <i data-lucide="layout-dashboard"></i><span>Overview</span>
+            </a>
+            <a class="sidenav-item" data-view="users" href="#">
+                <i data-lucide="users"></i><span>Users</span>
+            </a>
+            <a class="sidenav-item" data-view="kyc" href="#">
+                <i data-lucide="shield-check"></i><span>Owner KYC</span>
+                <span class="nav-badge" id="kycBadge" hidden></span>
+            </a>
+            <a class="sidenav-item" data-view="student" href="#">
+                <i data-lucide="graduation-cap"></i><span>Student Verif.</span>
+                <span class="nav-badge" id="studentBadge" hidden></span>
+            </a>
+            <a class="sidenav-item" data-view="listings" href="#">
+                <i data-lucide="home"></i><span>Listings</span>
+            </a>
+            <a class="sidenav-item" data-view="analytics" href="#">
+                <i data-lucide="bar-chart-3"></i><span>Analytics</span>
+            </a>
+        </nav>
+        <div class="sidebar-bottom">
+            <button class="logout-btn" id="adminLogoutBtn" type="button">
+                <i data-lucide="log-out"></i><span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="main-wrap">
+
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1 class="page-title" id="pageTitle">Overview</h1>
+                <p class="page-sub" id="pageSub">Platform health at a glance</p>
+            </div>
+            <div class="topbar-right">
+                <div class="admin-avatar" id="adminAvatar">A</div>
+            </div>
+        </header>
+
+        <!-- OVERVIEW -->
+        <section id="viewOverview" class="view active">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon neutral"><i data-lucide="users"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Total users</span>
+                        <strong class="stat-value" id="ovTotalUsers">—</strong>
+                    </div>
+                </div>
+                <div class="stat-card" id="kycStatCard">
+                    <div class="stat-icon warn"><i data-lucide="shield-alert"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Pending KYC</span>
+                        <strong class="stat-value" id="ovPendingKyc">—</strong>
+                        <span class="stat-sub">Owner verifications</span>
+                    </div>
+                </div>
+                <div class="stat-card" id="studentStatCard">
+                    <div class="stat-icon warn"><i data-lucide="book-open"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Pending student</span>
+                        <strong class="stat-value" id="ovPendingStudent">—</strong>
+                        <span class="stat-sub">Resident verifications</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon danger"><i data-lucide="ban"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Suspended</span>
+                        <strong class="stat-value" id="ovSuspended">—</strong>
+                        <span class="stat-sub">Accounts</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2 class="panel-title">Pending owner KYC</h2>
+                            <p class="panel-sub">Applications awaiting your review</p>
+                        </div>
+                        <button class="text-btn" data-goto="kyc">View all →</button>
+                    </div>
+                    <div id="ovKycQueue" class="queue-list">
+                        <div class="queue-empty">Loading…</div>
+                    </div>
+                </div>
+
+                <div class="right-col">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2 class="panel-title">User breakdown</h2>
+                        </div>
+                        <div class="breakdown-grid">
+                            <div class="breakdown-item">
+                                <div class="bk-val" id="bkAdmins">—</div>
+                                <div class="bk-lbl">Admins</div>
+                                <div class="bk-bar">
+                                    <div class="bk-fill gray" id="bkAdminsBar" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="breakdown-item">
+                                <div class="bk-val" id="bkOwners">—</div>
+                                <div class="bk-lbl">Owners</div>
+                                <div class="bk-bar">
+                                    <div class="bk-fill blue" id="bkOwnersBar" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="breakdown-item">
+                                <div class="bk-val" id="bkResidents">—</div>
+                                <div class="bk-lbl">Residents</div>
+                                <div class="bk-bar">
+                                    <div class="bk-fill teal" id="bkResidentsBar" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2 class="panel-title">Recent registrations</h2>
+                                <p class="panel-sub">Newest accounts</p>
+                            </div>
+                            <button class="text-btn" data-goto="users">View all →</button>
+                        </div>
+                        <div id="ovRecentUsers" class="queue-list">
+                            <div class="queue-empty">Loading…</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- USERS -->
+        <section id="viewUsers" class="view" hidden>
+            <div class="view-toolbar">
+                <div class="search-wrap">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="searchInput" placeholder="Search name, email, or role…" />
+                </div>
+                <select id="roleFilter">
+                    <option value="all">All roles</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Property Owner">Property Owner</option>
+                    <option value="Resident">Resident</option>
+                </select>
+                <select id="statusFilter">
+                    <option value="all">All statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Suspended">Suspended</option>
+                </select>
+                <button class="btn solid" id="addUserBtn" type="button">
+                    <i data-lucide="user-plus"></i><span>Add user</span>
+                </button>
+            </div>
+            <div class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">User directory</h2>
+                        <p class="panel-sub">Manage accounts, roles, and access</p>
+                    </div>
+                    <div class="mini-stats">
+                        <span><b id="totalUsers">0</b> total</span>
+                        <span><b id="totalOwners">0</b> owners</span>
+                        <span><b id="totalResidents">0</b> residents</span>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Strikes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- KYC -->
+        <section id="viewKyc" class="view" hidden>
+            <div class="filter-bar" id="kycFilterBar">
+                <button class="filter-pill active" data-status="PENDING">Pending</button>
+                <button class="filter-pill" data-status="APPROVED">Approved</button>
+                <button class="filter-pill" data-status="REJECTED">Rejected</button>
+            </div>
+            <div class="panel">
+                <div id="kycList"></div>
+            </div>
+        </section>
+
+        <!-- STUDENT -->
+        <section id="viewStudent" class="view" hidden>
+            <div class="filter-bar" id="studentFilterBar">
+                <button class="filter-pill active" data-status="PENDING">Pending</button>
+                <button class="filter-pill" data-status="APPROVED">Approved</button>
+                <button class="filter-pill" data-status="REJECTED">Rejected</button>
+            </div>
+            <div class="panel">
+                <div id="studentList"></div>
+            </div>
+        </section>
+
+        <!-- LISTINGS MANAGEMENT -->
+        <section id="viewListings" class="view" hidden>
+            <div class="filter-bar" id="listingsFilterBar">
+                <button class="filter-pill active" data-status="">All</button>
+                <button class="filter-pill" data-status="PUBLISHED">Published</button>
+                <button class="filter-pill" data-status="DRAFT">Draft</button>
+                <button class="filter-pill" data-status="READY">Ready</button>
+                <button class="filter-pill" data-status="ARCHIVED">Archived</button>
+            </div>
+            <div class="listings-search-bar">
+                <div class="lsb-input-wrap">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="listingsSearch" placeholder="Search by title, owner, or city…"
+                        autocomplete="off">
+                </div>
+                <span class="listings-count" id="listingsCount"></span>
+            </div>
+            <div class="panel">
+                <div id="listingsList"></div>
+                <div class="listings-pagination" id="listingsPagination" hidden>
+                    <button class="btn ghost" id="listingsPrevPage"><i data-lucide="chevron-left"></i> Prev</button>
+                    <span id="listingsPageLabel"></span>
+                    <button class="btn ghost" id="listingsNextPage">Next <i data-lucide="chevron-right"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ANALYTICS -->
+        <section id="viewAnalytics" class="view" hidden>
+
+            <div class="stats-row an-stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon an-blue"><i data-lucide="users"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Total users</span>
+                        <strong class="stat-value" id="anTotalUsers">—</strong>
+                        <span class="stat-sub" id="anUserSub">— residents · — owners</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-green"><i data-lucide="home"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Published listings</span>
+                        <strong class="stat-value" id="anPublished">—</strong>
+                        <span class="stat-sub" id="anListingSub">of — total</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-teal"><i data-lucide="calendar-check-2"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Total bookings</span>
+                        <strong class="stat-value" id="anTotalBookings">—</strong>
+                        <span class="stat-sub" id="anBookingSub">— pending</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Core charts -->
+            <div class="an-two-col">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2 class="panel-title">Booking funnel</h2>
+                            <p class="panel-sub">All booking statuses across the platform</p>
+                        </div>
+                    </div>
+                    <div class="an-chart-wrap"><canvas id="cBookings"></canvas></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2 class="panel-title">Verification pipeline</h2>
+                            <p class="panel-sub">Owner KYC and student status breakdown</p>
+                        </div>
+                    </div>
+                    <div class="an-chart-wrap"><canvas id="cVerify"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Toggle bar -->
+            <div class="an-toggle-bar">
+                <span class="an-section-label" id="anSectionLabel">Recent bookings</span>
+                <button class="an-toggle-btn" id="anToggleBtn">
+                    <i data-lucide="bar-chart-3"></i>
+                    Show more charts
+                </button>
+            </div>
+
+            <!-- Recent bookings (default view) -->
+            <div id="anRecentSection" class="an-panel-swap">
+                <div class="panel">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Listing</th>
+                                    <th>Resident</th>
+                                    <th>Move-in</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="anRecentBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extra charts (hidden by default) -->
+            <div id="anExtraSection" class="an-panel-swap" hidden>
+                <div class="panel" style="margin-bottom:16px">
+                    <div class="panel-head">
+                        <div>
+                            <h2 class="panel-title">User registrations</h2>
+                            <p class="panel-sub">New signups over the last 30 days</p>
+                        </div>
+                    </div>
+                    <div class="an-chart-wrap"><canvas id="cGrowth"></canvas></div>
+                </div>
+                <div class="an-three-col">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2 class="panel-title">Listing statuses</h2>
+                                <p class="panel-sub">Draft → Published</p>
+                            </div>
+                        </div>
+                        <div class="an-chart-wrap an-chart-sm"><canvas id="cListings"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2 class="panel-title">Top cities</h2>
+                                <p class="panel-sub">Listings by location</p>
+                            </div>
+                        </div>
+                        <div class="an-chart-wrap an-chart-sm"><canvas id="cCities"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2 class="panel-title">Listing types</h2>
+                                <p class="panel-sub">Property category split</p>
+                            </div>
+                        </div>
+                        <div class="an-chart-wrap an-chart-sm"><canvas id="cTypes"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </div><!-- /main-wrap -->
+
+
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add user</h3>
+                <button class="icon-btn" id="closeModalBtn" type="button"><i data-lucide="x"></i></button>
+            </div>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="nameInput">Full name</label>
+                    <input id="nameInput" type="text" placeholder="Juan Dela Cruz" />
+                </div>
+                <div class="field">
+                    <label for="emailInput">Email</label>
+                    <input id="emailInput" type="email" placeholder="juan@email.com" />
+                </div>
+                <div class="field" id="passwordField">
+                    <label for="passwordInput">Password <span class="field-hint"
+                            id="passwordHint">required</span></label>
+                    <input id="passwordInput" type="password" placeholder="Min. 8 characters" />
+                </div>
+                <div class="field">
+                    <label for="roleInput">Role</label>
+                    <select id="roleInput">
+                        <option value="Admin">Admin</option>
+                        <option value="Property Owner">Property Owner</option>
+                        <option value="Resident" selected>Resident</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="statusInput">Status</label>
+                    <select id="statusInput">
+                        <option value="Active">Active</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Suspended">Suspended</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn ghost" id="cancelBtn" type="button">Cancel</button>
+                <button class="btn solid" id="saveUserBtn" type="button">Save user</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/admin/user-management/user-management.js" defer></script>
+</body>
+
+</html>

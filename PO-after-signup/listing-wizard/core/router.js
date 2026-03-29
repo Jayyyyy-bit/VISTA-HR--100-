@@ -9,7 +9,6 @@
 
     const DASHBOARD_URL = "/Property-Owner/dashboard/property-owner-dashboard.html";
 
-    // ✅ Correct route table (ALL entries must have id + file)
     const ROUTES = [
         { id: "step-1", file: "steps/step1_unit_category.html", init: window.Step1Init, sync: "syncStep1" },
         { id: "step-2", file: "steps/step2_space_type.html", init: window.Step2Init, sync: "syncStep2" },
@@ -21,27 +20,27 @@
         { id: "step-8", file: "steps/step8_details.html", init: window.Step8Init, sync: "syncStep8" },
     ];
 
-    function setHash(id) {
-        location.hash = `#/${id}`;
-    }
+    function setHash(id) { location.hash = `#/${id}`; }
 
     function getRouteFromHash() {
-        // supports "#/step-1" or "#/step-1?x=y"
         const raw = (location.hash || "");
         const cleaned = raw.replace(/^#\/?/, "");
         const id = cleaned.split("?")[0].trim();
         return id || "step-1";
     }
 
-    function indexOfRoute(id) {
-        return ROUTES.findIndex(r => r.id === id);
-    }
+    function indexOfRoute(id) { return ROUTES.findIndex(r => r.id === id); }
 
     function renderDots(activeIndex) {
         if (!dots) return;
-        dots.innerHTML = ROUTES
-            .map((_, i) => `<span class="dot ${i <= activeIndex ? "active" : ""}"></span>`)
-            .join("");
+        const total = ROUTES.length;
+        const pct = Math.round(((activeIndex + 1) / total) * 100);
+        dots.innerHTML = `
+            <div class="wiz-prog-track">
+                <div class="wiz-prog-bar" style="width:${pct}%"></div>
+            </div>
+            <span class="wiz-prog-label">${activeIndex + 1} / ${total}</span>
+        `;
     }
 
     function setNextLabel(idx) {
@@ -57,11 +56,8 @@
     const STEP_CACHE = new Map();
     async function getStepHTML(file) {
         if (STEP_CACHE.has(file)) return STEP_CACHE.get(file);
-
         const res = await fetch(file, { cache: "no-store" });
-        if (!res.ok) {
-            throw new Error(`Failed to load step HTML: ${file} (${res.status})`);
-        }
+        if (!res.ok) throw new Error(`Failed to load step HTML: ${file} (${res.status})`);
         const html = await res.text();
         STEP_CACHE.set(file, html);
         return html;
@@ -77,38 +73,35 @@
             return;
         }
 
-        // prefetch HTML
         const htmlPromise = getStepHTML(route.file);
 
-        // fade out old content
         if (stepHost?.dataset?.hasStep && window.StepTransition?.fadeOut) {
             await window.StepTransition.fadeOut(stepHost);
         }
 
-        // inject new HTML
         const html = await htmlPromise;
         stepHost.innerHTML = html;
         stepHost.dataset.hasStep = "1";
+        stepHost.dataset.step = route.id;
 
-        // header updates
+        document.body.className = document.body.className
+            .replace(/\bwiz-step-\S+/g, "").trim();
+        document.body.classList.add(`wiz-step-${route.id}`);
+
         updateStepKicker(idx);
 
-        // init step JS
         if (typeof route.init === "function") {
             route.init({ stepId: route.id, nextBtn, backBtn });
         }
 
-        // icons
         if (window.lucide?.createIcons) window.lucide.createIcons();
 
-        // buttons / dots
         renderDots(idx);
         setNextLabel(idx);
         if (backBtn) backBtn.disabled = idx <= 0;
 
         if (window.SidePanel?.refresh) window.SidePanel.refresh();
 
-        // fade in
         if (window.StepTransition?.fadeIn) {
             await window.StepTransition.fadeIn(stepHost);
         }
@@ -116,7 +109,6 @@
 
     window.loadStep = loadStep;
 
-    // Back button
     on(backBtn, "click", () => {
         const current = getRouteFromHash();
         const idx = indexOfRoute(current);
@@ -124,7 +116,6 @@
         setHash(prevId);
     });
 
-    // Next button: sync then navigate
     on(nextBtn, "click", async () => {
         const current = getRouteFromHash();
         const idx = indexOfRoute(current);
@@ -134,14 +125,11 @@
         try {
             nextBtn.disabled = true;
 
-            // ✅ call store sync if exists
             const fnName = route?.sync;
             const fn = fnName ? window.ListingStore?.[fnName] : null;
             if (typeof fn === "function") await fn();
 
             if (isLast) {
-                // optional: submitForVerification
-                // await window.ListingStore?.submitForVerification?.();
                 location.href = DASHBOARD_URL;
                 return;
             }
@@ -159,7 +147,6 @@
         }
     });
 
-    // Header buttons
     on($("#saveExitBtn"), "click", () => {
         window.ListingStore?.saveDraft?.({ status: "DRAFT" });
         location.href = `${DASHBOARD_URL}#/listings`;
@@ -167,22 +154,98 @@
 
     on($("#questionsBtn"), "click", () => alert("FAQ coming soon."));
 
-    // Hash change
+    on($("#btsDismiss"), "click", () => {
+        window.SidePanel?.dismissTips?.();
+    });
+
     window.addEventListener("hashchange", () => loadStep(getRouteFromHash()));
 
-    // Boot
+    // ── Boot ──────────────────────────────────────────────────────────────────
     (async () => {
+
+        // ── Helpers ──────────────────────────────────────────────────────────
+        function nukeAllLocalDraftState() {
+            // Wipe every localStorage key the wizard owns so no stale IDs
+            // can bleed into the new session. Order matters: clear index
+            // entries first, then active pointer, then the map.
+            try {
+                const ids = window.ListingStore?.listDraftIds?.() || [];
+                for (const id of ids) window.ListingStore?.clearDraft?.(id);
+            } catch { /* silent */ }
+            localStorage.removeItem("vista_draft_active");
+            localStorage.removeItem("vista_draft_index");
+            localStorage.removeItem("vista_listing_map");
+        }
+
+        // ── Step 1: purge any draft-pending-* placeholders from prior crashes ─
+        // These are created by ensureActiveDraft() when no real draft exists yet.
+        // They have no listingId and no data — safe to remove unconditionally.
         try {
-            const token = localStorage.getItem("access_token");
-            if (token && window.ListingStore?.resumeDraft) {
-                await window.ListingStore.resumeDraft();
+            const ids = window.ListingStore?.listDraftIds?.() || [];
+            for (const id of ids) {
+                if (String(id).startsWith("draft-pending-")) {
+                    window.ListingStore?.clearDraft?.(id);
+                }
             }
+        } catch { /* silent */ }
+
+        // ── Step 2: route on ?new=1 vs resume ────────────────────────────────
+        try {
+            const params = new URLSearchParams(location.search);
+            const isNew = params.get("new") === "1";
+
+            if (isNew) {
+                // FIX: wipe ALL local state first so no stale draftId can
+                // shadow the new listing we are about to create.
+                location.hash = "";
+                nukeAllLocalDraftState();
+
+                // FIX: create the server-side listing ROW and bind it to
+                // localStorage BEFORE rendering step 1. This guarantees that
+                // getListingId() will never return null during the session —
+                // which was the root cause of the step-2 "jump back" bug and
+                // of duplicate/ghost listings being created by syncStep1().
+                try {
+                    await window.ListingStore.createNewDraft();
+                } catch (createErr) {
+                    // If the server call fails (rate-limit, network) show a
+                    // friendly message and stay on the current page rather than
+                    // rendering a broken wizard.
+                    const msg =
+                        createErr?.payload?.error ||
+                        createErr?.error ||
+                        createErr?.message ||
+                        "Could not start a new listing. Please try again.";
+                    alert(msg);
+                    // Redirect back to dashboard so the owner isn't stuck
+                    location.href = DASHBOARD_URL;
+                    return;
+                }
+
+                loadStep("step-1");
+                return;
+            }
+
+            // ── Resume flow ───────────────────────────────────────────────────
+            const listing = window.ListingStore?.resumeDraft
+                ? await window.ListingStore.resumeDraft({ allowLatestFallback: true })
+                : null;
+
+            if (listing?.current_step && listing.current_step > 1) {
+                const targetStep = `step-${listing.current_step}`;
+                const targetIdx = indexOfRoute(targetStep);
+                if (targetIdx !== -1) {
+                    setHash(targetStep);
+                    loadStep(targetStep);
+                    return;
+                }
+            }
+
         } catch (e) {
-            console.warn("[router] resumeDraft failed", e);
+            console.warn("[router] boot failed", e);
         }
 
         const id = getRouteFromHash();
-        // if invalid hash -> force step-1
         if (indexOfRoute(id) === -1) setHash("step-1");
         else loadStep(id);
     })();

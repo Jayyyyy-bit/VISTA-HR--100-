@@ -1,5 +1,3 @@
-// steps/step1.js (or wherever your Step 1 script lives)
-
 window.Step1Init = function ({ nextBtn }) {
     const { readDraft, saveDraft, syncStep1 } = window.ListingStore;
 
@@ -61,9 +59,8 @@ window.Step1Init = function ({ nextBtn }) {
         return;
     }
 
-    // render cards sa current selection
     const draft = readDraft();
-    const selected = draft.placeType;
+    const selected = draft.placeType || "";
 
     grid.innerHTML = PLACE_TYPES.map((t) => {
         const sel = selected === t.key ? "selected" : "";
@@ -75,38 +72,40 @@ window.Step1Init = function ({ nextBtn }) {
     `;
     }).join("");
 
-    lucide.createIcons();
+    window.lucide?.createIcons?.();
 
-    // disabled yung next but pag walang selection 
     nextBtn.disabled = !selected;
 
     function applyTips(key) {
         const g = GUIDANCE[key];
         if (!g) {
-            window.SidePanel.setTips({ selectedLabel: "—" });
+            window.SidePanel?.setTips?.({ selectedLabel: "—" });
             return;
         }
-        window.SidePanel.setTips({ selectedLabel: g.title, tips: g.tips });
+        window.SidePanel?.setTips?.({ selectedLabel: g.title, tips: g.tips });
     }
 
     applyTips(selected);
-    window.SidePanel.refresh();
+    window.SidePanel?.refresh?.();
 
-    // card click selection
     grid.querySelectorAll(".card").forEach((btn) => {
         btn.addEventListener("click", () => {
-            saveDraft({ placeType: btn.dataset.key });
+            const key = btn.dataset.key;
+            saveDraft({ placeType: key });
 
             grid.querySelectorAll(".card").forEach((b) => b.classList.remove("selected"));
             btn.classList.add("selected");
 
             nextBtn.disabled = false;
 
-            applyTips(btn.dataset.key);
-            window.SidePanel.refresh();
+            applyTips(key);
+            window.SidePanel?.refresh?.();
         });
     });
 
-    //  Next button sync to backend (creates listing + saves listing_id)
-
+    // Navigation is handled exclusively by router.js (nextBtn click → syncStep1 → setHash).
+    // Step1Init must NOT attach its own onclick or set location.hash — doing so causes
+    // a double-fire: router fires syncStep1 + navigates, then this handler fires syncStep1
+    // again and navigates again, which jumps the user back to step-2 on every Next click.
+    // The only job of StepNInit is: update nextBtn.disabled based on local selection state.
 };

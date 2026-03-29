@@ -1,161 +1,113 @@
-// steps/step5.js
+// steps/step5_amenities.js
 
 window.Step5Init = function Step5Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
 
     const TAB_META = {
-        appliances: { title: "Appliances", hint: "Common home essentials guests expect." },
-        activities: { title: "Activities", hint: "Comfort and extras that improve the stay." },
-        safety: { title: "Safety items", hint: "Help guests feel safe and prepared." }
+        appliances: {
+            title: "Essentials",
+            hint: "Common home essentials guests expect."
+        },
+        activities: {
+            title: "Comfort",
+            hint: "Comfort and extras that improve the stay."
+        },
+        safety: {
+            title: "Safety",
+            hint: "Help guests feel safe and prepared."
+        }
     };
 
     const OPTIONS = {
         appliances: [
-            { key: "WIFI", label: "Wi-Fi", icon: "wifi" },
-            { key: "AIRCON", label: "Aircon", icon: "snowflake" },
-            { key: "FAN", label: "Electric fan", icon: "wind" },
-            { key: "TV", label: "TV", icon: "tv" },
-            { key: "CABLE_TV", label: "Cable TV", icon: "tv-2" },
-            { key: "STREAMING", label: "Streaming", icon: "play-circle" },
-            { key: "REFRIGERATOR", label: "Refrigerator", icon: "archive" },
-            { key: "MICROWAVE", label: "Microwave", icon: "zap" },
-            { key: "RICE_COOKER", label: "Rice cooker", icon: "utensils" },
-            { key: "ELECTRIC_KETTLE", label: "Electric kettle", icon: "cup-soda" },
-            { key: "COFFEE_MAKER", label: "Coffee maker", icon: "coffee" },
-            { key: "STOVE", label: "Stove / cooktop", icon: "flame" },
-            { key: "OVEN", label: "Oven", icon: "box" },
-            { key: "TOASTER", label: "Toaster", icon: "square" },
-            { key: "KITCHEN", label: "Kitchen", icon: "utensils-crossed" },
-            { key: "COOKWARE", label: "Cookware", icon: "utensils" },
-            { key: "DISHES", label: "Dishes & utensils", icon: "utensils" },
-            { key: "DINING_TABLE", label: "Dining table", icon: "table" },
-
-            { key: "HOT_WATER", label: "Hot water", icon: "droplet" },
-            { key: "WATER_HEATER", label: "Water heater", icon: "thermometer" },
-            { key: "BIDET", label: "Bidet", icon: "droplets" },
-
-            { key: "WASHER", label: "Washing machine", icon: "refresh-cw" },
-            { key: "DRYER", label: "Dryer", icon: "wind" },
-            { key: "IRON", label: "Iron", icon: "layers" },
-            { key: "HANGERS", label: "Hangers", icon: "paperclip" },
-
-            { key: "HAIR_DRYER", label: "Hair dryer", icon: "wind" },
-            { key: "TOWELS", label: "Towels", icon: "bookmark" },
-            { key: "LINENS", label: "Bed linens", icon: "layers-2" },
-
-            { key: "BACKUP_POWER", label: "Backup power", icon: "battery-charging" },
-            { key: "ROUTER_MODEM", label: "Router / modem", icon: "router" },
-            { key: "WORK_DESK", label: "Desk", icon: "laptop" },
-
-            { key: "CLEANING_SUPPLIES", label: "Cleaning supplies", icon: "spray-can" },
-            { key: "TRASH_BINS", label: "Trash bins", icon: "trash-2" },
-            { key: "BLACKOUT_CURTAINS", label: "Blackout curtains", icon: "moon" },
-            { key: "ELEVATOR_ACCESS", label: "Elevator access", icon: "arrow-up-down" },
-            { key: "HEATER", label: "Heater", icon: "thermometer-sun" },
-            { key: "FIREPLACE", label: "Fireplace", icon: "flame" }
+            "Air conditioning",
+            "Electric fan",
+            "Refrigerator",
+            "Microwave",
+            "Rice cooker",
+            "Electric kettle",
+            "Induction stove",
+            "Washing machine",
+            "Water heater",
+            "TV",
+            "WiFi"
         ],
 
         activities: [
-            { key: "WORKSPACE", label: "Dedicated workspace", icon: "laptop" },
-            { key: "BALCONY", label: "Balcony / terrace", icon: "building-2" },
-            { key: "GARDEN", label: "Garden", icon: "leaf" },
-            { key: "PATIO", label: "Patio", icon: "sun" },
-            { key: "ROOFTOP", label: "Rooftop access", icon: "mountain" },
-
-            { key: "POOL", label: "Pool access", icon: "waves" },
-            { key: "GYM", label: "Gym access", icon: "dumbbell" },
-            { key: "SPA", label: "Spa / sauna", icon: "sparkles" },
-            { key: "GAME_ROOM", label: "Game room", icon: "gamepad-2" },
-
-            { key: "PARKING", label: "Parking", icon: "car" },
-            { key: "FREE_PARKING", label: "Free parking", icon: "car" },
-            { key: "PAID_PARKING", label: "Paid parking", icon: "car" },
-
-            { key: "SELF_CHECKIN", label: "Self check-in", icon: "key" },
-            { key: "DOORMAN", label: "Doorman / lobby", icon: "bell" },
-            { key: "ELEVATOR", label: "Elevator", icon: "arrow-up-down" },
-
-            { key: "PET_FRIENDLY", label: "Pet-friendly", icon: "paw-print" },
-            { key: "SMOKING_AREA", label: "Smoking area", icon: "cigarette" },
-            { key: "FAMILY_FRIENDLY", label: "Family-friendly", icon: "baby" },
-
-            { key: "WHEELCHAIR", label: "Wheelchair accessible", icon: "accessibility" },
-            { key: "STAIRS_ONLY", label: "Stairs only", icon: "arrow-up" },
-
-            { key: "NEAR_TRANSIT", label: "Near transit", icon: "train" },
-            { key: "NEAR_MALL", label: "Near mall", icon: "shopping-bag" },
-            { key: "NEAR_SCHOOL", label: "Near school", icon: "graduation-cap" },
-            { key: "NEAR_HOSPITAL", label: "Near hospital", icon: "heart-pulse" },
-            { key: "NEAR_GROCERIES", label: "Near groceries", icon: "shopping-cart" },
-
-            { key: "QUIET_AREA", label: "Quiet area", icon: "volume-x" },
-            { key: "GREAT_VIEW", label: "Great view", icon: "binoculars" },
-            { key: "CITY_VIEW", label: "City view", icon: "building" },
-            { key: "PARK_VIEW", label: "Park view", icon: "trees" },
-
-
-            { key: "EXTRA_STORAGE", label: "Extra storage", icon: "archive" },
-            { key: "LONG_STAY", label: "Long-stay friendly", icon: "calendar-days" },
-            { key: "SHORT_STAY", label: "Short-stay friendly", icon: "clock" },
-
-            { key: "EVENT_OK", label: "Events allowed", icon: "sparkles" },
-            { key: "COOKING_ALLOWED", label: "Cooking allowed", icon: "utensils-crossed" },
-            { key: "LAUNDRY_AREA", label: "Laundry area", icon: "shirt" },
-            { key: "WATER_REFILL", label: "Water refill nearby", icon: "droplet" }
+            "Swimming pool",
+            "Gym",
+            "Basketball court",
+            "Playground",
+            "Garden",
+            "Rooftop access",
+            "BBQ area",
+            "Co-working space",
+            "Function room"
         ],
 
         safety: [
-            { key: "SECURITY_GUARD", label: "Security / guard", icon: "shield" },
-            { key: "CCTV_OUTSIDE", label: "CCTV outside", icon: "camera" },
-            { key: "CCTV_COMMON", label: "CCTV common areas", icon: "camera" },
-            { key: "GATED", label: "Gated property", icon: "shield-check" },
-            { key: "SMART_LOCK", label: "Smart lock", icon: "lock" },
-            { key: "KEYPAD", label: "Keypad entry", icon: "keyboard" },
-            { key: "LOCKBOX", label: "Lockbox", icon: "package" },
-
-            { key: "SMOKE_ALARM", label: "Smoke alarm", icon: "bell" },
-            { key: "CO_ALARM", label: "CO alarm", icon: "alert-triangle" },
-            { key: "FIRE_EXT", label: "Fire extinguisher", icon: "flame" },
-            { key: "FIRST_AID", label: "First aid kit", icon: "heart-pulse" },
-            { key: "EMERGENCY_EXIT", label: "Emergency exit", icon: "door-open" },
-            { key: "FIRE_ESCAPE_PLAN", label: "Fire escape plan", icon: "map" },
-
-            { key: "WELL_LIT", label: "Well-lit entrance", icon: "sun" },
-            { key: "SAFEBOX", label: "Safe", icon: "package" },
-            { key: "WINDOW_GRILLS", label: "Window grills", icon: "grid-3x3" },
-            { key: "DOOR_CHAIN", label: "Door chain", icon: "link" },
-
-            { key: "NO_WEAPONS", label: "No weapons on property", icon: "ban" },
-            { key: "NO_ILLEGAL", label: "No illegal activities", icon: "ban" },
-
-            { key: "LIFEGUARD", label: "Lifeguard (if pool)", icon: "life-buoy" },
-            { key: "POOL_FENCE", label: "Pool fence", icon: "grid-3x3" },
-
-            { key: "CHILD_SAFETY", label: "Child-safe furniture", icon: "baby" },
-            { key: "STAIR_GATES", label: "Stair gates", icon: "grid-3x3" },
-
-            { key: "PEST_CONTROL", label: "Pest control", icon: "bug" },
-            { key: "EARTHQUAKE_KIT", label: "Emergency kit", icon: "backpack" },
-            { key: "EVAC_ROUTE", label: "Evacuation route info", icon: "route" },
-
-            { key: "CONTACT_INFO", label: "Emergency contacts posted", icon: "phone" },
-            { key: "BUILDING_RULES", label: "Building rules available", icon: "file-text" },
-            { key: "CHECKIN_ID", label: "Check-in ID policy", icon: "badge-check" },
-
-            { key: "POWER_SURGE", label: "Surge protector", icon: "zap" },
-            { key: "GENERATOR", label: "Generator", icon: "battery" },
-            { key: "WATER_SUPPLY", label: "Emergency water supply", icon: "droplet" }
+            "24/7 security",
+            "CCTV",
+            "Fire extinguisher",
+            "Smoke detector",
+            "First aid kit",
+            "Gated property",
+            "Secure parking",
+            "Elevator",
+            "Backup generator"
         ]
     };
 
-    const ICON_FALLBACK = {
-        router: "wifi",
-        "shield-check": "shield",
-        "tv-2": "tv",
-        "spray-can": "spray-can",
-        table: "grid-2x2",
-        trees: "leaf"
+    // Use safe Lucide names only
+    const DEFAULT_ICON = "sparkles";
+
+    const LUCIDE_MAP = {
+        "Air conditioning": "wind",
+        "Electric fan": "fan",
+        "Refrigerator": "refrigerator",
+        "Microwave": "microwave",
+        "Rice cooker": "cooking-pot",
+        "Electric kettle": "kettle",
+        "Induction stove": "flame",
+        "Washing machine": "washing-machine",
+        "Water heater": "flame",
+        "TV": "tv",
+        "WiFi": "wifi",
+
+        "Swimming pool": "waves",
+        "Gym": "dumbbell",
+        "Basketball court": "dribbble",
+        "Playground": "trees",
+        "Garden": "leaf",
+        "Rooftop access": "building-2",
+        "BBQ area": "flame-kindling",
+        "Co-working space": "laptop",
+        "Function room": "door-open",
+
+        "24/7 security": "shield",
+        "CCTV": "cctv",
+        "Fire extinguisher": "shield-alert",
+        "Smoke detector": "siren",
+        "First aid kit": "briefcase-medical",
+        "Gated property": "gate",
+        "Secure parking": "parking-circle",
+        "Elevator": "arrow-up-down",
+        "Backup generator": "battery-charging"
     };
+
+    const ICON_ANIM_CLASSES = [
+        "anim-wifi",
+        "anim-wind",
+        "anim-water",
+        "anim-bounce",
+        "anim-sway",
+        "anim-rise",
+        "anim-shield",
+        "anim-car",
+        "anim-fire",
+        "anim-spin",
+        "anim-default"
+    ];
 
     const tabs = Array.from(document.querySelectorAll(".amenTab"));
     const indicator = document.getElementById("amenIndicator");
@@ -163,7 +115,6 @@ window.Step5Init = function Step5Init({ nextBtn }) {
     const titleEl = document.getElementById("amenTitle");
     const hintEl = document.getElementById("amenHint");
     const countEl = document.getElementById("amenCount");
-
     const searchInput = document.getElementById("amenSearchInput");
     const searchClear = document.getElementById("amenSearchClear");
 
@@ -175,11 +126,174 @@ window.Step5Init = function Step5Init({ nextBtn }) {
     let activeTab = "appliances";
     let searchQ = "";
 
-    const norm = (s) => (s || "").toLowerCase().trim();
+    const norm = (s) => String(s || "").toLowerCase().trim();
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, (m) => {
+            const map = {
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                "\"": "&quot;",
+                "'": "&#39;"
+            };
+            return map[m] || m;
+        });
+    }
+
+    function toAmenityItem(label, index) {
+        return {
+            key: label,
+            label,
+            order: index
+        };
+    }
+
+    function findKeywordIcon(label) {
+        const l = norm(label);
+
+        if (!l) return "";
+
+        if (l.includes("wifi") || l.includes("internet")) return "wifi";
+        if (l.includes("air") || l.includes("fan") || l.includes("cool")) return "wind";
+        if (l.includes("refrigerator") || l.includes("fridge")) return "refrigerator";
+        if (l.includes("microwave")) return "microwave";
+        if (l.includes("rice") || l.includes("cook")) return "cooking-pot";
+        if (l.includes("kettle")) return "kettle";
+        if (l.includes("stove") || l.includes("bbq") || l.includes("heat")) return "flame";
+        if (l.includes("wash") || l.includes("laundry")) return "washing-machine";
+        if (l.includes("tv") || l.includes("television")) return "tv";
+
+        if (l.includes("pool") || l.includes("water")) return "waves";
+        if (l.includes("gym") || l.includes("fitness")) return "dumbbell";
+        if (l.includes("basketball") || l.includes("court")) return "dribbble";
+        if (l.includes("play")) return "trees";
+        if (l.includes("garden") || l.includes("plant")) return "leaf";
+        if (l.includes("roof") || l.includes("building")) return "building-2";
+        if (l.includes("room") || l.includes("hall")) return "door-open";
+        if (l.includes("work") || l.includes("laptop")) return "laptop";
+
+        if (l.includes("security") || l.includes("shield")) return "shield";
+        if (l.includes("camera") || l.includes("cctv")) return "cctv";
+        if (l.includes("fire")) return "shield-alert";
+        if (l.includes("smoke") || l.includes("alarm")) return "siren";
+        if (l.includes("first aid") || l.includes("medical") || l.includes("aid")) return "briefcase-medical";
+        if (l.includes("gate") || l.includes("door")) return "gate";
+        if (l.includes("parking") || l.includes("car")) return "parking-circle";
+        if (l.includes("elevator") || l.includes("lift")) return "arrow-up-down";
+        if (l.includes("generator") || l.includes("battery") || l.includes("power")) return "battery-charging";
+
+        return "";
+    }
+
+    function getAmenityIcon(label) {
+        return LUCIDE_MAP[label] || findKeywordIcon(label) || DEFAULT_ICON;
+    }
+
+    function safeCreateLucideIcons() {
+        try {
+            if (window.lucide && typeof window.lucide.createIcons === "function") {
+                window.lucide.createIcons();
+            }
+        } catch (err) {
+            console.error("[Step5] lucide.createIcons failed:", err);
+        }
+    }
+
+    function getIconAnimClass(amenityKey, iconName) {
+        const key = norm(amenityKey);
+        const icon = norm(iconName);
+
+        if (icon.includes("wifi")) return "anim-wifi";
+
+        if (icon.includes("wind") || icon.includes("fan")) return "anim-wind";
+
+        if (icon.includes("waves")) return "anim-water";
+
+        if (
+            icon.includes("dumbbell") ||
+            icon.includes("dribbble") ||
+            icon.includes("trees")
+        ) {
+            return "anim-bounce";
+        }
+
+        if (icon.includes("leaf")) return "anim-sway";
+
+        if (
+            icon.includes("building") ||
+            icon.includes("door-open") ||
+            icon.includes("arrow-up-down")
+        ) {
+            return "anim-rise";
+        }
+
+        if (
+            icon.includes("shield") ||
+            icon.includes("cctv") ||
+            icon.includes("siren") ||
+            icon.includes("briefcase-medical") ||
+            icon.includes("gate")
+        ) {
+            return "anim-shield";
+        }
+
+        if (icon.includes("parking") || icon.includes("car")) {
+            return "anim-car";
+        }
+
+        if (
+            icon.includes("flame") ||
+            icon.includes("battery-charging") ||
+            icon.includes("kettle") ||
+            icon.includes("cooking-pot")
+        ) {
+            return "anim-fire";
+        }
+
+        if (icon.includes("washing-machine")) {
+            return "anim-spin";
+        }
+
+        // fallback with some label hints
+        if (key.includes("wifi")) return "anim-wifi";
+        if (key.includes("air") || key.includes("fan")) return "anim-wind";
+        if (key.includes("pool")) return "anim-water";
+
+        return "anim-default";
+    }
+
+    function triggerAmenAnim(btn) {
+        if (!btn) return;
+
+        const icon = btn.dataset.icon || "";
+        const iconEl = btn.querySelector(".card-ic");
+
+        btn.classList.remove("animRun");
+        void btn.offsetWidth;
+        btn.classList.add("animRun");
+
+        if (iconEl) {
+            iconEl.classList.remove(...ICON_ANIM_CLASSES);
+            void iconEl.offsetWidth;
+
+            const anim = getIconAnimClass(btn.dataset.key || "", icon);
+            iconEl.classList.add(anim);
+
+            setTimeout(() => {
+                iconEl.classList.remove(anim);
+            }, 220);
+        }
+
+        setTimeout(() => {
+            btn.classList.remove("animRun");
+        }, 220);
+    }
 
     function readAmenDraft() {
         const d = ListingStore.readDraft();
         const a = d.amenities || { appliances: [], activities: [], safety: [] };
+
         return {
             appliances: Array.isArray(a.appliances) ? a.appliances : [],
             activities: Array.isArray(a.activities) ? a.activities : [],
@@ -197,9 +311,11 @@ window.Step5Init = function Step5Init({ nextBtn }) {
 
     function setIndicatorTo(btn) {
         if (!indicator || !btn) return;
+
         const wrap = btn.parentElement.getBoundingClientRect();
         const r = btn.getBoundingClientRect();
         const left = r.left - wrap.left;
+
         indicator.style.width = `${r.width}px`;
         indicator.style.transform = `translateX(${left}px)`;
     }
@@ -211,18 +327,20 @@ window.Step5Init = function Step5Init({ nextBtn }) {
         if (countEl) countEl.textContent = String(total);
         if (nextBtn) nextBtn.disabled = total < 1;
 
-        SidePanel.setTips({
-            selectedLabel: "Amenities",
-            tips: [
-                "Add essentials like Wi-Fi and aircon to match guest expectations.",
-                "Safety items increase trust and approval chances.",
-                "You can always update amenities later."
-            ]
-        });
-        SidePanel.refresh();
+        if (SidePanel) {
+            SidePanel.setTips({
+                selectedLabel: "Amenities",
+                tips: [
+                    "Add essentials like Wi-Fi and aircon to match guest expectations.",
+                    "Safety items increase trust and approval chances.",
+                    "You can always update amenities later."
+                ]
+            });
+            SidePanel.refresh();
+        }
     }
 
-    function renderTab(tabKey) {
+    function renderTab(tabKey, animateKey = "") {
         activeTab = tabKey;
 
         tabs.forEach((t) => {
@@ -234,72 +352,110 @@ window.Step5Init = function Step5Init({ nextBtn }) {
         if (titleEl) titleEl.textContent = TAB_META[tabKey].title;
         if (hintEl) hintEl.textContent = TAB_META[tabKey].hint;
 
-        const a = readAmenDraft();
-        const selectedSet = new Set(a[tabKey]);
+        const draft = readAmenDraft();
+        const selectedSet = new Set(draft[tabKey]);
 
-        const list = (OPTIONS[tabKey] || []).filter((o) => {
-            if (!searchQ) return true;
-            return norm(o.label).includes(searchQ);
-        });
+        const list = (OPTIONS[tabKey] || [])
+            .map((label, index) => toAmenityItem(label, index))
+            .filter((item) => !searchQ || norm(item.label).includes(searchQ))
+            .sort((a, b) => {
+                const aSel = selectedSet.has(a.key) ? 1 : 0;
+                const bSel = selectedSet.has(b.key) ? 1 : 0;
 
-        grid.innerHTML = list.map((o) => {
-            const icon = ICON_FALLBACK[o.icon] || o.icon;
-            const sel = selectedSet.has(o.key) ? "selected" : "";
-            return `
-        <button class="card amenCard ${sel}" type="button" data-key="${o.key}">
-          <i class="card-ic" data-lucide="${icon}"></i>
-          <div class="label">${o.label}</div>
-        </button>
-      `;
-        }).join("") || `
-      <div class="amenEmpty">
-        <div class="amenEmptyTitle">No results</div>
-        <div class="amenEmptySub">Try a different keyword.</div>
-      </div>
-    `;
-
-        if (window.lucide?.createIcons) window.lucide.createIcons();
-
-        grid.querySelectorAll(".amenCard").forEach((btn) => {
-            btn.addEventListener("click", () => {
-                const key = btn.dataset.key;
-                const curr = readAmenDraft();
-                const set = new Set(curr[activeTab]);
-
-                if (set.has(key)) set.delete(key);
-                else set.add(key);
-
-                curr[activeTab] = Array.from(set);
-                saveAmenDraft(curr);
-
-                btn.classList.toggle("selected");
-                updateCountAndNext();
+                if (aSel !== bSel) return bSel - aSel;
+                return a.order - b.order;
             });
-        });
+
+        grid.innerHTML =
+            list.map((item) => {
+                const isSelected = selectedSet.has(item.key);
+                const iconName = getAmenityIcon(item.label);
+
+                return `
+<button
+    class="card amenCard${isSelected ? " selected" : ""}"
+    type="button"
+    data-key="${escapeHtml(item.key)}"
+    data-icon="${escapeHtml(iconName)}"
+    aria-pressed="${isSelected ? "true" : "false"}"
+>
+    <span class="amenIconWrap">
+        <i data-lucide="${iconName}" class="card-ic amen-lucide" aria-hidden="true"></i>
+    </span>
+    <span class="label">${escapeHtml(item.label)}</span>
+</button>
+`;
+            }).join("") || `
+<div class="amenEmpty">
+    <div class="amenEmptyTitle">No results</div>
+    <div class="amenEmptySub">Try a different keyword.</div>
+</div>
+`;
+
+        safeCreateLucideIcons();
 
         const activeBtn = tabs.find((t) => t.dataset.tab === tabKey);
         setIndicatorTo(activeBtn);
-
         updateCountAndNext();
+
+        if (animateKey) {
+            const nextBtnEl = Array.from(grid.querySelectorAll(".amenCard"))
+                .find((card) => card.dataset.key === animateKey);
+
+            if (nextBtnEl) triggerAmenAnim(nextBtnEl);
+        }
     }
 
-    function setSearch(q) {
-        searchQ = norm(q);
-        if (searchInput) searchInput.value = q;
-        if (searchClear) searchClear.style.opacity = searchQ ? "1" : ".35";
+    function setSearch(value) {
+        searchQ = norm(value);
+
+        if (searchInput) searchInput.value = value;
+        if (searchClear) {
+            searchClear.style.opacity = searchQ ? "1" : ".35";
+            searchClear.style.pointerEvents = searchQ ? "auto" : "none";
+        }
+
         renderTab(activeTab);
     }
 
-    // bind search
-    if (searchInput) searchInput.addEventListener("input", (e) => setSearch(e.target.value));
-    if (searchClear) searchClear.addEventListener("click", () => setSearch(""));
+    grid.addEventListener("click", (e) => {
+        const btn = e.target.closest(".amenCard");
+        if (!btn || !grid.contains(btn)) return;
 
-    // tab clicks
-    tabs.forEach((btn) => btn.addEventListener("click", () => renderTab(btn.dataset.tab)));
+        const key = btn.dataset.key;
+        const draft = readAmenDraft();
+        const set = new Set(draft[activeTab]);
 
-    // first paint
+        if (set.has(key)) set.delete(key);
+        else set.add(key);
+
+        draft[activeTab] = Array.from(set);
+        saveAmenDraft(draft);
+
+        renderTab(activeTab, key);
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+            setSearch(e.target.value);
+        });
+    }
+
+    if (searchClear) {
+        searchClear.addEventListener("click", () => {
+            setSearch("");
+            searchInput.focus();
+        });
+
+        searchClear.style.opacity = ".35";
+        searchClear.style.pointerEvents = "none";
+    }
+
+    tabs.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            renderTab(btn.dataset.tab);
+        });
+    });
+
     renderTab(activeTab);
-
-    // ✅ Sync Step 5 to backend on Next
-
 };

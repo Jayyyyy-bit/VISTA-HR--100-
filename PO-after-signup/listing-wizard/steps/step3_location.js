@@ -1,4 +1,6 @@
 // steps/step3_location.js
+// Location data powered by PSGC API (Philippine Standard Geographic Code)
+// Source: https://psgc.gitlab.io/api/ — Official PSA / DICT data, no API key required
 console.log("[Step3] init loaded ✅");
 
 window.Step3Init = function Step3Init() {
@@ -324,10 +326,47 @@ window.Step3Init = function Step3Init() {
     }
 
     async function fetchBarangays(city, q) {
-        const url = `${API_BASE}/locations/barangays?city=${encodeURIComponent(city)}&q=${encodeURIComponent(q || "")}`;
-        const res = await fetch(url, { cache: "no-store" });
-        const data = await res.json().catch(() => ({}));
-        return Array.isArray(data?.barangays) ? data.barangays : [];
+        try {
+            // Get city code from our map (populated during loadCities)
+            const cityCode = cityCodeMap[city];
+            if (!cityCode) {
+                // City code not in map yet — fall back to backend
+                throw new Error("City code not found for: " + city);
+            }
+
+            // Use cached barangays for this city if available
+            if (!psgcCache.barangays[cityCode]) {
+                const res = await fetch(
+                    `https://psgc.gitlab.io/api/cities-municipalities/${cityCode}/barangays/`,
+                    { cache: "force-cache" }
+                );
+                if (!res.ok) throw new Error("PSGC barangays error: " + res.status);
+
+                const data = await res.json();
+                // Sort and store
+                psgcCache.barangays[cityCode] = data
+                    .map(b => b.name)
+                    .sort((a, b) => a.localeCompare(b));
+                console.log("[Step3] PSGC: loaded", psgcCache.barangays[cityCode].length, "barangays for", city);
+            }
+
+            const allBrgy = psgcCache.barangays[cityCode];
+
+            // Client-side filter by query
+            if (!q || !q.trim()) return allBrgy.slice(0, 30); // show first 30 if no query
+            const qLow = q.toLowerCase().trim();
+            return allBrgy.filter(b => b.toLowerCase().includes(qLow)).slice(0, 20);
+
+        } catch (e) {
+            console.warn("[Step3] PSGC barangays failed, falling back to backend", e);
+            // Graceful fallback to original backend endpoint
+            try {
+                const url = `${API_BASE}/locations/barangays?city=${encodeURIComponent(city)}&q=${encodeURIComponent(q || "")}`;
+                const res = await fetch(url, { cache: "no-store" });
+                const data = await res.json().catch(() => ({}));
+                return Array.isArray(data?.barangays) ? data.barangays : [];
+            } catch { return []; }
+        }
     }
 
     function debouncedBarangaySuggest({ force = false } = {}) {
@@ -571,6 +610,11 @@ window.Step3Init = function Step3Init() {
 
         paintFromDraft();
         ensureMap();
+
+        // Invalidate map size multiple times — needed because the full-bleed
+        // layout takes a frame or two to settle after CSS applies.
+        setTimeout(() => map?.invalidateSize?.(), 100);
+        setTimeout(() => map?.invalidateSize?.(), 400);
 
         const loc = readLocFromDraft();
         if (Number.isFinite(loc?.lat) && Number.isFinite(loc?.lng)) {

@@ -8,10 +8,12 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
+        rel="stylesheet">
 
     <!-- Use your local lucide (since unpkg sometimes 404s in your setup) -->
-    <script src="/PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
+    <script src="../PO-after-signup/listing-wizard/vendor/lucide.min.js"></script>
 
     <link rel="stylesheet" href="login.css" />
 </head>
@@ -31,11 +33,7 @@
             <span class="brand-text">VISTA<span>-HR</span></span>
         </div>
 
-        <div class="top-actions">
-            <button class="chip" type="button" id="goSignupBtn">
-                Create account
-            </button>
-        </div>
+
     </header>
 
     <main class="wrap">
@@ -45,31 +43,19 @@
                     <i data-lucide="sparkles"></i>
                     Welcome back
                 </div>
-                <h1 class="title">Sign in</h1>
-                <p class="sub">Choose your role and continue to VISTA-HR.</p>
+                <h1 class="title">Sign <em>in</em></h1>
+                <p class="sub">Welcome back. Enter your details to continue.</p>
             </div>
 
             <!-- Role tabs -->
-            <div class="tabs" role="tablist" aria-label="Role tabs">
-                <button class="tab isActive" id="tabOwner" type="button" role="tab" aria-selected="true"
-                    data-role="OWNER">
-                    <i data-lucide="building-2"></i>
-                    Property owner
-                </button>
-                <button class="tab" id="tabResident" type="button" role="tab" aria-selected="false"
-                    data-role="RESIDENT">
-                    <i data-lucide="home"></i>
-                    Resident
-                </button>
-                <span class="tabIndicator" id="tabIndicator" aria-hidden="true"></span>
-            </div>
+
 
             <form class="form" id="loginForm" autocomplete="on">
                 <div class="field">
                     <label>Email</label>
                     <div class="inputWrap">
                         <i class="inIc" data-lucide="mail"></i>
-                        <input id="email" type="email" placeholder="you@email.com" required />
+                        <input id="email" name="email" type="email" ... />
                     </div>
                 </div>
 
@@ -77,7 +63,7 @@
                     <label>Password</label>
                     <div class="inputWrap">
                         <i class="inIc" data-lucide="lock"></i>
-                        <input id="password" type="password" placeholder="••••••••" required />
+                        <input id="password" name="password" type="password" ... />
                         <button class="ghostIcon" type="button" id="togglePw" aria-label="Show password">
                             <i data-lucide="eye"></i>
                         </button>
@@ -108,10 +94,142 @@
         </section>
     </main>
 
-    <script src="login.js"></script>
+
+    <!-- FORGOT PASSWORD MODAL — Meta-style -->
+    <div class="fp-overlay" id="fpOverlay" hidden></div>
+    <div class="fp-modal" id="fpModal" hidden role="dialog" aria-modal="true">
+
+        <!-- Step 1: Enter email -->
+        <div class="fp-step" id="fpStep1">
+            <button class="fp-back-icon" id="fpClose1" type="button"><i data-lucide="x"></i></button>
+            <div class="fp-head">
+                <h2 class="fp-title">Find your account</h2>
+                <p class="fp-sub">Enter your email address to search for your account.</p>
+            </div>
+            <div class="fp-field">
+                <input type="email" id="fpEmail" class="fp-input" placeholder="Email address" autocomplete="email">
+            </div>
+            <p class="fp-err" id="fpErr1" hidden></p>
+            <div class="fp-actions">
+                <button class="fp-cancel" id="fpCancel1" type="button">Cancel</button>
+                <button class="fp-submit" id="fpSearch" type="button">
+                    <span id="fpSearchLabel">Search</span>
+                    <span class="fp-spin" id="fpSpin1" hidden></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: "Is this you?" confirmation (Meta-style) -->
+        <div class="fp-step" id="fpStep2" hidden>
+            <button class="fp-back-icon" id="fpBack2" type="button"><i data-lucide="arrow-left"></i></button>
+            <div class="fp-head">
+                <h2 class="fp-title">Is this your account?</h2>
+                <p class="fp-sub">We found an account matching that email.</p>
+            </div>
+            <div class="fp-account-card" id="fpAccountCard">
+                <div class="fp-account-av" id="fpAccountAv">?</div>
+                <div class="fp-account-info">
+                    <div class="fp-account-name" id="fpAccountName"></div>
+                    <div class="fp-account-role" id="fpAccountRole"></div>
+                </div>
+            </div>
+            <div class="fp-send-options">
+                <p class="fp-send-title">Send reset code to:</p>
+                <label class="fp-option-row">
+                    <div class="fp-option-icon"><i data-lucide="mail"></i></div>
+                    <div class="fp-option-info">
+                        <span class="fp-option-label">Email</span>
+                        <span class="fp-option-masked" id="fpMaskedEmail"></span>
+                    </div>
+                    <input type="radio" name="fpSendMethod" value="email" checked class="fp-radio">
+                </label>
+            </div>
+            <p class="fp-not-you">Not you? <button class="fp-link-btn" id="fpNotYou" type="button">Search again</button>
+            </p>
+            <div class="fp-actions">
+                <button class="fp-cancel" id="fpCancel2" type="button">Cancel</button>
+                <button class="fp-submit" id="fpSendOtp" type="button">
+                    <span id="fpSendOtpLabel">Continue</span>
+                    <span class="fp-spin" id="fpSpin2" hidden></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: OTP input -->
+        <div class="fp-step" id="fpStep3" hidden>
+            <button class="fp-back-icon" id="fpBack3" type="button"><i data-lucide="arrow-left"></i></button>
+            <div class="fp-head">
+                <h2 class="fp-title">Enter reset code</h2>
+                <p class="fp-sub" id="fpStep3Sub">We sent a 6-digit code to your email.</p>
+            </div>
+            <div class="fp-otp-row">
+                <input class="fp-otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"
+                    autocomplete="one-time-code">
+                <input class="fp-otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                <input class="fp-otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                <input class="fp-otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                <input class="fp-otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                <input class="fp-otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+            </div>
+            <p class="fp-err" id="fpErr3" hidden></p>
+            <div class="fp-resend-row">
+                <span class="fp-resend-label" id="fpResendLabel" hidden>Didn't receive it?</span>
+                <button class="fp-link-btn" id="fpResend" type="button" hidden>Resend code</button>
+                <span class="fp-countdown" id="fpCountdown"></span>
+            </div>
+            <div class="fp-actions">
+                <button class="fp-cancel" id="fpCancel3" type="button">Cancel</button>
+                <button class="fp-submit" id="fpVerify" type="button" disabled>
+                    <span id="fpVerifyLabel">Continue</span>
+                    <span class="fp-spin" id="fpSpin3" hidden></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: New password -->
+        <div class="fp-step" id="fpStep4" hidden>
+            <div class="fp-head">
+                <h2 class="fp-title">Create new password</h2>
+                <p class="fp-sub">Choose a strong password — minimum 8 characters.</p>
+            </div>
+            <div class="fp-field">
+                <div class="fp-pw-wrap">
+                    <input type="password" id="fpNewPw" class="fp-input" placeholder="New password"
+                        autocomplete="new-password">
+                    <button class="fp-eye" id="fpEye" type="button"><i data-lucide="eye"></i></button>
+                </div>
+            </div>
+            <div class="fp-field">
+                <input type="password" id="fpConfirmPw" class="fp-input" placeholder="Confirm new password"
+                    autocomplete="new-password">
+            </div>
+            <p class="fp-err" id="fpErr4" hidden></p>
+            <div class="fp-actions">
+                <button class="fp-cancel" id="fpCancel4" type="button">Cancel</button>
+                <button class="fp-submit" id="fpReset" type="button">
+                    <span id="fpResetLabel">Reset password</span>
+                    <span class="fp-spin" id="fpSpin4" hidden></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Success -->
+        <div class="fp-step" id="fpStep5" hidden>
+            <div class="fp-success">
+                <div class="fp-success-ic"><i data-lucide="check-circle-2"></i></div>
+                <h2 class="fp-title">Password reset!</h2>
+                <p class="fp-sub">Your password has been updated successfully.</p>
+                <button class="fp-submit full" id="fpDone" type="button">Log in now</button>
+            </div>
+        </div>
+
+    </div>
+
     <script>
         if (window.lucide?.createIcons) window.lucide.createIcons();
     </script>
+    <script src="sessionGuard.js"></script>
+    <script src="login.js"></script>
 </body>
 
 </html>
