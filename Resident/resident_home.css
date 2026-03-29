@@ -63,9 +63,9 @@ body {
 }
 
 .topbar-inner {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 24px;
+    max-width: none;
+    width: 100%;
+    padding: 0 48px;
     height: 100%;
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -192,6 +192,12 @@ body {
 .topbar-right {
     display: flex;
     align-items: center;
+    gap: 10px;
+}
+
+/* profile-wrap: positions the dropdown relative to the avatar button */
+.profile-wrap {
+    position: relative;
 }
 
 .user-menu-btn {
@@ -234,33 +240,38 @@ body {
 /* User dropdown */
 .user-dropdown {
     position: absolute;
-    top: 72px;
-    right: 24px;
-    width: 230px;
+    top: calc(100% + 10px);
+    right: 0;
+    left: auto;
+    width: 240px;
     background: var(--white);
     border: 1px solid var(--ink-12);
     border-radius: var(--r-xl);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04), 0 12px 40px rgba(0, 0, 0, 0.13);
     padding: 8px;
-    z-index: 200;
-    display: none;
-    animation: dropIn 180ms var(--ease-o) both;
-}
+    z-index: 300;
 
-@keyframes dropIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px) scale(0.97);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+    /* Hidden state — use visibility+opacity+transform so CSS transitions work */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top right;
+    transition:
+        opacity 180ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+        visibility 0ms linear 180ms;
+    pointer-events: none;
 }
 
 .user-dropdown.open {
-    display: block;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    transition:
+        opacity 200ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+        visibility 0ms linear 0ms;
+    pointer-events: auto;
 }
 
 .ud-user {
@@ -351,7 +362,7 @@ body {
     height: var(--catbar-h);
     display: flex;
     align-items: center;
-    padding: 0 24px;
+    padding: 0 48px;
     gap: 12px;
 }
 
@@ -456,9 +467,8 @@ body {
    MAIN / ROWS
 ════════════════════ */
 .main {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 32px 24px 80px;
+    width: 100%;
+    padding: 32px 48px 80px;
 }
 
 /* ── Listing rows (Airbnb horizontal scroll) ── */
@@ -516,9 +526,9 @@ body {
     scrollbar-width: none;
     padding-bottom: 4px;
     /* so shadow shows */
-    margin: 0 -24px;
-    padding-left: 24px;
-    padding-right: 24px;
+    margin: 0 -48px;
+    padding-left: 48px;
+    padding-right: 48px;
 }
 
 .row-scroll::-webkit-scrollbar {
@@ -578,7 +588,7 @@ body {
 .lcard {
     flex-shrink: 0;
     scroll-snap-align: start;
-    width: 280px;
+    width: 300px;
     cursor: pointer;
 }
 
@@ -1871,7 +1881,13 @@ body {
     background: rgba(0, 0, 0, 0.45);
     z-index: 500;
     backdrop-filter: blur(3px);
-    animation: fadeIn 200ms ease both;
+}
+
+/* Never let display:flex or animation override the hidden attribute */
+.bm-overlay[hidden],
+.bm-modal[hidden] {
+    display: none !important;
+    animation: none !important;
 }
 
 .bm-modal {
@@ -1885,10 +1901,11 @@ body {
     z-index: 600;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
     overflow: hidden;
-    animation: modalIn 260ms var(--ease-o) both;
     display: flex;
     flex-direction: column;
     max-height: calc(100dvh - 40px);
+    /* Animation only runs when the modal becomes visible, not on page load */
+    animation: modalIn 260ms var(--ease-o) both;
 }
 
 @keyframes modalIn {
@@ -2289,4 +2306,255 @@ body {
     width: 14px;
     height: 14px;
     stroke-width: 2.5;
+}
+
+.notif-wrap {
+    position: relative;
+}
+
+.notif-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    position: relative;
+}
+
+.notif-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.notif-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 999px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    padding: 0 4px;
+}
+
+.notif-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 320px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: 999;
+    overflow: hidden;
+}
+
+.notif-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.notif-mark-read {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1B3F6E;
+}
+
+.notif-list {
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.notif-item {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 13px;
+}
+
+.notif-item.unread {
+    background: #f0f4ff;
+}
+
+.notif-icon {
+    font-size: 18px;
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+.notif-title {
+    font-weight: 700;
+    color: #111;
+    margin: 0 0 2px;
+}
+
+.notif-title.read {
+    font-weight: 400;
+}
+
+.notif-body {
+    color: #666;
+    margin: 0 0 3px;
+    line-height: 1.4;
+}
+
+.notif-time {
+    color: #aaa;
+    font-size: 11px;
+}
+
+.notif-empty {
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+    padding: 28px 0;
+}
+
+/* ── Stronger card shadows ───────────────────────────── */
+/* lcard photo shadow — depth on white backgrounds */
+.lcard-photo {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .08), 0 8px 24px rgba(0, 0, 0, .10);
+}
+
+.lcard:hover .lcard-photo {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .10), 0 16px 40px rgba(0, 0, 0, .14);
+}
+
+/* ── Header shadow ───────────────────────────────────── */
+.topbar {
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .06), 0 4px 20px rgba(0, 0, 0, .07) !important;
+}
+
+
+/* ── Listing Detail Drawer — Photo Gallery ───────────────────── */
+.dd-gallery {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+.dd-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 120ms ease;
+}
+
+.dd-gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+    transition: background 120ms, transform 120ms;
+    color: #111;
+}
+
+.dd-gallery-nav:hover {
+    background: #fff;
+    transform: translateY(-50%) scale(1.08);
+}
+
+.dd-gallery-nav.prev {
+    left: 10px;
+}
+
+.dd-gallery-nav.next {
+    right: 10px;
+}
+
+.dd-gallery-nav svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5;
+}
+
+.dd-gallery-counter {
+    position: absolute;
+    bottom: 56px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    pointer-events: none;
+}
+
+.dd-gallery-strip {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 4px;
+    padding: 8px 10px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.dd-gallery-strip::-webkit-scrollbar {
+    display: none;
+}
+
+.dd-thumb {
+    flex-shrink: 0;
+    width: 48px;
+    height: 36px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    background: none;
+    transition: border-color 120ms, transform 120ms;
+    opacity: 0.65;
+}
+
+.dd-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.dd-thumb.active {
+    border-color: #fff;
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.dd-thumb:hover {
+    opacity: 0.9;
 }

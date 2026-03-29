@@ -218,3 +218,28 @@ def send_student_rejected_email(to: str, reason: str, name: str = "") -> None:
     html = _base_template("Student Verification Update — VISTA-HR", body)
     text = f"{greeting}\n\nYour student verification was not approved.\nReason: {reason}"
     send_email(to, "Action Required — Student Verification", html, text)
+
+def send_password_reset_email(to: str, otp: str, name: str = "") -> None:
+    greeting = f"Hi {name}," if name else "Hi,"
+    body = f"""
+      <p style="margin:0 0 8px;font-size:15px;color:#111;font-weight:600;">{greeting}</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;">
+        We received a request to reset your VISTA-HR password.
+        Use the code below — it expires in <strong>10 minutes</strong>.
+      </p>
+      <div style="text-align:center;margin:0 0 28px;">
+        <span style="display:inline-block;font-size:36px;font-weight:900;
+                     letter-spacing:10px;color:#1B3F6E;background:#f0f4ff;
+                     padding:16px 32px;border-radius:12px;
+                     border:2px dashed #c7d7f5;">
+          {otp}
+        </span>
+      </div>
+      <p style="margin:0 0 16px;font-size:13px;color:#888;">
+        If you did not request a password reset, you can safely ignore this email.
+        Your password will not change.
+      </p>
+    """
+    html = _base_template("Password Reset — VISTA-HR", body)
+    text = f"{greeting}\n\nYour VISTA-HR password reset code is: {otp}\n\nExpires in 10 minutes."
+    send_email(to, "Reset Your VISTA-HR Password", html, text)

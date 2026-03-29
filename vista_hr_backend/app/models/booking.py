@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Enum
 from ..extensions import db
 
-BOOKING_STATUS = ("PENDING", "APPROVED", "REJECTED", "CANCELLED")
+BOOKING_STATUS = ("PENDING", "APPROVED", "ACTIVE", "COMPLETED", "REJECTED", "CANCELLED")
 
 class Booking(db.Model):
     __tablename__ = "bookings"
@@ -30,14 +30,20 @@ class Booking(db.Model):
     )
 
     move_in_date = db.Column(db.Date, nullable=True)
+    move_out_date = db.Column(db.Date, nullable=True)
     message = db.Column(db.Text, nullable=True)
 
     # Owner response note (optional)
     owner_note = db.Column(db.Text, nullable=True)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # Proof of payment — Cloudinary URL uploaded by resident
+    payment_proof_url = db.Column(db.String(500), nullable=True)
+    # True = owner confirmed payment received
+    payment_verified  = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
 
     # Relationships (lazy=True is fine for this scale)
@@ -65,8 +71,11 @@ class Booking(db.Model):
             "resident_email": resident.email if resident else None,
             "status": self.status,
             "move_in_date": self.move_in_date.isoformat() if self.move_in_date else None,
+            "move_out_date": self.move_out_date.isoformat() if self.move_out_date else None,
             "message": self.message,
             "owner_note": self.owner_note,
+            "payment_proof_url": self.payment_proof_url,
+            "payment_verified": bool(self.payment_verified),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             # Denormalized listing snapshot for easy display

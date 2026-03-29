@@ -107,7 +107,7 @@ def admin_list_kyc():
     if status_filter != "ALL":
         query = query.filter(User.kyc_status == status_filter)
 
-    owners = query.order_by(User.kyc_submitted_at.desc().nullslast()).all()
+    owners = query.order_by(User.kyc_submitted_at.desc()).all()
 
     result = []
     for u in owners:
@@ -132,7 +132,7 @@ def admin_list_kyc():
 @kyc_bp.post("/admin/kyc/<int:user_id>/approve")
 @require_role("ADMIN")
 def admin_kyc_approve(user_id: int):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return json_error("User not found", 404)
 
@@ -152,7 +152,7 @@ def admin_kyc_approve(user_id: int):
         return json_error("Database error", 500)
 
     try:
-        _send_async(send_kyc_approved_email(user.email, _name(user)))
+        _send_async(send_kyc_approved_email, user.email, _name(user))
     except Exception as e:
         pass  # non-fatal
 
@@ -162,7 +162,7 @@ def admin_kyc_approve(user_id: int):
 @kyc_bp.post("/admin/kyc/<int:user_id>/reject")
 @require_role("ADMIN")
 def admin_kyc_reject(user_id: int):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return json_error("User not found", 404)
 
@@ -185,7 +185,7 @@ def admin_kyc_reject(user_id: int):
         return json_error("Database error", 500)
 
     try:
-        _send_async(send_kyc_rejected_email(user.email, reason, _name(user)))
+        _send_async(send_kyc_rejected_email, user.email, reason, _name(user))
     except Exception:
         pass
 
@@ -261,7 +261,7 @@ def admin_list_students():
         # Only show residents who have submitted something
         query = query.filter(User.student_status != "NONE")
 
-    residents = query.order_by(User.student_submitted_at.desc().nullslast()).all()
+    residents = query.order_by(User.student_submitted_at.desc()).all()
 
     result = []
     for u in residents:
@@ -285,7 +285,7 @@ def admin_list_students():
 @kyc_bp.post("/admin/student/<int:user_id>/approve")
 @require_role("ADMIN")
 def admin_student_approve(user_id: int):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return json_error("User not found", 404)
 
@@ -305,7 +305,7 @@ def admin_student_approve(user_id: int):
         return json_error("Database error", 500)
 
     try:
-        _send_async(send_student_approved_email(user.email, _name(user)))
+        _send_async(send_student_approved_email, user.email, _name(user))
     except Exception:
         pass
 
@@ -315,7 +315,7 @@ def admin_student_approve(user_id: int):
 @kyc_bp.post("/admin/student/<int:user_id>/reject")
 @require_role("ADMIN")
 def admin_student_reject(user_id: int):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return json_error("User not found", 404)
 
@@ -338,7 +338,7 @@ def admin_student_reject(user_id: int):
         return json_error("Database error", 500)
 
     try:
-        _send_async(send_student_rejected_email(user.email, reason, _name(user)))
+        _send_async(send_student_rejected_email, user.email, reason, _name(user))
     except Exception:
         pass
 
@@ -357,7 +357,7 @@ def set_student_discount(listing_id: int):
     Body: { discount: 10 }   (integer 0-100, or null to remove)
     """
     user: User = g.current_user
-    listing = Listing.query.get(listing_id)
+    listing = db.session.get(Listing, listing_id)
 
     if not listing or listing.owner_id != user.id:
         return json_error("Listing not found", 404)

@@ -1,0 +1,763 @@
+/* Resident/my-bookings.css */
+[hidden] {
+    display: none !important;
+}
+
+:root {
+    --navy: #1B3F6E;
+    --navy-d: #0F2545;
+    --ink: #111827;
+    --ink-60: rgba(17, 24, 39, .6);
+    --ink-30: rgba(17, 24, 39, .3);
+    --line: #E5E7EB;
+    --bg: #F9FAFB;
+    --white: #FFFFFF;
+    --amber: #B45309;
+    --green: #15803d;
+    --red: #DC2626;
+
+    --font: 'DM Sans', system-ui, sans-serif;
+    --font-d: 'Fraunces', Georgia, serif;
+    --ease-o: cubic-bezier(.22, 1, .36, 1);
+    --r: 18px;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+/* ── Topbar ── */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, .92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    height: 64px;
+}
+
+.topbar-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+}
+
+.backBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--ink-60);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 10px;
+    transition: background 120ms, color 120ms;
+    width: fit-content;
+}
+
+.backBtn:hover {
+    background: var(--line);
+    color: var(--ink);
+}
+
+.backBtn svg {
+    width: 15px;
+    height: 15px;
+    stroke-width: 2.2;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+    justify-content: center;
+}
+
+.brandDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+    background: #C8872A;
+    flex-shrink: 0;
+}
+
+.topbar-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.avatarBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.avatarCircle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--navy), #4a90d9);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Page wrap ── */
+.pageWrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 36px 24px 80px;
+}
+
+.pageHeader {
+    margin-bottom: 28px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.pageTitle {
+    font-family: var(--font-d);
+    font-size: 34px;
+    font-weight: 300;
+    letter-spacing: -.03em;
+    color: var(--ink);
+    margin-bottom: 4px;
+    line-height: 1.1;
+}
+
+.pageSub {
+    font-size: 13px;
+    color: var(--ink-60);
+    font-weight: 500;
+}
+
+/* ── Filter tab bar ── */
+.filterBar {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 0;
+}
+
+.filterBar::-webkit-scrollbar {
+    display: none;
+}
+
+.filterTab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-60);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color 120ms, border-color 120ms;
+    flex-shrink: 0;
+}
+
+.filterTab:hover {
+    color: var(--ink);
+}
+
+.filterTab.active {
+    color: var(--navy);
+    border-bottom-color: var(--navy);
+}
+
+.tabCount {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* ── Loading skeleton ── */
+.skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.skeleton-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    animation: pulse 1.5s ease infinite;
+}
+
+.sk-img {
+    width: 88px;
+    height: 70px;
+    border-radius: 12px;
+    background: var(--line);
+    flex-shrink: 0;
+}
+
+.sk-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sk-line {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--line);
+}
+
+.sk-line.w60 {
+    width: 60%;
+}
+
+.sk-line.w40 {
+    width: 40%;
+}
+
+.sk-line.w30 {
+    width: 30%;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .55;
+    }
+}
+
+/* ── Booking card ── */
+.booking-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    overflow: hidden;
+    margin-bottom: 12px;
+    transition: box-shadow 160ms, transform 160ms var(--ease-o);
+    animation: fadeUp 240ms var(--ease-o) both;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.booking-card:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .08);
+}
+
+.bc-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 20px;
+}
+
+/* Listing thumbnail */
+.bc-thumb {
+    width: 88px;
+    height: 70px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--line);
+}
+
+.bc-thumb-placeholder {
+    width: 88px;
+    height: 70px;
+    border-radius: 12px;
+    background: var(--line);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-30);
+}
+
+.bc-thumb-placeholder svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.5;
+}
+
+.bc-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.bc-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.bc-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bc-loc {
+    font-size: 12px;
+    color: var(--ink-60);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.bc-loc svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+.bc-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.bc-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--ink-60);
+    font-weight: 500;
+}
+
+.bc-meta-item svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2;
+}
+
+.bc-price {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--navy);
+    flex-shrink: 0;
+}
+
+.bc-price span {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-60);
+}
+
+/* Status badge */
+.bc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.bc-status--pending {
+    background: rgba(180, 83, 9, .1);
+    color: var(--amber);
+    border: 1px solid rgba(180, 83, 9, .2);
+}
+
+.bc-status--approved {
+    background: rgba(21, 128, 61, .1);
+    color: var(--green);
+    border: 1px solid rgba(21, 128, 61, .2);
+}
+
+.bc-status--active {
+    background: rgba(27, 63, 110, .1);
+    color: var(--navy);
+    border: 1px solid rgba(27, 63, 110, .2);
+}
+
+.bc-status--completed {
+    background: rgba(17, 24, 39, .06);
+    color: var(--ink-60);
+    border: 1px solid var(--line);
+}
+
+.bc-status--rejected {
+    background: rgba(220, 38, 38, .08);
+    color: var(--red);
+    border: 1px solid rgba(220, 38, 38, .2);
+}
+
+.bc-status--cancelled {
+    background: rgba(17, 24, 39, .04);
+    color: var(--ink-30);
+    border: 1px solid var(--line);
+}
+
+/* Message block */
+.bc-message {
+    font-size: 12px;
+    color: var(--ink-60);
+    font-style: italic;
+    padding: 8px 12px;
+    margin: 0 20px 14px;
+    border-left: 3px solid var(--line);
+    border-radius: 0 8px 8px 0;
+    background: rgba(0, 0, 0, .02);
+    line-height: 1.6;
+}
+
+/* Owner note */
+.bc-owner-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-60);
+    padding: 8px 12px;
+    margin: 0 20px 14px;
+    background: rgba(21, 128, 61, .05);
+    border: 1px solid rgba(21, 128, 61, .15);
+    border-radius: 10px;
+    line-height: 1.6;
+}
+
+.bc-owner-note svg {
+    width: 13px;
+    height: 13px;
+    stroke-width: 2;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--green);
+}
+
+.bc-owner-note.rejected {
+    background: rgba(220, 38, 38, .05);
+    border-color: rgba(220, 38, 38, .15);
+}
+
+.bc-owner-note.rejected svg {
+    color: var(--red);
+}
+
+/* Action bar */
+.bc-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--bg);
+}
+
+.bc-timestamp {
+    font-size: 11px;
+    color: var(--ink-30);
+    font-weight: 500;
+}
+
+.bc-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: none;
+    border: 1.5px solid rgba(220, 38, 38, .3);
+    color: var(--red);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 120ms, transform 140ms;
+}
+
+.bc-cancel-btn:hover {
+    background: rgba(220, 38, 38, .06);
+    transform: scale(1.02);
+}
+
+.bc-cancel-btn svg {
+    width: 13px;
+    height: 13px;
+    stroke-width: 2.5;
+}
+
+/* ── Empty state ── */
+.empty-state {
+    text-align: center;
+    padding: 72px 20px;
+}
+
+.empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: var(--ink-30);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+}
+
+.empty-icon svg {
+    width: 26px;
+    height: 26px;
+    stroke-width: 1.6;
+}
+
+.empty-title {
+    font-family: var(--font-d);
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--ink);
+    margin-bottom: 8px;
+}
+
+.empty-sub {
+    font-size: 13px;
+    color: var(--ink-60);
+    margin-bottom: 22px;
+    max-width: 260px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+}
+
+.empty-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 24px;
+    border-radius: 999px;
+    background: var(--navy);
+    color: #fff;
+    text-decoration: none;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    transition: background 130ms;
+}
+
+.empty-cta:hover {
+    background: var(--navy-d);
+}
+
+.empty-cta svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.2;
+}
+
+/* ── Cancel Modal ── */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: rgba(0, 0, 0, .45);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 180ms ease both;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modalCard {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 24px;
+    width: min(420px, 100%);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+    animation: slideUp 220ms var(--ease-o) both;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modalHead {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.modalIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(220, 38, 38, .08);
+    color: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modalIcon svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+}
+
+.modalTitle {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 4px;
+}
+
+.modalSub {
+    font-size: 13px;
+    color: var(--ink-60);
+    line-height: 1.5;
+}
+
+.modalActions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modalBtn {
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 120ms, transform 140ms;
+    border: none;
+}
+
+.modalBtn--ghost {
+    background: var(--line);
+    color: var(--ink);
+}
+
+.modalBtn--ghost:hover {
+    background: #d1d5db;
+}
+
+.modalBtn--danger {
+    background: var(--red);
+    color: #fff;
+}
+
+.modalBtn--danger:hover {
+    background: #b91c1c;
+    transform: scale(1.02);
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .pageTitle {
+        font-size: 26px;
+    }
+
+    .bc-main {
+        flex-wrap: wrap;
+    }
+
+    .bc-thumb,
+    .bc-thumb-placeholder {
+        width: 100%;
+        height: 130px;
+        border-radius: 12px 12px 0 0;
+    }
+}

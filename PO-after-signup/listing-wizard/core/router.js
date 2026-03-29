@@ -33,9 +33,14 @@
 
     function renderDots(activeIndex) {
         if (!dots) return;
-        dots.innerHTML = ROUTES
-            .map((_, i) => `<span class="dot ${i <= activeIndex ? "active" : ""}"></span>`)
-            .join("");
+        const total = ROUTES.length;
+        const pct = Math.round(((activeIndex + 1) / total) * 100);
+        dots.innerHTML = `
+            <div class="wiz-prog-track">
+                <div class="wiz-prog-bar" style="width:${pct}%"></div>
+            </div>
+            <span class="wiz-prog-label">${activeIndex + 1} / ${total}</span>
+        `;
     }
 
     function setNextLabel(idx) {
@@ -77,6 +82,11 @@
         const html = await htmlPromise;
         stepHost.innerHTML = html;
         stepHost.dataset.hasStep = "1";
+        stepHost.dataset.step = route.id;
+
+        document.body.className = document.body.className
+            .replace(/\bwiz-step-\S+/g, "").trim();
+        document.body.classList.add(`wiz-step-${route.id}`);
 
         updateStepKicker(idx);
 
@@ -144,20 +154,95 @@
 
     on($("#questionsBtn"), "click", () => alert("FAQ coming soon."));
 
+    on($("#btsDismiss"), "click", () => {
+        window.SidePanel?.dismissTips?.();
+    });
+
     window.addEventListener("hashchange", () => loadStep(getRouteFromHash()));
 
-    // ✅ Boot
+    // ── Boot ──────────────────────────────────────────────────────────────────
     (async () => {
+
+        // ── Helpers ──────────────────────────────────────────────────────────
+        function nukeAllLocalDraftState() {
+            // Wipe every localStorage key the wizard owns so no stale IDs
+            // can bleed into the new session. Order matters: clear index
+            // entries first, then active pointer, then the map.
+            try {
+                const ids = window.ListingStore?.listDraftIds?.() || [];
+                for (const id of ids) window.ListingStore?.clearDraft?.(id);
+            } catch { /* silent */ }
+            localStorage.removeItem("vista_draft_active");
+            localStorage.removeItem("vista_draft_index");
+            localStorage.removeItem("vista_listing_map");
+        }
+
+        // ── Step 1: purge any draft-pending-* placeholders from prior crashes ─
+        // These are created by ensureActiveDraft() when no real draft exists yet.
+        // They have no listingId and no data — safe to remove unconditionally.
+        try {
+            const ids = window.ListingStore?.listDraftIds?.() || [];
+            for (const id of ids) {
+                if (String(id).startsWith("draft-pending-")) {
+                    window.ListingStore?.clearDraft?.(id);
+                }
+            }
+        } catch { /* silent */ }
+
+        // ── Step 2: route on ?new=1 vs resume ────────────────────────────────
         try {
             const params = new URLSearchParams(location.search);
             const isNew = params.get("new") === "1";
 
-            if (window.ListingStore?.resumeDraft) {
-                await window.ListingStore.resumeDraft({ allowLatestFallback: !isNew });
+            if (isNew) {
+                // FIX: wipe ALL local state first so no stale draftId can
+                // shadow the new listing we are about to create.
+                location.hash = "";
+                nukeAllLocalDraftState();
+
+                // FIX: create the server-side listing ROW and bind it to
+                // localStorage BEFORE rendering step 1. This guarantees that
+                // getListingId() will never return null during the session —
+                // which was the root cause of the step-2 "jump back" bug and
+                // of duplicate/ghost listings being created by syncStep1().
+                try {
+                    await window.ListingStore.createNewDraft();
+                } catch (createErr) {
+                    // If the server call fails (rate-limit, network) show a
+                    // friendly message and stay on the current page rather than
+                    // rendering a broken wizard.
+                    const msg =
+                        createErr?.payload?.error ||
+                        createErr?.error ||
+                        createErr?.message ||
+                        "Could not start a new listing. Please try again.";
+                    alert(msg);
+                    // Redirect back to dashboard so the owner isn't stuck
+                    location.href = DASHBOARD_URL;
+                    return;
+                }
+
+                loadStep("step-1");
+                return;
+            }
+
+            // ── Resume flow ───────────────────────────────────────────────────
+            const listing = window.ListingStore?.resumeDraft
+                ? await window.ListingStore.resumeDraft({ allowLatestFallback: true })
+                : null;
+
+            if (listing?.current_step && listing.current_step > 1) {
+                const targetStep = `step-${listing.current_step}`;
+                const targetIdx = indexOfRoute(targetStep);
+                if (targetIdx !== -1) {
+                    setHash(targetStep);
+                    loadStep(targetStep);
+                    return;
+                }
             }
 
         } catch (e) {
-            console.warn("[router] resumeDraft failed", e);
+            console.warn("[router] boot failed", e);
         }
 
         const id = getRouteFromHash();

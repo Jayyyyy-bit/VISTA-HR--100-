@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>VISTA-HR · Messages</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="resident_messages.css" />
+</head>
+
+<body>
+
+    <!-- TOPBAR -->
+    <header class="rm-topbar">
+        <a class="rm-back" href="/Resident/resident_home.html">
+            <i data-lucide="arrow-left"></i>
+            <span>Browse</span>
+        </a>
+        <div class="rm-brand">
+            <span class="rm-brand-dot"></span>
+            <span>VISTA<b>-HR</b></span>
+        </div>
+        <div class="rm-topbar-right">
+            <button class="rm-avatar-btn" id="rmAvatarBtn">
+                <span class="rm-avatar" id="rmAvatar">R</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN LAYOUT -->
+    <div class="rm-shell">
+
+        <!-- LEFT: Thread list -->
+        <aside class="rm-sidebar" id="rmSidebar">
+            <div class="rm-sidebar-head">
+                <h1 class="rm-sidebar-title">Messages</h1>
+                <span class="rm-unread-pill" id="rmUnreadPill" hidden>0</span>
+            </div>
+            <div class="rm-search-wrap">
+                <i data-lucide="search" class="rm-search-icon"></i>
+                <input class="rm-search-input" id="rmSearchInput" type="text" placeholder="Search conversations…"
+                    autocomplete="off">
+            </div>
+            <div class="rm-thread-list" id="rmThreadList">
+                <div class="rm-loading"><i data-lucide="loader-2" class="rm-spin"></i>Loading…</div>
+            </div>
+        </aside>
+
+        <!-- RIGHT: Chat area -->
+        <main class="rm-main" id="rmMain">
+
+            <!-- Empty state -->
+            <div class="rm-empty" id="rmEmpty">
+                <i data-lucide="message-square" class="rm-empty-icon"></i>
+                <p class="rm-empty-title">Your messages</p>
+                <p class="rm-empty-sub">When you inquire about a listing, your conversation with the owner will appear
+                    here.</p>
+                <a class="rm-empty-cta" href="/Resident/resident_home.html">
+                    <i data-lucide="search"></i> Browse listings
+                </a>
+            </div>
+
+            <!-- Chat wrap (hidden until thread selected) -->
+            <div class="rm-chat" id="rmChat" hidden>
+
+                <!-- Chat header -->
+                <div class="rm-chat-header" id="rmChatHeader">
+                    <button class="rm-chat-back" id="rmChatBack">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <div class="rm-chat-header-av" id="rmChatAv">P</div>
+                    <div class="rm-chat-header-info">
+                        <div class="rm-chat-header-name" id="rmChatName">Owner</div>
+                        <div class="rm-chat-header-sub" id="rmChatSub">Property Owner</div>
+                    </div>
+                    <div class="rm-listing-chip" id="rmListingChip">
+                        <i data-lucide="home"></i>
+                        <span id="rmListingChipTitle">—</span>
+                    </div>
+                </div>
+
+                <!-- Listing info bar -->
+                <div class="rm-listing-bar" id="rmListingBar">
+                    <img class="rm-listing-thumb" id="rmListingThumb" src="" alt="" hidden>
+                    <div class="rm-listing-bar-ph" id="rmListingPh" hidden>
+                        <i data-lucide="home"></i>
+                    </div>
+                    <div class="rm-listing-bar-info">
+                        <div class="rm-listing-bar-title" id="rmListingBarTitle">—</div>
+                        <div class="rm-listing-bar-meta" id="rmListingBarMeta"></div>
+                    </div>
+                    <a class="rm-listing-bar-link" id="rmListingBarLink" href="#">
+                        <i data-lucide="external-link"></i> View
+                    </a>
+                </div>
+
+                <!-- Bubble list -->
+                <div class="rm-bubbles" id="rmBubbles"></div>
+
+                <!-- Input area -->
+                <div class="rm-input-area">
+                    <textarea class="rm-input" id="rmInput" placeholder="Type a message…" rows="1"
+                        maxlength="2000"></textarea>
+                    <button class="rm-send-btn" id="rmSendBtn" disabled>
+                        <i data-lucide="send"></i>
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/auth/sessionGuard.js"></script>
+    <script src="resident_messages.js"></script>
+</body>
+
+</html>

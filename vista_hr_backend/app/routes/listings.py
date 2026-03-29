@@ -1,5 +1,6 @@
 # app/routes/listings.py
 from __future__ import annotations
+from datetime import datetime, timedelta, timezone
 
 import json
 import os
@@ -157,7 +158,14 @@ def my_listings():
         # compute "badge" state
         status = d.get("status") or "DRAFT"
         complete = _is_listing_complete(l)
-        # if complete but status still DRAFT, front can show "In progress" but backend will fix on step-8 anyway
+
+        # Check for active/approved booking on this listing
+        from ..models.booking import Booking as _Bk
+        active_bk = _Bk.query.filter(
+            _Bk.listing_id == l.id,
+            _Bk.status.in_(["ACTIVE", "APPROVED"])
+        ).first()
+        booking_status = active_bk.status if active_bk else None
 
         out.append({
             "id": d.get("id"),
@@ -168,9 +176,10 @@ def my_listings():
             "title": d.get("title") or "",
             "city": (d.get("location") or {}).get("city") or "",
             "barangay": (d.get("location") or {}).get("barangay") or "",
-            "cover": cover,              #  dashboard image
-            "complete": bool(complete),  #  for "Ready to publish" UI
+            "cover": cover,
+            "complete": bool(complete),
             "photos": photos,
+            "booking_status": booking_status,   # ACTIVE/APPROVED/None
         })
 
     return jsonify({
@@ -208,9 +217,9 @@ def get_latest_draft():
     )
     return jsonify({"listing": listing.to_dict() if listing else None}), 200
 
-# =========================
+
 # Delete listing (OWNER)
-# =========================
+
 @listings_bp.delete("/listings/<int:listing_id>")
 @require_role("OWNER")
 def delete_listing(listing_id: int):
@@ -219,12 +228,23 @@ def delete_listing(listing_id: int):
         return json_error("Listing not found", 404)
 
     try:
+        from ..models.booking import Booking
+        from ..models.review  import Review
+        from ..models.message import Message
+
+        Booking.query.filter_by(listing_id=listing_id).delete(synchronize_session=False)
+        Review.query.filter_by(listing_id=listing_id).delete(synchronize_session=False)
+        Message.query.filter_by(listing_id=listing_id).delete(synchronize_session=False)
+
         db.session.delete(listing)
         db.session.commit()
+
         return jsonify({"message": "Listing deleted", "id": listing_id}), 200
-    except SQLAlchemyError:
+    except Exception as e:
         db.session.rollback()
-        return json_error("Database error", 500)
+        import traceback
+        traceback.print_exc()   # prints full error to Flask terminal
+        return json_error(f"Database error: {str(e)}", 500)
 
 
 
@@ -250,6 +270,35 @@ def create_step1():
     place_type = data.get("placeType") or data.get("place_type")
     if place_type is not None and (not isinstance(place_type, str) or not place_type.strip()):
         return json_error("Validation failed", 400, fields={"placeType": "Must be a non-empty string."})
+
+    # ── Idempotency guard ────────────────────────────────────────────────────
+    # If this owner already has a bare step-1 draft (no place_type set) created
+    # within the last 10 minutes, return it instead of inserting a new row.
+    # This prevents ghost/duplicate listings caused by stale localStorage on the
+    # client calling POST /step-1 more than once in the same wizard session
+    # (e.g. hard reload, bfcache restore, or localStorage wipe mid-session).
+    ten_min_ago = datetime.now(timezone.utc) - timedelta(minutes=10)
+    recent_ghost = (
+        Listing.query
+        .filter(
+            Listing.owner_id == user.id,
+            Listing.status == "DRAFT",
+            Listing.current_step == 1,
+            Listing.place_type.is_(None),
+            Listing.created_at >= ten_min_ago,
+        )
+        .order_by(Listing.created_at.desc())
+        .first()
+    )
+    if recent_ghost:
+        # Reuse the existing row — return 200 (not 201) so the client knows
+        # this was a recovery, not a fresh creation.
+        return jsonify({
+            "message": "Resumed existing draft",
+            "listing": recent_ghost.to_dict(),
+            "limit": limit,
+            "active_count": active_count,
+        }), 200
 
     listing = Listing(
         owner_id=user.id,
@@ -547,10 +596,7 @@ def update_step8(listing_id: int):
     # finished = READY (if owner not verified)
     user = g.current_user
     if _is_listing_complete(listing):
-        # Must have email verified before any publish/ready state
-        if not bool(getattr(user, "email_verified", False)):
-            listing.status = "DRAFT"
-        elif bool(getattr(user, "is_verified", False)):
+        if bool(getattr(user, "is_verified", False)) and bool(getattr(user, "email_verified", False)):
             listing.status = "PUBLISHED"
         else:
             listing.status = "READY"
@@ -602,6 +648,36 @@ def submit_for_verification(listing_id: int):
 # Resident feed (PUBLISHED only)
 # Supports: city, type, min_price, max_price, limit
 # =========================
+# ══ OWNER — Pull (unpublish) a listing ══════════════════════
+@listings_bp.post("/listings/<int:listing_id>/pull")
+@require_role("OWNER")
+def pull_listing(listing_id: int):
+    """Unpublish a listing — sets status back to READY so owner can re-publish later."""
+    from ..models.booking import Booking
+    listing = _get_owned_listing_or_404(listing_id)
+    if not listing:
+        return json_error("Listing not found", 404)
+
+    # Block if has active/approved booking
+    active_booking = Booking.query.filter(
+        Booking.listing_id == listing_id,
+        Booking.status.in_(["ACTIVE", "APPROVED"])
+    ).first()
+    if active_booking:
+        return json_error(
+            "Cannot unpublish — this listing has an active reservation.",
+            400, code="HAS_ACTIVE_BOOKING"
+        )
+
+    listing.status = "READY"
+    try:
+        db.session.commit()
+        return jsonify({"message": "Listing unpublished", "status": "READY"}), 200
+    except Exception:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+
 @listings_bp.get("/listings/feed")
 def resident_feed():
     city = (request.args.get("city") or "").strip().lower()
@@ -651,6 +727,10 @@ def resident_feed():
         if isinstance(photos, list) and photos:
             cover = photos[0].get("url") if isinstance(photos[0], dict) else photos[0]
 
+        # Virtual tour URL — stored inside photos JSON as virtualTour.panoUrl
+        vt = d.get("virtualTour") or {}
+        tour_url = vt.get("panoUrl") or vt.get("pano_url") or None
+
         out.append({
             "id": d["id"],
             "title": d.get("title") or "Untitled space",
@@ -660,14 +740,65 @@ def resident_feed():
             "price": price,
             "student_discount": d.get("student_discount") or 0,
             "cover": cover,
+            "photos": d.get("photos") or [],
             "status": d.get("status"),
             "capacity": cap,
             "amenities": d.get("amenities"),
             "highlights": d.get("highlights"),
             "description": d.get("description"),
+            "tour_url": tour_url,
+            "has_tour": bool(tour_url),
         })
 
         if len(out) >= limit:
             break
 
     return jsonify({"listings": out, "total": len(out)}), 200
+# =========================
+# PUBLIC STATS — no auth required
+# Used by the roles page to show live platform numbers
+# Cached in-memory for 5 minutes to avoid DB hammering
+# =========================
+import time as _time
+
+_stats_cache = {"data": None, "ts": 0}
+_STATS_TTL   = 300  # 5 minutes
+
+@listings_bp.get("/public/stats")
+def public_stats():
+    now = _time.time()
+    if _stats_cache["data"] and now - _stats_cache["ts"] < _STATS_TTL:
+        return jsonify(_stats_cache["data"]), 200
+
+    from ..models.user import User
+
+    total_listings  = Listing.query.filter(Listing.status == "PUBLISHED").count()
+    total_owners    = User.query.filter(User.role == "OWNER").count()
+    total_residents = User.query.filter(User.role == "RESIDENT").count()
+
+    # Lowest price across published listings (from capacity JSON)
+    published = (
+        Listing.query
+        .filter(Listing.status == "PUBLISHED")
+        .limit(200)
+        .all()
+    )
+    prices = []
+    for l in published:
+        cap = l.capacity or {}
+        if isinstance(cap, dict):
+            p = cap.get("monthly_rent") or cap.get("price")
+            if p and isinstance(p, (int, float)) and p > 0:
+                prices.append(p)
+
+    min_price = int(min(prices)) if prices else None
+
+    data = {
+        "total_listings":   total_listings,
+        "total_owners":     total_owners,
+        "total_residents":  total_residents,
+        "min_price":        min_price,
+    }
+    _stats_cache["data"] = data
+    _stats_cache["ts"]   = now
+    return jsonify(data), 200

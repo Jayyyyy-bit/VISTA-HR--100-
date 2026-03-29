@@ -122,18 +122,64 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         };
     }
 
+    const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per photo
+    const MAX_PHOTOS = 20;
+
+    function showUploadError(msg) {
+        // Show inline error below upload zone instead of alert()
+        let errEl = document.getElementById("photoUploadErr");
+        if (!errEl) {
+            errEl = document.createElement("p");
+            errEl.id = "photoUploadErr";
+            errEl.style.cssText = "color:#dc2626;font-size:12px;margin-top:8px;font-weight:500;";
+            uploadZone?.insertAdjacentElement("afterend", errEl);
+        }
+        errEl.textContent = msg;
+        errEl.hidden = false;
+        setTimeout(() => { if (errEl) errEl.hidden = true; }, 5000);
+    }
+
+    function validateFiles(fileList) {
+        const { photos } = read();
+        const files = Array.from(fileList || []);
+        const valid = [];
+        const errors = [];
+
+        for (const f of files) {
+            if (!ALLOWED_TYPES.has(f.type)) {
+                errors.push(`"${f.name}" is not an image. Only JPG, PNG, and WEBP are allowed.`);
+                continue;
+            }
+            if (f.size > MAX_FILE_SIZE) {
+                errors.push(`"${f.name}" is too large. Maximum size is 10 MB per photo.`);
+                continue;
+            }
+            if (photos.length + valid.length >= MAX_PHOTOS) {
+                errors.push(`Maximum ${MAX_PHOTOS} photos allowed. Extra files were skipped.`);
+                break;
+            }
+            valid.push(f);
+        }
+
+        if (errors.length) showUploadError(errors[0]);
+        return valid;
+    }
+
     async function addFiles(fileList) {
         const { photos } = read();
-        const files = Array.from(fileList || []).filter(f => f.type.startsWith("image/"));
+        const files = validateFiles(fileList);
+        if (!files.length) return; // all rejected — error already shown
+
         setUploading(true);
         try {
-            const added = [];
-            for (const f of files) added.push(await uploadOneToCloudinary(f));
+            // Parallel upload — all files upload simultaneously instead of one by one
+            const added = await Promise.all(files.map(f => uploadOneToCloudinary(f)));
             savePhotos(ensureCover([...photos, ...added]));
             render();
         } catch (e) {
             console.error("[Step7] upload failed", e);
-            alert(e?.message || e?.error?.message || "Upload failed. Please try again.");
+            showUploadError(e?.message || e?.error?.message || "Upload failed. Please try again.");
         } finally {
             setUploading(false);
             updateNextAndSide();
@@ -151,9 +197,15 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         panoUploadZone?.classList.toggle("isUploading", !!on);
     }
 
+    const MAX_PANO_SIZE = 50 * 1024 * 1024; // 50 MB for panoramas (equirectangular images are large)
+
     async function uploadPanorama(file) {
-        if (!file.type.startsWith("image/")) {
-            alert("Please choose a JPG or PNG image file.");
+        if (!ALLOWED_TYPES.has(file.type)) {
+            alert("Please choose a JPG, PNG, or WEBP image file for the panorama.");
+            return;
+        }
+        if (file.size > MAX_PANO_SIZE) {
+            alert("Panorama file is too large. Maximum size is 50 MB.");
             return;
         }
 
@@ -212,22 +264,37 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     // ────────────────────────────────────────
     //  RENDER
     // ────────────────────────────────────────
+    const TIPS_DISMISS_KEY = "vista_tips_dismissed_step7";
+
+    function isTipsDismissed() {
+        try { return localStorage.getItem(TIPS_DISMISS_KEY) === "1"; } catch { return false; }
+    }
+
+    function markTipsDismissed() {
+        try { localStorage.setItem(TIPS_DISMISS_KEY, "1"); } catch { }
+    }
+
     function updateNextAndSide() {
         const { photos } = read();
         const count = photos.length;
         if (photoCountLabel) photoCountLabel.textContent = `${count} / ${MIN_PHOTOS} minimum`;
         if (nextBtn) nextBtn.disabled = count < MIN_PHOTOS;
 
-        SidePanel.setTips({
-            selectedLabel: "Photos & Virtual Tour",
-            tips: [
-                "Use bright photos: living area, bedroom, bathroom, and entrance.",
-                "Set a strong cover photo — this shows in search results.",
-                "A 360° virtual tour increases resident inquiries by up to 40%.",
-                "Use the Google Street View app (free) to capture a 360° panorama.",
-            ],
-        });
-        SidePanel.refresh();
+        // Only show the bottom tips strip if user hasn't dismissed it before
+        if (!isTipsDismissed()) {
+            SidePanel.setTips({
+                selectedLabel: "Photos & Virtual Tour",
+                tips: [
+                    "Use bright photos: living area, bedroom, bathroom, and entrance.",
+                    "Set a strong cover photo — this shows in search results.",
+                    "A 360° virtual tour increases resident inquiries by up to 40%.",
+                    "Use the Google Street View app (free) to capture a 360° panorama.",
+                ],
+            });
+        } else {
+            // Still update the side panel progress, just skip the bottom strip
+            SidePanel.refresh();
+        }
     }
 
     function render() {

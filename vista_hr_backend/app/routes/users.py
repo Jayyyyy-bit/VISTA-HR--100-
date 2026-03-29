@@ -70,12 +70,15 @@ def create_user():
 
     name = (data.get("name") or "").strip()
     email = (data.get("email") or "").strip().lower()
-    password = (data.get("password") or "12345678").strip()
+    password = (data.get("password") or "").strip()
     role = (data.get("role") or "").strip().upper()
     is_verified = bool(data.get("is_verified", False))
 
     if not name or not email or not password or role not in VALID_ROLES:
         return json_error("Invalid payload. Required: name, email, password, role", 400)
+
+    if len(password) < 8:
+        return json_error("Validation failed", 400, fields={"password": "Password must be at least 8 characters."})
 
     if User.query.filter_by(email=email).first():
         return json_error("Email already registered", 409)
@@ -104,17 +107,25 @@ def create_user():
 @users_bp.put("/users/<int:user_id>")
 @require_role("ADMIN")
 def update_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return json_error("User not found", 404)
 
     data = request.get_json(silent=True) or {}
+
+    # Guard: admin cannot alter their own role or suspend themselves
+    is_self = (user.id == g.current_user.id)
 
     name = (data.get("name") or "").strip()
     email = (data.get("email") or "").strip().lower()
     role = (data.get("role") or "").strip().upper()
     is_verified = data.get("is_verified")
     is_suspended = data.get("is_suspended")
+
+    if is_self and role and role != (user.role.value if hasattr(user.role, "value") else str(user.role)):
+        return json_error("You cannot change your own role.", 400)
+    if is_self and is_suspended:
+        return json_error("You cannot suspend your own account.", 400)
 
     if name:
         first_name, last_name = split_name(name)
@@ -152,6 +163,26 @@ def update_user(user_id):
 
     if is_suspended is not None:
         user.is_suspended = bool(is_suspended)
+        if bool(is_suspended):
+            sus_until_raw = data.get("suspended_until")
+            if sus_until_raw:
+                try:
+                    from datetime import datetime as _dt
+                    sus_dt = _dt.fromisoformat(str(sus_until_raw).replace("Z", "+00:00"))
+                    user.suspended_until = sus_dt
+                except ValueError:
+                    user.suspended_until = None
+            else:
+                user.suspended_until = None
+            reason = (data.get("suspension_reason") or "").strip() or None
+            user.suspension_reason = reason
+            current_strikes = int(getattr(user, "strike_count", 0) or 0)
+            if bool(data.get("add_strike", True)):
+                current_strikes = min(current_strikes + 1, 3)
+                user.strike_count = current_strikes
+        else:
+            user.suspended_until   = None
+            user.suspension_reason = None
 
     try:
         db.session.commit()
@@ -161,10 +192,55 @@ def update_user(user_id):
         return json_error("Database error", 500)
 
 
+@users_bp.patch("/users/<int:user_id>")
+@require_role("ADMIN")
+def patch_user(user_id: int):
+    """Partial update — used for suspend/uplift/strike operations."""
+    data = request.get_json(silent=True) or {}
+    user = db.session.get(User, user_id)
+    if not user:
+        return json_error("User not found", 404)
+
+    me = g.current_user
+    if me.id == user_id and data.get("is_suspended"):
+        return json_error("You cannot suspend your own account.", 400)
+
+    is_suspended = data.get("is_suspended")
+    if is_suspended is not None:
+        user.is_suspended = bool(is_suspended)
+        if bool(is_suspended):
+            sus_until_raw = data.get("suspended_until")
+            if sus_until_raw:
+                try:
+                    from datetime import datetime as _dt
+                    sus_dt = _dt.fromisoformat(str(sus_until_raw).replace("Z", "+00:00"))
+                    user.suspended_until = sus_dt
+                except ValueError:
+                    user.suspended_until = None
+            else:
+                user.suspended_until = None
+            reason = (data.get("suspension_reason") or "").strip() or None
+            user.suspension_reason = reason
+            current_strikes = int(getattr(user, "strike_count", 0) or 0)
+            if bool(data.get("add_strike", True)):
+                current_strikes = min(current_strikes + 1, 3)
+                user.strike_count = current_strikes
+        else:
+            user.suspended_until   = None
+            user.suspension_reason = None
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Updated", "user": serialize_user(user)}), 200
+    except Exception:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+
 @users_bp.delete("/users/<int:user_id>")
 @require_role("ADMIN")
 def delete_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return json_error("User not found", 404)
 
@@ -176,5 +252,21 @@ def delete_user(user_id):
         db.session.commit()
         return jsonify({"message": "User deleted"}), 200
     except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+# ══ Reset strikes for a user ══════════════════════════════
+@users_bp.post("/admin/users/<int:user_id>/reset-strikes")
+@require_role("ADMIN")
+def reset_strikes(user_id: int):
+    """Admin resets strike count for a user."""
+    user = db.session.get(User, user_id)
+    if not user:
+        return json_error("User not found", 404)
+    user.strike_count = 0
+    try:
+        db.session.commit()
+        return jsonify({"message": "Strikes reset", "strike_count": 0}), 200
+    except Exception:
         db.session.rollback()
         return json_error("Database error", 500)

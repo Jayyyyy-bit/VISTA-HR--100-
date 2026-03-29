@@ -1,92 +1,99 @@
-lucide.createIcons();
+/* PO-after-signup/PO_welcome-page.js */
+(() => {
+    const API = "http://127.0.0.1:5000/api";
+    const DASH_URL = "/Property-Owner/dashboard/property-owner-dashboard.html";
+    const WIZARD_URL = "/PO-after-signup/listing-wizard/index.html?new=1";
+    const VERIFY_URL = "/Property-Owner/verification/verify.html";
 
-const LS_USERS_KEY = "vista_users";
-const LS_SESSION_KEY = "vista_session_user";
-
-// Uses transition.js goTo() if present, else fallback
-function safeGoTo(url) {
-    if (typeof goTo === "function") goTo(url);
-    else window.location.href = url;
-}
-
-function readUsers() {
-    try { return JSON.parse(localStorage.getItem(LS_USERS_KEY)) || []; }
-    catch { return []; }
-}
-function readSession() {
-    try { return JSON.parse(localStorage.getItem(LS_SESSION_KEY)) || null; }
-    catch { return null; }
-}
-function getCurrentOwner() {
-    const session = readSession();
-    if (!session?.userId) return null;
-    const users = readUsers();
-    return users.find(u => u.id === session.userId) || null;
-}
-
-// Elements
-const ownerName = document.getElementById("ownerName");
-const statusText = document.getElementById("statusText");
-const publishValue = document.getElementById("publishValue");
-const verifyValue = document.getElementById("verifyValue");
-
-const backBtn = document.getElementById("backBtn");
-const verifyNowBtn = document.getElementById("verifyNowBtn");
-const startWizardBtn = document.getElementById("startWizardBtn");
-const openDashboardBtn = document.getElementById("openDashboardBtn");
-
-const createCard = document.getElementById("createCard");
-const dashCard = document.getElementById("dashCard");
-
-// Init user info
-const owner = getCurrentOwner();
-const verified = owner?.verificationStatus === "VERIFIED";
-
-ownerName.textContent = owner?.firstName || owner?.fullName || "Property Owner";
-statusText.textContent = verified ? "Verified" : "Unverified";
-publishValue.textContent = verified ? "Unlocked" : "Locked";
-verifyValue.textContent = verified ? "Done" : "Required";
-
-// Routes (adjust these to your actual files)
-function goRoles() {
-    safeGoTo("../../Login_Register_Page/Signup/roles.html");
-}
-
-function goVerify() {
-    // Later: safeGoTo("../../../Property-Owner/verification/verify.html");
-    alert("Verification page is coming soon.");
-}
-
-function goWizard() {
-    safeGoTo("../../../PO-after-signup/listing-wizard/index.html");
-}
-
-
-function goDashboard() {
-    // Later: safeGoTo("../../../Property-Owner/dashboard.html");
-    safeGoTo("../Property-Owner/dashboard/property-owner-dashboard.html");
-
-}
-
-// Events
-backBtn?.addEventListener("click", goRoles);
-verifyNowBtn?.addEventListener("click", goVerify);
-startWizardBtn?.addEventListener("click", goWizard);
-openDashboardBtn?.addEventListener("click", goDashboard);
-
-// Card click + keyboard
-function makeCardClickable(card, fn) {
-    if (!card) return;
-    card.addEventListener("click", (e) => {
-        const isButton = e.target.closest("button");
-        if (!isButton) fn();
-    });
-    card.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            fn();
+    async function init() {
+        // Fetch current user from backend
+        let user = null;
+        try {
+            const res = await fetch(`${API}/auth/me`, { credentials: "include" });
+            if (!res.ok) { location.replace("/auth/login.html"); return; }
+            const data = await res.json().catch(() => ({}));
+            user = data?.user || null;
+        } catch {
+            location.replace("/auth/login.html");
+            return;
         }
-    });
-}
-makeCardClickable(createCard, goWizard);
-makeCardClickable(dashCard, goDashboard);
+
+        if (!user || user.role !== "OWNER") {
+            location.replace("/auth/login.html");
+            return;
+        }
+
+        // ── Key logic: skip welcome for returning owners ──
+        // has_completed_onboarding is set to true after they first visit dashboard
+        if (user.has_completed_onboarding) {
+            location.replace(DASH_URL);
+            return;
+        }
+
+        // Personalise UI
+        const firstName = user.first_name || user.email?.split("@")[0] || "Property Owner";
+        const el = id => document.getElementById(id);
+
+        el("ownerName").textContent = firstName;
+
+        const verified = user.kyc_status === "APPROVED" || user.is_verified;
+
+        // Status chip
+        const chip = el("statusChip");
+        el("statusText").textContent = verified ? "Verified" : "Unverified";
+        if (verified) chip.classList.add("verified");
+
+        // Mini panel values
+        const pubEl = el("publishValue");
+        pubEl.textContent = verified ? "Unlocked" : "Locked";
+        pubEl.className = "mini-value " + (verified ? "unlocked" : "locked");
+
+        el("verifyValue").textContent = verified ? "Done ✓" : "Required";
+
+        // Verify button — hide if already verified
+        const verifyBtn = el("verifyNowBtn");
+        if (verified) {
+            verifyBtn.classList.add("done");
+            el("verifyBtnText").textContent = "Verified ✓";
+            verifyBtn.style.pointerEvents = "none";
+        }
+
+        // Mark onboarding as started when they land here
+        // (we mark it complete when they click through to dashboard/wizard)
+        markOnboardingComplete();
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+
+        // Wire buttons
+        el("startWizardBtn")?.addEventListener("click", () => location.href = WIZARD_URL);
+        el("openDashboardBtn")?.addEventListener("click", () => location.href = DASH_URL);
+
+        // Card click (non-button areas)
+        el("createCard")?.addEventListener("click", e => {
+            if (!e.target.closest("button") && !e.target.closest("a")) location.href = WIZARD_URL;
+        });
+        el("dashCard")?.addEventListener("click", e => {
+            if (!e.target.closest("button")) location.href = DASH_URL;
+        });
+    }
+
+    // Mark has_completed_onboarding = true via backend
+    // This ensures next login skips this page
+    async function markOnboardingComplete() {
+        try {
+            await fetch(`${API}/auth/me/onboarding`, {
+                method: "PATCH",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+            });
+        } catch {
+            // Non-fatal — worst case they see this page again next login
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();

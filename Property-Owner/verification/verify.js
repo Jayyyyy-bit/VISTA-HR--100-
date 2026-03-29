@@ -1,261 +1,187 @@
 /* Property-Owner/verification/verify.js */
 (() => {
-    const API_BASE = "http://127.0.0.1:5000/api";
-    const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
-
-    // ── Auth guard ────────────────────────────────────────────
-    async function init() {
-        if (!window.AuthGuard) {
-            console.error("AuthGuard missing");
-            return;
-        }
-        const ok = await window.AuthGuard.requireOwner();
-        if (!ok) return;
-
-        // Check existing KYC status before showing form
-        try {
-            const res = await fetch(`${API_BASE}/kyc/status`, { credentials: "include" });
-            const data = await res.json().catch(() => ({}));
-            const status = data.kyc_status || "NONE";
-
-            if (status === "PENDING") {
-                showState("pending");
-                return;
-            }
-            if (status === "REJECTED") {
-                const reason = data.kyc_reject_reason || "";
-                const el = document.getElementById("rejectReasonText");
-                if (el && reason) {
-                    el.textContent = `Your documents could not be verified. Reason: ${reason}`;
-                }
-                showState("rejected");
-                return;
-            }
-            if (status === "APPROVED") {
-                // Already verified — go to dashboard
-                location.replace("/Property-Owner/dashboard/property-owner-dashboard.html");
-                return;
-            }
-        } catch (e) {
-            console.warn("Could not fetch KYC status", e);
-        }
-
-        showState("form");
-        setupForm();
-        if (window.lucide?.createIcons) lucide.createIcons();
-    }
-
-    function showState(state) {
-        document.getElementById("kycFormCard").hidden = state !== "form";
-        document.getElementById("kycPendingCard").hidden = state !== "pending";
-        document.getElementById("kycRejectedCard").hidden = state !== "rejected";
-        if (window.lucide?.createIcons) lucide.createIcons();
-    }
-
-    // Re-submit button on rejected card
-    document.getElementById("resubmitBtn")?.addEventListener("click", () => {
-        showState("form");
-        setupForm();
-        if (window.lucide?.createIcons) lucide.createIcons();
-    });
-
-    // ── Upload state ──────────────────────────────────────────
+    const API = "http://127.0.0.1:5000/api";
+    const MAX_SIZE = 5 * 1024 * 1024;
     const uploads = { front: null, back: null, selfie: null };
 
-    // ── Setup dropzones ───────────────────────────────────────
-    function setupForm() {
-        setupDropzone("dropFront", "inputFront", "dropContentFront", "previewFront", "previewImgFront", "removeFront", "errFront", "front");
-        setupDropzone("dropBack", "inputBack", "dropContentBack", "previewBack", "previewImgBack", "removeBack", "errBack", "back");
-        setupDropzone("dropSelfie", "inputSelfie", "dropContentSelfie", "previewSelfie", "previewImgSelfie", "removeSelfie", null, "selfie");
+    function el(id) { return document.getElementById(id); }
 
-        document.getElementById("submitBtn")?.addEventListener("click", handleSubmit);
+    /* ── Show one state, hide others ── */
+    function showState(s) {
+        el("kycFormCard").hidden = s !== "form";
+        el("kycPendingCard").hidden = s !== "pending";
+        el("kycRejectedCard").hidden = s !== "rejected";
+        if (window.lucide?.createIcons) lucide.createIcons();
     }
 
-    function setupDropzone(dropId, inputId, contentId, previewId, imgId, removeId, errId, slot) {
-        const drop = document.getElementById(dropId);
-        const input = document.getElementById(inputId);
-        const content = document.getElementById(contentId);
-        const preview = document.getElementById(previewId);
-        const img = document.getElementById(imgId);
-        const remove = document.getElementById(removeId);
-        const errEl = errId ? document.getElementById(errId) : null;
+    /* ── Boot ── */
+    async function init() {
+        let user = null;
+        try {
+            const r = await fetch(`${API}/auth/me`, { credentials: "include" });
+            if (!r.ok) { location.replace("/auth/login.html"); return; }
+            user = (await r.json().catch(() => ({}))).user;
+        } catch { location.replace("/auth/login.html"); return; }
 
+        if (!user || user.role !== "OWNER") { location.replace("/auth/login.html"); return; }
+        if (user.kyc_status === "APPROVED") {
+            location.replace("/Property-Owner/dashboard/property-owner-dashboard.html"); return;
+        }
+
+        /* Live status check */
+        try {
+            const r = await fetch(`${API}/kyc/status`, { credentials: "include" });
+            const data = await r.json().catch(() => ({}));
+            const st = data.kyc_status || user.kyc_status || "NONE";
+
+            if (st === "PENDING") { showState("pending"); bindResubmit(); return; }
+            if (st === "REJECTED") {
+                const reason = data.kyc_reject_reason || user.kyc_reject_reason || "";
+                if (reason) el("rejectReasonText").textContent =
+                    `Your documents could not be verified. Reason: ${reason}`;
+                showState("rejected"); bindResubmit(); return;
+            }
+        } catch (e) { console.warn("KYC status fetch failed, showing form:", e); }
+
+        showState("form");
+        setupDropzones();
+        el("submitBtn").addEventListener("click", handleSubmit, { once: true });
+        lucide.createIcons();
+    }
+
+    function bindResubmit() {
+        el("resubmitBtn")?.addEventListener("click", () => {
+            showState("form");
+            setupDropzones();
+            el("submitBtn").addEventListener("click", handleSubmit, { once: true });
+            lucide.createIcons();
+        }, { once: true });
+    }
+
+    /* ── Dropzones ── */
+    function setupDropzones() {
+        uploads.front = uploads.back = uploads.selfie = null;
+        updateBtn();
+        wire("dropFront", "inputFront", "dropContentFront", "previewFront", "previewImgFront", "removeFront", "errFront", "front");
+        wire("dropBack", "inputBack", "dropContentBack", "previewBack", "previewImgBack", "removeBack", "errBack", "back");
+        wire("dropSelfie", "inputSelfie", "dropContentSelfie", "previewSelfie", "previewImgSelfie", "removeSelfie", null, "selfie");
+    }
+
+    function wire(dropId, inputId, contentId, previewId, imgId, removeId, errId, slot) {
+        const drop = el(dropId), input = el(inputId),
+            content = el(contentId), preview = el(previewId),
+            img = el(imgId), remove = el(removeId),
+            errEl = errId ? el(errId) : null;
         if (!drop || !input) return;
 
-        // Click to open file picker
-        drop.addEventListener("click", e => {
-            if (e.target.closest(".removeBtn")) return;
-            input.click();
-        });
-
-        // Drag events
+        drop.addEventListener("click", e => { if (!e.target.closest(".remove-btn")) input.click(); });
         drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("dragover"); });
         drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
         drop.addEventListener("drop", e => {
-            e.preventDefault();
-            drop.classList.remove("dragover");
-            const file = e.dataTransfer.files?.[0];
-            if (file) handleFile(file, slot, img, content, preview, drop, errEl);
+            e.preventDefault(); drop.classList.remove("dragover");
+            const f = e.dataTransfer.files?.[0]; if (f) onFile(f, slot, img, content, preview, drop, errEl);
         });
-
-        // File input change
         input.addEventListener("change", () => {
-            const file = input.files?.[0];
-            if (file) handleFile(file, slot, img, content, preview, drop, errEl);
+            const f = input.files?.[0]; if (f) onFile(f, slot, img, content, preview, drop, errEl);
             input.value = "";
         });
-
-        // Remove button
         remove?.addEventListener("click", e => {
             e.stopPropagation();
             uploads[slot] = null;
             if (preview) preview.hidden = true;
             if (content) content.hidden = false;
-            drop.classList.remove("hasFile");
+            drop.classList.remove("has-file");
             if (img) img.src = "";
             if (errEl) errEl.textContent = "";
-            updateSubmitBtn();
+            updateBtn();
         });
     }
 
-    function handleFile(file, slot, img, content, preview, drop, errEl) {
+    function onFile(file, slot, img, content, preview, drop, errEl) {
         if (errEl) errEl.textContent = "";
-
-        if (!file.type.startsWith("image/")) {
-            if (errEl) errEl.textContent = "Only image files are accepted (JPG, PNG, WEBP).";
-            return;
-        }
-        if (file.size > MAX_FILE_BYTES) {
-            if (errEl) errEl.textContent = "File is too large. Maximum size is 5 MB.";
-            return;
-        }
-
-        // Show local preview immediately
+        if (!file.type.startsWith("image/")) { if (errEl) errEl.textContent = "Only image files (JPG, PNG, WEBP)."; return; }
+        if (file.size > MAX_SIZE) { if (errEl) errEl.textContent = "File too large — max 5 MB."; return; }
         const reader = new FileReader();
         reader.onload = e => {
             if (img) img.src = e.target.result;
             if (preview) preview.hidden = false;
             if (content) content.hidden = true;
-            drop.classList.add("hasFile");
+            drop.classList.add("has-file");
         };
         reader.readAsDataURL(file);
-
-        // Store file for upload
         uploads[slot] = file;
-        updateSubmitBtn();
+        updateBtn();
     }
 
-    function updateSubmitBtn() {
-        const btn = document.getElementById("submitBtn");
+    function updateBtn() {
+        const btn = el("submitBtn");
         if (btn) btn.disabled = !uploads.front || !uploads.back;
     }
 
-    // ── Cloudinary upload ─────────────────────────────────────
-    async function getSignature(folder) {
-        const res = await fetch(`${API_BASE}/uploads/sign`, {
+    /* ── Cloudinary ── */
+    async function getSig(folder) {
+        const r = await fetch(`${API}/uploads/sign`, {
             method: "POST", credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ folder }),
         });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Could not get upload signature.");
-        return data;
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || "Signature failed.");
+        return d;
     }
 
-    async function uploadToCloudinary(file, folder) {
-        const sig = await getSignature(folder);
+    async function upload(file, folder) {
+        const sig = await getSig(folder);
         const fd = new FormData();
-        fd.append("file", file);
-        fd.append("api_key", sig.apiKey);
-        fd.append("timestamp", sig.timestamp);
-        fd.append("signature", sig.signature);
+        fd.append("file", file); fd.append("api_key", sig.apiKey);
+        fd.append("timestamp", sig.timestamp); fd.append("signature", sig.signature);
         fd.append("folder", sig.folder);
-
-        const res = await fetch(
-            `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
-            { method: "POST", body: fd }
-        );
-        const out = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(out.error?.message || "Upload failed.");
+        const r = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: "POST", body: fd });
+        const out = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(out.error?.message || "Upload failed.");
         return out.secure_url;
     }
 
-    // ── Submit ────────────────────────────────────────────────
+    /* ── Submit ── */
     async function handleSubmit() {
-        const btn = document.getElementById("submitBtn");
-        const label = btn?.querySelector(".btnLabel");
-        const spinner = btn?.querySelector(".btnSpinner");
-        const globalErr = document.getElementById("globalErr");
-
+        const btn = el("submitBtn"), label = btn.querySelector(".btn-label"), spinner = btn.querySelector(".btn-spinner");
+        const errEl = el("globalErr");
         if (!uploads.front || !uploads.back) return;
 
-        // Clear errors
-        if (globalErr) { globalErr.hidden = true; globalErr.textContent = ""; }
-        document.getElementById("errFront").textContent = "";
-        document.getElementById("errBack").textContent = "";
-
-        btn.disabled = true;
-        if (label) label.hidden = true;
-        if (spinner) spinner.hidden = false;
+        errEl.hidden = true; errEl.textContent = "";
+        el("errFront").textContent = ""; el("errBack").textContent = "";
+        btn.disabled = true; label.hidden = true; spinner.hidden = false;
 
         try {
             const folder = "vista_hr/kyc";
-
-            // Upload all files (front required, back required, selfie optional)
             let frontUrl, backUrl, selfieUrl = null;
 
-            try {
-                frontUrl = await uploadToCloudinary(uploads.front, folder);
-            } catch {
-                document.getElementById("errFront").textContent = "Front upload failed. Try again.";
-                throw new Error("front_upload_failed");
-            }
+            try { frontUrl = await upload(uploads.front, folder); }
+            catch { el("errFront").textContent = "Front upload failed. Try again."; throw new Error("u"); }
 
-            try {
-                backUrl = await uploadToCloudinary(uploads.back, folder);
-            } catch {
-                document.getElementById("errBack").textContent = "Back upload failed. Try again.";
-                throw new Error("back_upload_failed");
-            }
+            try { backUrl = await upload(uploads.back, folder); }
+            catch { el("errBack").textContent = "Back upload failed. Try again."; throw new Error("u"); }
 
-            if (uploads.selfie) {
-                selfieUrl = await uploadToCloudinary(uploads.selfie, folder).catch(() => null);
-            }
+            if (uploads.selfie) selfieUrl = await upload(uploads.selfie, folder).catch(() => null);
 
-            // Submit to backend
-            const res = await fetch(`${API_BASE}/kyc/submit`, {
+            const r = await fetch(`${API}/kyc/submit`, {
                 method: "POST", credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    id_front_url: frontUrl,
-                    id_back_url: backUrl,
-                    selfie_url: selfieUrl,
-                }),
+                body: JSON.stringify({ id_front_url: frontUrl, id_back_url: backUrl, selfie_url: selfieUrl }),
             });
-            const data = await res.json().catch(() => ({}));
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || "Submission failed.");
 
-            if (!res.ok) throw new Error(data.error || "Submission failed.");
-
-            // Update session cache
-            if (data.user && window.AuthGuard?.saveSession) {
-                window.AuthGuard.saveSession({ user: data.user });
-            }
-
+            if (data.user && window.AuthGuard?.saveSession) window.AuthGuard.saveSession({ user: data.user });
             showState("pending");
-
         } catch (err) {
-            if (err.message !== "front_upload_failed" && err.message !== "back_upload_failed") {
-                if (globalErr) {
-                    globalErr.textContent = err.message || "Something went wrong. Please try again.";
-                    globalErr.hidden = false;
-                }
-            }
-            btn.disabled = false;
-            if (label) label.hidden = false;
-            if (spinner) spinner.hidden = true;
+            if (err.message !== "u") { errEl.textContent = err.message || "Something went wrong."; errEl.hidden = false; }
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
+            btn.addEventListener("click", handleSubmit, { once: true });
         }
     }
 
-    // Boot
-    document.addEventListener("DOMContentLoaded", init);
+    /* ── Boot ── */
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
 })();

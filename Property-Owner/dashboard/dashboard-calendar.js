@@ -1,4 +1,6 @@
 (() => {
+    const API_BASE = "http://127.0.0.1:5000/api";
+
     const STATUS = {
         AVAILABLE: "AVAILABLE",
         RESERVED: "RESERVED",
@@ -15,49 +17,54 @@
         monthPickerOpen: false,
         unitFilter: "all",
         statusFilter: "all",
-        bookings: [
-            {
-                id: 1,
-                guest: "Angela Cruz",
-                listing: "Condo Unit 1",
-                unit: "Condo Unit 1",
-                start: "2026-03-12",
-                end: "2026-04-12",
-                status: STATUS.MOVED_IN,
-                image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop"
-            },
-            {
-                id: 2,
-                guest: "Mark Santos",
-                listing: "Studio Apartment A",
-                unit: "Studio Apartment A",
-                start: "2026-03-18",
-                end: "2026-05-18",
-                status: STATUS.RESERVED,
-                image: "https://images.unsplash.com/photo-1494526585095-c41746248156?q=80&w=1200&auto=format&fit=crop"
-            },
-            {
-                id: 3,
-                guest: "Paolo Reyes",
-                listing: "Room 3B",
-                unit: "Room 3B",
-                start: "2026-03-20",
-                end: "2026-04-20",
-                status: STATUS.MOVE_OUT,
-                image: "https://images.unsplash.com/photo-1484154218962-a197022b5858?q=80&w=1200&auto=format&fit=crop"
-            },
-            {
-                id: 4,
-                guest: "Denise Lim",
-                listing: "Condo Unit 1",
-                unit: "Condo Unit 1",
-                start: "2026-03-28",
-                end: "2026-05-01",
-                status: STATUS.RESERVED,
-                image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=1200&auto=format&fit=crop"
-            }
-        ]
+        bookings: [],
+        loading: false,
+        loadError: null,
     };
+
+    // ── Fetch real bookings from backend ──
+    async function loadBookings() {
+        state.loading = true;
+        state.loadError = null;
+        renderLoadingState();
+
+        try {
+            const res = await fetch(`${API_BASE}/bookings/for-owner`, {
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            // Map to calendar shape, skip bookings with no dates or non-active statuses
+            const SHOW_STATUSES = new Set(["APPROVED", "ACTIVE", "COMPLETED"]);
+            state.bookings = (data.bookings || [])
+                .filter(b => SHOW_STATUSES.has(b.status) && b.start && b.end)
+                .map(b => ({
+                    id: b.id,
+                    guest: b.guest || "Unknown",
+                    listing: b.unit || `Listing #${b.listing_id}`,
+                    unit: b.unit || `Listing #${b.listing_id}`,
+                    start: b.start,
+                    end: b.end,
+                    status: b.calendar_status || b.status,
+                    image: b.image || null,
+                }));
+        } catch (e) {
+            console.error("[calendar] Failed to load bookings", e);
+            state.loadError = "Could not load bookings. Please try again.";
+            state.bookings = [];
+        } finally {
+            state.loading = false;
+        }
+    }
+
+    function renderLoadingState() {
+        const grid = document.getElementById("calendarGrid");
+        if (grid) {
+            grid.innerHTML = `<div style="grid-column:1/-1; padding:40px; text-align:center; color:#6b7280; font-size:14px; font-weight:600;">Loading bookings…</div>`;
+        }
+    }
 
     const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const MONTHS = [
@@ -850,7 +857,7 @@
     let hasBoundOutside = false;
     let hasBoundDropzone = false;
 
-    function render() {
+    async function render() {
         renderWeekdays();
         renderMiniCalendar();
         renderUnitFilter();
@@ -875,5 +882,24 @@
         }
     }
 
-    window.DashboardCalendar = { render };
+    async function init() {
+        await loadBookings();
+        await render();
+
+        // Show error banner if fetch failed
+        if (state.loadError) {
+            const grid = document.getElementById("calendarGrid");
+            if (grid) {
+                grid.innerHTML = `<div style="grid-column:1/-1; padding:20px 24px; background:#fef2f2; border:1px solid #fecaca; border-radius:12px; color:#b91c1c; font-size:13px; font-weight:700;">${escapeHtml(state.loadError)}</div>`;
+            }
+        }
+    }
+
+    window.DashboardCalendar = {
+        render: init,
+        reload: async () => {
+            await loadBookings();
+            await render();
+        }
+    };
 })();

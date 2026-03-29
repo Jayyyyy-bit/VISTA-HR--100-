@@ -49,25 +49,46 @@
 
             <!-- Right: user -->
             <div class="topbar-right">
-                <button class="user-menu-btn" id="profileBtn">
-                    <i data-lucide="menu" class="umenu-icon"></i>
-                    <span class="avatar" id="avatarEl">R</span>
-                </button>
-                <div class="user-dropdown" id="userDropdown">
-                    <div class="ud-user">
-                        <div class="ud-avatar" id="udAvatar">R</div>
-                        <div>
-                            <div class="ud-name" id="udName">Resident</div>
-                            <div class="ud-email" id="udEmail"></div>
+
+                <!-- Notification Bell -->
+                <div class="notif-wrap" id="notifWrap">
+                    <button class="notif-btn" id="notifBtn" aria-label="Notifications">
+                        <i data-lucide="bell"></i>
+                        <span class="notif-badge" id="notifBadge" hidden>0</span>
+                    </button>
+                    <div class="notif-panel" id="notifPanel" hidden>
+                        <div class="notif-head">
+                            <span>Notifications</span>
+                            <button class="notif-mark-read" id="notifMarkRead">Mark all read</button>
                         </div>
+                        <div class="notif-list" id="notifList"></div>
                     </div>
-                    <div class="ud-sep"></div>
-                    <button class="ud-item" id="udBookings"><i data-lucide="calendar-check"></i>My bookings</button>
-                    <button class="ud-item" id="udSaved"><i data-lucide="heart"></i>Saved listings</button>
-                    <button class="ud-item" id="udProfile"><i data-lucide="user"></i>Profile</button>
-                    <div class="ud-sep"></div>
-                    <button class="ud-item ud-logout" id="udLogout"><i data-lucide="log-out"></i>Log out</button>
                 </div>
+
+                <!-- Avatar + dropdown (separate from bell) -->
+                <div class="profile-wrap" id="profileWrap">
+                    <button class="user-menu-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                        <i data-lucide="menu" class="umenu-icon"></i>
+                        <span class="avatar" id="avatarEl">R</span>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown" aria-hidden="true">
+                        <div class="ud-user">
+                            <div class="ud-avatar" id="udAvatar">R</div>
+                            <div>
+                                <div class="ud-name" id="udName">Resident</div>
+                                <div class="ud-email" id="udEmail"></div>
+                            </div>
+                        </div>
+                        <div class="ud-sep"></div>
+                        <button class="ud-item" id="udBookings"><i data-lucide="calendar-check"></i>My bookings</button>
+                        <button class="ud-item" id="udMessages"><i data-lucide="message-square"></i>Messages</button>
+                        <button class="ud-item" id="udSaved"><i data-lucide="heart"></i>Saved listings</button>
+                        <button class="ud-item" id="udProfile"><i data-lucide="user"></i>Profile</button>
+                        <div class="ud-sep"></div>
+                        <button class="ud-item ud-logout" id="udLogout"><i data-lucide="log-out"></i>Log out</button>
+                    </div>
+                </div>
+
             </div>
 
         </div>

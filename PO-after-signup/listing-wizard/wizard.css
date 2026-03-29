@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap');
 
 /* =========================================================
    WIZARD.CSS — Organized (Step 0–8)
@@ -13,8 +13,8 @@
     --muted: rgba(12, 19, 34, .60);
     --muted2: rgba(12, 19, 34, .45);
     --line: rgba(12, 19, 34, .10);
-    --blue: #1B3F6E;
-    --blue2: #4A7CB5;
+    --blue: #C8882A;
+    --blue2: #C8882A;
 
     --radius-xl: 22px;
     --radius-lg: 18px;
@@ -34,7 +34,7 @@
     --shadow-hover: 0 16px 40px rgba(0, 0, 0, .12);
     --ring: 0 0 0 3px rgba(10, 10, 10, .18);
     /* VISTA-HR amber accent */
-    --accent: #0A0A0A;
+    --accent: #C8882A;
 }
 
 .tile {
@@ -75,9 +75,9 @@ body {
 
 body {
     margin: 0;
-    font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, sans-serif;
     color: var(--text-1);
-    background: #EDEAE4;
+    background: #F7F4EE;
 }
 
 /* ✅ SINGLE SOURCE OF TRUTH: caret/text color safety
@@ -134,7 +134,7 @@ textarea {
 .bg .g1 {
     left: -220px;
     top: -240px;
-    background: radial-gradient(circle, rgba(27, 63, 110, .08), transparent 60%);
+    background: radial-gradient(circle, rgba(200, 136, 42, .08), transparent 60%);
 
     /* combine float + pulse (final intended state) */
     animation: float-g1 12s ease-in-out infinite, pulse-soft 6s ease-in-out infinite alternate;
@@ -236,7 +236,7 @@ textarea {
     width: 16px;
     height: 16px;
     border-radius: 4px;
-    background: #111;
+    background: #C8882A;
 }
 
 .brand-text {
@@ -245,7 +245,7 @@ textarea {
 }
 
 .brand-text span {
-    color: var(--blue);
+    color: var(--amber);
 }
 
 .top-actions {
@@ -266,24 +266,25 @@ textarea {
 
 .chip:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
     box-shadow: 0 12px 22px rgba(12, 19, 34, .08);
 }
 
 .chip.primary {
-    background: var(--blue);
+    background: var(--amber);
     border: none;
     color: #fff;
-    box-shadow: 0 14px 26px rgba(27, 63, 110, .18);
+    box-shadow: 0 4px 14px rgba(200, 136, 42, .22);
 }
 
 /* ===== Page layout ===== */
 .page {
-    min-height: calc(100vh - 64px - 78px);
+    height: calc(100vh - 80px - 80px);
+    overflow: hidden;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 28px 18px;
+    padding: 0 18px;
 }
 
 .wizard-shell {
@@ -320,6 +321,24 @@ textarea {
     box-shadow: none;
     backdrop-filter: none;
     padding: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, .15) transparent;
+}
+
+.panel.panel-main::-webkit-scrollbar {
+    width: 5px
+}
+
+.panel.panel-main::-webkit-scrollbar-track {
+    background: transparent
+}
+
+.panel.panel-main::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .15);
+    border-radius: 999px
 }
 
 .panel.panel-main:hover {
@@ -403,11 +422,13 @@ textarea {
 
 .step-title {
     margin: 0;
+    font-family: 'Instrument Serif', serif;
     font-size: 32px;
-    font-weight: 900;
-    letter-spacing: -0.03em;
-    line-height: 1.08;
-    color: var(--text-1);
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--ink);
 }
 
 .step-sub {
@@ -560,7 +581,7 @@ textarea {
 
 .mini-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(27, 63, 110, .18);
+    border-color: rgba(200, 136, 42, .18);
     box-shadow: 0 18px 55px rgba(12, 19, 34, .11);
 }
 
@@ -624,7 +645,7 @@ textarea {
 .bar {
     height: 100%;
     width: 0%;
-    background: #1B3F6E;
+    background: #C8882A;
     transition: width .5s cubic-bezier(.2, .9, .2, 1);
     box-shadow: 0 6px 20px rgba(10, 10, 10, .28);
 }
@@ -682,7 +703,7 @@ textarea {
 }
 
 .cl-item.active .cl-dot {
-    background: rgba(27, 63, 110, .75);
+    background: #C8882A;
 }
 
 .cl-item.done .cl-dot {
@@ -731,7 +752,7 @@ textarea {
 }
 
 .dot.active {
-    background: rgba(27, 63, 110, .70);
+    background: #C8882A;
 }
 
 .nav {
@@ -758,14 +779,14 @@ textarea {
 }
 
 .btn.ghost:hover {
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
     transform: translateY(-1px);
 }
 
 .btn.solid {
     border: none;
     color: #fff;
-    background: #1B3F6E;
+    background: #C8882A;
     box-shadow: 0 12px 28px rgba(10, 10, 10, 0.24);
 }
 
@@ -1014,8 +1035,8 @@ textarea {
 
 .field input:focus,
 .field select:focus {
-    border-color: rgba(27, 63, 110, .65);
-    box-shadow: 0 0 0 4px rgba(27, 63, 110, .12);
+    border-color: rgba(200, 136, 42, .65);
+    box-shadow: 0 0 0 3px rgba(200, 136, 42, .15);
     transform: translateY(-1px);
 }
 
@@ -1158,8 +1179,8 @@ textarea {
 .hintIcon:hover,
 .hintIcon:focus {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .35);
-    color: rgba(27, 63, 110, .85);
+    border-color: rgba(200, 136, 42, .35);
+    color: rgba(200, 136, 42, .85);
     outline: none;
 }
 
@@ -1220,7 +1241,7 @@ textarea {
 
 .selectWrap:hover select {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
     box-shadow: 0 12px 26px rgba(12, 19, 34, .10);
 }
 
@@ -1312,8 +1333,8 @@ select option {
 
 #barangaySuggest .suggestItem:hover,
 #barangaySuggest .suggestItem.active {
-    background: rgba(27, 63, 110, .08) !important;
-    border-color: rgba(27, 63, 110, .18) !important;
+    background: rgba(200, 136, 42, .08) !important;
+    border-color: rgba(200, 136, 42, .18) !important;
     transform: scale(1.01) !important;
 }
 
@@ -1370,8 +1391,8 @@ select option {
 
 .suggestItem:hover,
 .suggestItem.active {
-    background: rgba(27, 63, 110, .06);
-    border-color: rgba(27, 63, 110, .18);
+    background: rgba(200, 136, 42, .06);
+    border-color: rgba(200, 136, 42, .18);
     transform: scale(1.015);
 }
 
@@ -1425,8 +1446,8 @@ select option {
 }
 
 .cap-rent-wrap:focus-within {
-    border-color: #1B3F6E;
-    box-shadow: 0 0 0 3px rgba(27, 63, 110, .08);
+    border-color: #C8882A;
+    box-shadow: 0 0 0 3px rgba(200, 136, 42, .08);
 }
 
 .cap-rent-peso {
@@ -1524,7 +1545,7 @@ select option {
 
 .qtyBtn:hover {
     transform: translateY(-1px) scale(1.04);
-    border-color: rgba(27, 63, 110, .28);
+    border-color: rgba(200, 136, 42, .28);
     box-shadow: 0 12px 24px rgba(12, 19, 34, .10);
 }
 
@@ -1538,7 +1559,7 @@ select option {
     content: "";
     position: absolute;
     inset: -40% -60%;
-    background: #1B3F6E;
+    background: #C8882A;
     transform: translateX(-40%) rotate(10deg);
     opacity: 0;
     transition: opacity .18s ease, transform .28s ease;
@@ -1578,8 +1599,8 @@ select option {
 .cap-titleRow .hintIcon:hover,
 .cap-titleRow .hintIcon:focus {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .35);
-    color: rgba(27, 63, 110, .85);
+    border-color: rgba(200, 136, 42, .35);
+    color: rgba(200, 136, 42, .85);
     outline: none;
 }
 
@@ -1753,7 +1774,7 @@ select option {
 
 .amenSearch:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .18);
+    border-color: rgba(200, 136, 42, .18);
     box-shadow: 0 16px 36px rgba(12, 19, 34, .10);
 }
 
@@ -1791,7 +1812,7 @@ select option {
 .amenSearchClear:hover {
     opacity: 1;
     transform: scale(1.05);
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
 }
 
 .amenScroll {
@@ -1886,7 +1907,7 @@ select option {
 
 .hlSearch:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .18);
+    border-color: rgba(200, 136, 42, .18);
     box-shadow: 0 16px 36px rgba(12, 19, 34, .10);
 }
 
@@ -1924,7 +1945,7 @@ select option {
 .hlSearchClear:hover {
     opacity: 1;
     transform: scale(1.05);
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
 }
 
 .hlCounter {
@@ -1961,13 +1982,13 @@ select option {
 
 .hlChip:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
     box-shadow: 0 14px 30px rgba(12, 19, 34, .10);
 }
 
 .hlChip.selected {
-    border-color: rgba(27, 63, 110, .55);
-    box-shadow: 0 18px 45px rgba(27, 63, 110, .14);
+    border-color: rgba(200, 136, 42, .55);
+    box-shadow: 0 18px 45px rgba(200, 136, 42, .14);
 }
 
 .hlIc {
@@ -2214,13 +2235,13 @@ select option {
 
 .uploadZone:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .28);
+    border-color: rgba(200, 136, 42, .28);
     box-shadow: 0 20px 55px rgba(12, 19, 34, .08);
 }
 
 .uploadZone.drag {
-    border-color: rgba(27, 63, 110, .55);
-    background: rgba(27, 63, 110, .06);
+    border-color: rgba(200, 136, 42, .55);
+    background: rgba(200, 136, 42, .06);
 }
 
 .uzTop {
@@ -2259,7 +2280,7 @@ select option {
 
 .uzBtn:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
     box-shadow: 0 14px 30px rgba(12, 19, 34, .10);
 }
 
@@ -2277,19 +2298,41 @@ select option {
 }
 
 .thumbGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, .15) transparent;
+}
+
+.thumbGrid::-webkit-scrollbar {
+    height: 4px
+}
+
+.thumbGrid::-webkit-scrollbar-track {
+    background: transparent
+}
+
+.thumbGrid::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .15);
+    border-radius: 999px
 }
 
 .thumb {
     position: relative;
-    border-radius: 16px;
+    border-radius: 12px;
     overflow: hidden;
-    border: 1px solid rgba(12, 19, 34, .10);
-    background: rgba(255, 255, 255, .9);
-    box-shadow: 0 14px 35px rgba(12, 19, 34, .08);
+    border: 1px solid rgba(0, 0, 0, .10);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
     transition: transform .14s ease, box-shadow .14s ease;
+    flex: 0 0 200px;
+    scroll-snap-align: start;
 }
 
 .thumb:hover {
@@ -2298,8 +2341,8 @@ select option {
 }
 
 .thumb img {
-    width: 100%;
-    height: 170px;
+    width: 200px;
+    height: 160px;
     object-fit: cover;
     display: block;
 }
@@ -2338,7 +2381,7 @@ select option {
 
 .tBtn:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .22);
+    border-color: rgba(200, 136, 42, .22);
     box-shadow: 0 12px 26px rgba(12, 19, 34, .10);
 }
 
@@ -2397,8 +2440,8 @@ select option {
 }
 
 .vtToggle.on {
-    background: rgba(27, 63, 110, .28);
-    border-color: rgba(27, 63, 110, .22);
+    background: rgba(200, 136, 42, .28);
+    border-color: rgba(200, 136, 42, .22);
 }
 
 .vtToggle.on .vtKnob {
@@ -2430,8 +2473,8 @@ select option {
 }
 
 .vtInput:focus {
-    border-color: rgba(27, 63, 110, .65);
-    box-shadow: 0 0 0 4px rgba(27, 63, 110, .12);
+    border-color: rgba(200, 136, 42, .65);
+    box-shadow: 0 0 0 3px rgba(200, 136, 42, .15);
     transform: translateY(-1px);
 }
 
@@ -2444,7 +2487,7 @@ select option {
 
 @media (max-width: 980px) {
     .thumbGrid {
-        grid-template-columns: repeat(2, 1fr);
+        /* horizontal scroll — no change needed on mobile */
     }
 }
 
@@ -2456,6 +2499,8 @@ select option {
     margin: 0 auto;
     display: grid;
     gap: 14px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .detCard {
@@ -2464,6 +2509,8 @@ select option {
     background: rgba(255, 255, 255, .78);
     box-shadow: 0 14px 40px rgba(12, 19, 34, .08);
     padding: 16px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .detHead {
@@ -2507,18 +2554,22 @@ select option {
     padding: 0 14px;
     font-weight: 850;
     outline: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
 .detInput:focus {
-    border-color: rgba(27, 63, 110, .65);
-    box-shadow: 0 0 0 4px rgba(27, 63, 110, .12);
+    border-color: rgba(200, 136, 42, .65);
+    box-shadow: 0 0 0 3px rgba(200, 136, 42, .15);
     transform: translateY(-1px);
 }
 
 .detTextarea {
     width: 100%;
     min-height: 160px;
+    max-height: 260px;
     resize: vertical;
     border-radius: 14px;
     border: 1px solid rgba(12, 19, 34, .14);
@@ -2527,12 +2578,15 @@ select option {
     font-weight: 750;
     outline: none;
     line-height: 1.45;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    overflow-y: auto;
     transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
 .detTextarea:focus {
-    border-color: rgba(27, 63, 110, .65);
-    box-shadow: 0 0 0 4px rgba(27, 63, 110, .12);
+    border-color: rgba(200, 136, 42, .65);
+    box-shadow: 0 0 0 3px rgba(200, 136, 42, .15);
     transform: translateY(-1px);
 }
 
@@ -2560,12 +2614,17 @@ select option {
     background: rgba(255, 255, 255, .70);
     box-shadow: 0 12px 30px rgba(12, 19, 34, .08);
     padding: 14px;
+    overflow: hidden;
+    min-width: 0;
 }
 
 .pvH {
     font-weight: 950;
     font-size: 14px;
     margin-bottom: 6px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    overflow: hidden;
 }
 
 .pvP {
@@ -2573,6 +2632,8 @@ select option {
     font-size: 12.5px;
     color: rgba(12, 19, 34, .62);
     line-height: 1.45;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* ========= Custom Dropdown (City) ========= */
@@ -2606,14 +2667,14 @@ select option {
 
 .ddBtn:hover {
     transform: translateY(-1px);
-    border-color: rgba(27, 63, 110, .35);
+    border-color: rgba(200, 136, 42, .35);
     box-shadow: 0 10px 24px rgba(12, 19, 34, .08);
 }
 
 .ddBtn:focus-visible {
     outline: none;
-    border-color: rgba(27, 63, 110, .65);
-    box-shadow: 0 0 0 4px rgba(27, 63, 110, .12);
+    border-color: rgba(200, 136, 42, .65);
+    box-shadow: 0 0 0 3px rgba(200, 136, 42, .15);
 }
 
 .ddVal {
@@ -2680,12 +2741,12 @@ select option {
 }
 
 .ddOpt:hover {
-    background: rgba(27, 63, 110, .08);
+    background: rgba(200, 136, 42, .08);
     transform: scale(1.02);
 }
 
 .ddOpt.active {
-    background: rgba(27, 63, 110, .12);
+    background: rgba(200, 136, 42, .12);
 }
 
 .ddOpt .tag {
@@ -2693,9 +2754,9 @@ select option {
     font-weight: 950;
     padding: 6px 9px;
     border-radius: 999px;
-    border: 1px solid rgba(27, 63, 110, .18);
-    background: rgba(27, 63, 110, .06);
-    color: rgba(27, 63, 110, .85);
+    border: 1px solid rgba(200, 136, 42, .18);
+    background: rgba(200, 136, 42, .06);
+    color: rgba(200, 136, 42, .85);
 }
 
 /* Selection highlight */
@@ -2703,7 +2764,7 @@ select option {
 .formCard textarea::selection,
 .field input::selection,
 .field textarea::selection {
-    background: rgba(27, 63, 110, .18);
+    background: rgba(200, 136, 42, .18);
 }
 
 
@@ -2757,7 +2818,7 @@ select:-webkit-autofill {
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    background: rgba(27, 63, 110, .08);
+    background: rgba(200, 136, 42, .08);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2791,8 +2852,8 @@ select:-webkit-autofill {
     gap: 6px;
     padding: 7px 14px;
     border-radius: 999px;
-    border: 1.5px solid rgba(27, 63, 110, .20);
-    background: rgba(27, 63, 110, .06);
+    border: 1.5px solid rgba(200, 136, 42, .20);
+    background: rgba(200, 136, 42, .06);
     color: rgb(27, 63, 110);
     font-family: inherit;
     font-size: 12px;
@@ -2803,8 +2864,8 @@ select:-webkit-autofill {
 }
 
 .vtGuideBtn:hover {
-    background: rgba(27, 63, 110, .12);
-    border-color: rgba(27, 63, 110, .35);
+    background: rgba(200, 136, 42, .12);
+    border-color: rgba(200, 136, 42, .35);
 }
 
 .vtGuideBtn svg {
@@ -2815,9 +2876,9 @@ select:-webkit-autofill {
 
 /* ── Panorama upload zone ── */
 .panoUploadZone {
-    border: 2px dashed rgba(27, 63, 110, .25);
+    border: 2px dashed rgba(200, 136, 42, .25);
     border-radius: 18px;
-    background: rgba(27, 63, 110, .03);
+    background: rgba(200, 136, 42, .03);
     overflow: hidden;
     cursor: pointer;
     transition: border-color .16s, background .16s;
@@ -2830,8 +2891,8 @@ select:-webkit-autofill {
 
 .panoUploadZone:hover,
 .panoUploadZone.drag {
-    border-color: rgba(27, 63, 110, .55);
-    background: rgba(27, 63, 110, .06);
+    border-color: rgba(200, 136, 42, .55);
+    background: rgba(200, 136, 42, .06);
 }
 
 .panoUploadZone.isUploading {
@@ -2852,7 +2913,7 @@ select:-webkit-autofill {
     width: 32px;
     height: 32px;
     stroke-width: 1.4;
-    color: rgba(27, 63, 110, .40);
+    color: rgba(200, 136, 42, .40);
 }
 
 .panoUploadTitle {
@@ -3095,13 +3156,13 @@ select:-webkit-autofill {
     width: 46px;
     height: 46px;
     border-radius: 14px;
-    background: #1B3F6E;
+    background: #C8882A;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     flex-shrink: 0;
-    box-shadow: 0 8px 20px rgba(27, 63, 110, .25);
+    box-shadow: 0 8px 20px rgba(200, 136, 42, .25);
 }
 
 .gm-icon svg {
@@ -3160,7 +3221,7 @@ select:-webkit-autofill {
 
 .gm-progress-bar {
     height: 100%;
-    background: #1B3F6E;
+    background: #C8882A;
     transition: width .35s cubic-bezier(.22, 1, .36, 1);
     border-radius: 999px;
 }
@@ -3218,14 +3279,14 @@ select:-webkit-autofill {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #1B3F6E;
+    background: #C8882A;
     color: #fff;
     font-size: 15px;
     font-weight: 950;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 16px rgba(27, 63, 110, .25);
+    box-shadow: 0 6px 16px rgba(200, 136, 42, .25);
     flex-shrink: 0;
 }
 
@@ -3233,7 +3294,7 @@ select:-webkit-autofill {
     width: 40px;
     height: 40px;
     border-radius: 14px;
-    background: rgba(27, 63, 110, .07);
+    background: rgba(200, 136, 42, .07);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3291,8 +3352,8 @@ select:-webkit-autofill {
 }
 
 .gm-store-btn:hover {
-    background: rgba(27, 63, 110, .08);
-    border-color: rgba(27, 63, 110, .25);
+    background: rgba(200, 136, 42, .08);
+    border-color: rgba(200, 136, 42, .25);
     color: rgb(27, 63, 110);
 }
 
@@ -3347,7 +3408,7 @@ select:-webkit-autofill {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: rgba(27, 63, 110, .10);
+    background: rgba(200, 136, 42, .10);
     color: rgb(27, 63, 110);
     font-size: 11px;
     font-weight: 950;
@@ -3442,7 +3503,7 @@ select:-webkit-autofill {
     background: rgb(27, 63, 110);
     border: none;
     color: #fff;
-    box-shadow: 0 6px 18px rgba(27, 63, 110, .22);
+    box-shadow: 0 6px 18px rgba(200, 136, 42, .22);
 }
 
 .gm-btn-next:hover {
@@ -3507,5 +3568,570 @@ select:-webkit-autofill {
 
     .gm-store-btns {
         flex-direction: column;
+    }
+}
+
+/* ============================================================
+   PROGRESS BAR (replaces dots)
+   ============================================================ */
+.wiz-prog-track {
+    flex: 1;
+    max-width: 280px;
+    height: 4px;
+    background: rgba(12, 14, 20, .10);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.wiz-prog-bar {
+    height: 100%;
+    background: #C8882A;
+    border-radius: 999px;
+    transition: width .45s cubic-bezier(.2, .9, .2, 1);
+    box-shadow: 0 0 8px rgba(200, 136, 42, .40);
+}
+
+.wiz-prog-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(12, 14, 20, .45);
+    white-space: nowrap;
+    margin-left: 10px;
+}
+
+/* Make the progress-bottom area flex and centred */
+.progress-bottom {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+    max-width: 320px;
+}
+
+/* ============================================================
+   BOTTOM TIPS STRIP
+   ============================================================ */
+.bts {
+    position: fixed;
+    bottom: 84px;
+    /* sits just above the bottombar */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    width: min(680px, calc(100vw - 32px));
+    transition: opacity .28s ease, transform .28s cubic-bezier(.2, .9, .2, 1);
+}
+
+.bts.bts-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(8px);
+}
+
+.bts-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(12, 14, 20, .88);
+    color: #fff;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 8px 32px rgba(12, 14, 20, .18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.bts-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(200, 136, 42, .25);
+    display: grid;
+    place-items: center;
+    color: #C8882A;
+}
+
+.bts-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.bts-list {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+}
+
+.bts-item {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, .80);
+    line-height: 1.4;
+    position: relative;
+}
+
+/* bullet separator between items */
+.bts-item+.bts-item::before {
+    content: "·";
+    position: absolute;
+    left: -10px;
+    color: rgba(255, 255, 255, .30);
+}
+
+.bts-close {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, .12);
+    color: rgba(255, 255, 255, .60);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background .14s ease, color .14s ease;
+}
+
+.bts-close:hover {
+    background: rgba(255, 255, 255, .20);
+    color: #fff;
+}
+
+.bts-close svg {
+    width: 13px;
+    height: 13px;
+}
+
+@media (max-width: 640px) {
+    .bts {
+        bottom: 76px
+    }
+
+    .bts-list {
+        flex-direction: column;
+        gap: 4px
+    }
+
+    .bts-item+.bts-item::before {
+        display: none
+    }
+}
+
+/* ============================================================
+   AIRBNB-STYLE LAYOUT OVERRIDES — v2
+   Pure white · centered content · no side panel · minimal
+   ============================================================ */
+
+/* ── Body & background ── */
+body {
+    background: #fff !important;
+    color: #000 !important
+}
+
+.bg {
+    display: none !important
+}
+
+/* ── Topbar ── */
+.topbar {
+    height: 80px !important;
+    background: #fff !important;
+    border-bottom: 1px solid rgba(0, 0, 0, .08) !important;
+    backdrop-filter: none !important;
+    padding: 0 24px !important;
+}
+
+.logo-box {
+    background: #C8882A !important
+}
+
+.brand-text {
+    color: #000 !important;
+    font-size: 15px !important
+}
+
+.brand-text span {
+    color: #C8882A !important
+}
+
+.chip {
+    border: 1px solid rgba(0, 0, 0, .20) !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+    padding: 9px 14px !important;
+}
+
+.chip:hover {
+    background: rgba(0, 0, 0, .04) !important;
+    transform: none !important
+}
+
+.chip.primary {
+    background: #222 !important;
+    color: #fff !important;
+    border-color: #222 !important;
+}
+
+.chip.primary:hover {
+    background: #000 !important
+}
+
+/* ── Page layout — vertically centered ── */
+.page {
+    min-height: calc(100vh - 80px - 80px) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 48px 24px !important;
+    background: #fff !important;
+}
+
+/* ── Wizard shell ── */
+.wizard-shell {
+    width: min(640px, 96vw) !important;
+    margin: 0 auto !important;
+}
+
+/* ── Stage — single column ── */
+.stage-centered {
+    display: block !important;
+    grid-template-columns: unset !important;
+}
+
+/* ── Hide side panel ── */
+.panel-side {
+    display: none !important
+}
+
+/* ── Main panel — transparent ── */
+.panel.panel-main {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 40px 0 48px !important;
+    backdrop-filter: none !important;
+    width: 100% !important;
+}
+
+/* ── Step header ── */
+.step-kicker {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: rgba(0, 0, 0, .55) !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    margin-bottom: 10px !important;
+}
+
+.step-header {
+    margin-bottom: 24px !important
+}
+
+.step-title {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-style: normal !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    letter-spacing: -.5px !important;
+    line-height: 1.15 !important;
+    color: #000 !important;
+    margin: 0 0 8px !important;
+}
+
+.step-sub {
+    font-size: 15px !important;
+    color: rgba(0, 0, 0, .55) !important;
+    font-weight: 400 !important;
+    margin: 0 !important;
+    line-height: 1.5 !important;
+}
+
+/* ── Cards grid ── */
+.grid {
+    margin-top: 24px !important;
+    gap: 16px !important;
+}
+
+/* ── Tile cards — Airbnb style ── */
+.card {
+    background: #fff !important;
+    border: 1.5px solid rgba(0, 0, 0, .15) !important;
+    border-radius: 12px !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    min-height: 96px !important;
+    padding: 16px !important;
+    transition: border-color .15s ease !important;
+}
+
+.card:hover {
+    border-color: rgba(0, 0, 0, .55) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    background: #fff !important;
+}
+
+.card.selected {
+    border: 2px solid #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.card .label {
+    color: #000 !important;
+    font-weight: 700 !important
+}
+
+.card .desc {
+    color: rgba(0, 0, 0, .55) !important
+}
+
+.card .card-ic {
+    color: #000 !important
+}
+
+.card:hover .card-ic {
+    transform: none !important;
+    color: #000 !important
+}
+
+.card.selected .card-ic {
+    transform: none !important;
+    color: #000 !important
+}
+
+/* ── Bottombar ── */
+.bottombar {
+    height: 80px !important;
+    background: #fff !important;
+    border-top: 1px solid rgba(0, 0, 0, .08) !important;
+    backdrop-filter: none !important;
+    padding: 0 24px !important;
+}
+
+/* ── Back button — underlined text ── */
+.btn.ghost {
+    border: none !important;
+    background: transparent !important;
+    font-family: inherit !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+    text-decoration: underline !important;
+    padding: 12px 4px !important;
+    min-width: unset !important;
+    border-radius: 0 !important;
+}
+
+.btn.ghost:hover {
+    color: #000 !important;
+    border: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.btn.ghost:disabled {
+    color: rgba(0, 0, 0, .35) !important;
+    opacity: 1 !important;
+}
+
+/* ── Next button — solid dark rounded ── */
+.btn.solid {
+    background: #222 !important;
+    border-radius: 8px !important;
+    padding: 14px 28px !important;
+    font-family: inherit !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+    color: #fff !important;
+    border: none !important;
+    min-width: unset !important;
+    transition: background .15s ease !important;
+}
+
+.btn.solid:hover {
+    background: #000 !important;
+    transform: none !important;
+    box-shadow: none !important
+}
+
+.btn.solid:disabled {
+    background: rgba(0, 0, 0, .25) !important;
+    opacity: 1 !important
+}
+
+/* ── Progress bar — full width, left-aligned ── */
+.progress-bottom {
+    flex: 1 !important;
+    max-width: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+.wiz-prog-track {
+    flex: 1 !important;
+    max-width: none !important;
+    height: 4px !important;
+    background: rgba(0, 0, 0, .10) !important;
+    border-radius: 999px !important;
+}
+
+.wiz-prog-bar {
+    background: #000 !important;
+    box-shadow: none !important;
+    border-radius: 999px !important;
+}
+
+.wiz-prog-label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: rgba(0, 0, 0, .45) !important;
+    white-space: nowrap !important;
+}
+
+/* ── Tips strip ── */
+.bts {
+    bottom: 88px !important
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .page {
+        padding: 32px 16px !important
+    }
+
+    .step-title {
+        font-size: 24px !important
+    }
+
+    .grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important
+    }
+
+    .bottombar {
+        height: 72px !important
+    }
+
+    .btn.solid {
+        padding: 12px 20px !important;
+        font-size: 14px !important
+    }
+}
+
+/* ============================================================
+   STEP 3 — BALANCED SPLIT  (form left · map right)
+   Map matches form height — not full viewport, just right-sized.
+   ============================================================ */
+
+/* Widen shell for step 3 only */
+body:has(.loc-split) .wizard-shell,
+body.wiz-step-step-3 .wizard-shell {
+    width: min(960px, 96vw) !important;
+}
+
+/* Page stays centered like other steps */
+body:has(.loc-split) .page,
+body.wiz-step-step-3 .page {
+    align-items: stretch !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Split wrapper */
+.loc-split {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 0 28px;
+    align-items: stretch;
+    width: 100%;
+}
+
+/* Left — form, clean card */
+.loc-form-col {
+    min-width: 0;
+}
+
+/* Right — map column, sticky so it stays in view while form scrolls */
+.loc-map-col {
+    position: sticky;
+    top: 96px;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+}
+
+.loc-map-inner {
+    background: #fff;
+    border: 1.5px solid rgba(0, 0, 0, .10);
+    border-radius: 16px;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.loc-map-inner .mapHeader {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, .06);
+}
+
+.loc-map-inner .mapTitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: #000
+}
+
+.loc-map-inner .mapSub {
+    font-size: 12px;
+    color: rgba(0, 0, 0, .45);
+    margin-top: 2px
+}
+
+/* Map canvas — fills remaining height of the inner card */
+.loc-osmMap {
+    flex: 1 !important;
+    height: 100% !important;
+    min-height: 200px !important;
+    border-radius: 0 !important;
+    margin-bottom: 0 !important;
+    background: #f0f0f0;
+}
+
+.loc-map-inner .mapHint {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, .45);
+    border-top: 1px solid rgba(0, 0, 0, .06);
+}
+
+/* Responsive — stack at 860px */
+@media (max-width: 860px) {
+
+    body:has(.loc-split) .wizard-shell,
+    body.wiz-step-step-3 .wizard-shell {
+        width: min(640px, 96vw) !important;
+    }
+
+    .loc-split {
+        grid-template-columns: 1fr !important;
+        gap: 20px 0 !important;
+    }
+
+    .loc-map-col {
+        position: static !important
+    }
+
+    .loc-osmMap {
+        height: 220px !important
     }
 }

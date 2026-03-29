@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Enum
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..extensions import db
@@ -23,7 +23,7 @@ class User(db.Model):
     # ── Email OTP verification ────────────────────────────────────
     # Must be True before user can access dashboard
     email_verified = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
-    email_otp = db.Column(db.String(6), nullable=True)
+    email_otp = db.Column(db.String(128), nullable=True)  # stores sha256 hash (64 chars) or reset token hash
     email_otp_expires_at = db.Column(db.DateTime, nullable=True)
 
     # ── Account-level verification (role-dependent) ───────────────
@@ -33,7 +33,11 @@ class User(db.Model):
     is_verified = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     # admin-controlled account status
-    is_suspended = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    is_suspended     = db.Column(db.Boolean,  nullable=False, default=False, server_default="0")
+    suspended_until  = db.Column(db.DateTime, nullable=True)   # auto-lifts when past this datetime
+    suspension_reason= db.Column(db.Text,     nullable=True)   # reason shown to user on login attempt
+    strike_count     = db.Column(db.Integer,  nullable=False, default=0, server_default="0")
+    # 3 strikes = permanent ban (is_suspended=True, suspended_until=NULL)
 
     has_completed_onboarding = db.Column(
         db.Boolean,
@@ -70,8 +74,8 @@ class User(db.Model):
         server_default="NONE",
     )
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def set_password(self, raw_password: str) -> None:
         self.password_hash = generate_password_hash(raw_password)
@@ -94,6 +98,9 @@ class User(db.Model):
             "email_verified": bool(self.email_verified),
             "is_verified": bool(self.is_verified),
             "is_suspended": bool(getattr(self, "is_suspended", False)),
+            "suspended_until": self.suspended_until.isoformat() if self.suspended_until else None,
+            "suspension_reason": self.suspension_reason,
+            "strike_count": int(getattr(self, "strike_count", 0) or 0),
             "has_completed_onboarding": int(bool(getattr(self, "has_completed_onboarding", False))),
             # KYC (owners)
             "kyc_status": kyc_val,

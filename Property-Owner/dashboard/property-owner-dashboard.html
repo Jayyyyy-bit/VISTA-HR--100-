@@ -9,12 +9,17 @@
     <!--GOOGLE FONT LINK -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap"
+        rel="stylesheet">
 
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-calendar.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-messages.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-today.css">
+    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-today.css">
 </head>
 
 <body>
@@ -31,15 +36,29 @@
             <nav class="dashTabs" role="tablist" aria-label="Dashboard tabs">
                 <button class="dashTab active" data-tab="today" role="tab" aria-selected="true">
                     Today
-                    <span class="dashTabBadge" id="bookingsBadge" hidden></span>
                 </button>
                 <button class="dashTab" data-tab="calendar" role="tab" aria-selected="false">Calendar</button>
                 <button class="dashTab" data-tab="listings" role="tab" aria-selected="false">Listings</button>
                 <button class="dashTab" data-tab="messages" role="tab" aria-selected="false">Messages</button>
             </nav>
 
+
             <div class="rightTools">
                 <button class="btn ghost" id="switchResidentBtn" type="button">Switch to Resident</button>
+
+                <div class="notif-wrap" id="notifWrap">
+                    <button class="notif-btn" id="notifBtn" aria-label="Notifications">
+                        <i data-lucide="bell"></i>
+                        <span class="notif-badge" id="notifBadge" hidden>0</span>
+                    </button>
+                    <div class="notif-panel" id="notifPanel" hidden>
+                        <div class="notif-head">
+                            <span>Notifications</span>
+                            <button class="notif-mark-read" id="notifMarkRead">Mark all read</button>
+                        </div>
+                        <div class="notif-list" id="notifList"></div>
+                    </div>
+                </div>
 
                 <button class="avatarBtn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
                     <span class="avatarCircle" id="avatarCircle">O</span>
@@ -68,102 +87,144 @@
         <!-- TODAY -->
         <section class="tabPanel active" id="tab-today" data-panel="today" role="tabpanel">
 
-            <!-- Verification banner (hidden by default, shown if owner not yet verified) -->
-            <!-- Email not verified banner (shown until OTP confirmed) -->
-            <div class="emailVerifyBanner" id="emailVerifyBanner" hidden>
-                <div class="verifyBannerIcon"><i data-lucide="mail"></i></div>
-                <div class="verifyBannerBody">
-                    <div class="verifyBannerTitle">Verify your email to publish listings</div>
-                    <div class="verifyBannerSub">We sent a 6-digit code to your email. Verify to unlock publishing.
+            <!-- Alert banners -->
+            <div class="td-alerts">
+                <div class="td-alert td-alert--blue" id="emailVerifyBanner" hidden>
+                    <div class="td-alert-icon"><i data-lucide="mail"></i></div>
+                    <div class="td-alert-body">
+                        <div class="td-alert-title">Verify your email to publish listings</div>
+                        <div class="td-alert-sub">We sent a 6-digit code to your email. Verify to unlock publishing.
+                        </div>
                     </div>
+                    <a class="td-alert-cta td-alert-cta--blue" id="emailVerifyBtn" href="#">
+                        <i data-lucide="mail-check"></i> Verify email
+                    </a>
                 </div>
-                <a class="verifyBannerCta verifyBannerCta--blue" id="emailVerifyBtn" href="#">
-                    <i data-lucide="mail-check"></i>
-                    Verify email
-                </a>
-            </div>
-
-            <div class="verifyBanner" id="verifyBanner" hidden>
-                <div class="verifyBannerIcon"><i data-lucide="shield-alert"></i></div>
-                <div class="verifyBannerBody">
-                    <div class="verifyBannerTitle">Account pending verification</div>
-                    <div class="verifyBannerSub">Your listings won't be visible to residents until an admin approves
-                        your account. This usually takes 1–2 business days.</div>
-                </div>
-                <a class="verifyBannerCta" href="/Property-Owner/verification/verify.html">
-                    <i data-lucide="shield-check"></i>
-                    Verify now
-                </a>
-            </div>
-
-            <!-- Stat cards -->
-            <div class="todayStats" id="todayStats">
-                <div class="statCard">
-                    <div class="statIcon statIcon--pending"><i data-lucide="clock"></i></div>
-                    <div class="statBody">
-                        <div class="statNum" id="statPending">—</div>
-                        <div class="statLabel">Pending bookings</div>
+                <div class="td-alert td-alert--amber" id="verifyBanner" hidden>
+                    <div class="td-alert-icon"><i data-lucide="shield-alert"></i></div>
+                    <div class="td-alert-body">
+                        <div class="td-alert-title">Account pending verification</div>
+                        <div class="td-alert-sub">Your listings won\'t be visible to residents until an admin approves
+                            your account. Usually 1–2 business days.</div>
                     </div>
-                </div>
-                <div class="statCard">
-                    <div class="statIcon statIcon--approved"><i data-lucide="check-circle-2"></i></div>
-                    <div class="statBody">
-                        <div class="statNum" id="statApproved">—</div>
-                        <div class="statLabel">Approved</div>
-                    </div>
-                </div>
-                <div class="statCard">
-                    <div class="statIcon statIcon--listings"><i data-lucide="home"></i></div>
-                    <div class="statBody">
-                        <div class="statNum" id="statListings">—</div>
-                        <div class="statLabel">Active listings</div>
-                    </div>
-                </div>
-                <div class="statCard">
-                    <div class="statIcon statIcon--occupancy"><i data-lucide="users"></i></div>
-                    <div class="statBody">
-                        <div class="statNum" id="statOccupancy">—</div>
-                        <div class="statLabel">Occupancy rate</div>
-                    </div>
+                    <a class="td-alert-cta td-alert-cta--amber" href="/Property-Owner/verification/verify.html">
+                        <i data-lucide="shield-check"></i> Verify now
+                    </a>
                 </div>
             </div>
 
-            <!-- Today's move-in events -->
-            <div class="todaySection" id="todayEventsSection">
-                <div class="todaySectionHead">
-                    <h3 class="todaySectionTitle">Today's move-ins</h3>
-                    <span class="todayDateLabel" id="todayDateLabel"></span>
-                </div>
-                <div id="todayEventsList"></div>
-            </div>
+            <!-- Two-column layout -->
+            <div class="td-shell">
 
-            <!-- All bookings (merged into Today) -->
-            <div class="todaySection">
-                <div class="todaySectionHead">
-                    <h3 class="todaySectionTitle">Bookings</h3>
-                </div>
-                <div class="bkFilterBar" role="tablist" aria-label="Booking status filter">
-                    <button class="bkFilterBtn active" data-status="ALL" role="tab">All</button>
-                    <button class="bkFilterBtn" data-status="PENDING" role="tab">
-                        Pending <span class="bkFilterCount" id="bkCountPending"></span>
-                    </button>
-                    <button class="bkFilterBtn" data-status="APPROVED" role="tab">Approved</button>
-                    <button class="bkFilterBtn" data-status="REJECTED" role="tab">Rejected</button>
-                    <button class="bkFilterBtn" data-status="CANCELLED" role="tab">Cancelled</button>
-                </div>
-                <div id="bookingsList"></div>
-            </div>
+                <!-- LEFT: main content -->
+                <div class="td-main">
 
-            <!-- Recent activity -->
-            <div class="todaySection">
-                <div class="todaySectionHead">
-                    <h3 class="todaySectionTitle">Recent activity</h3>
+                    <!-- Greeting + date on same row -->
+                    <div class="td-greeting-row">
+                        <h2 class="td-greeting-name" id="todayGreeting">Good morning</h2>
+                        <div class="td-greeting-date">
+                            <i data-lucide="calendar"></i>
+                            <span id="todayDateLabel"></span>
+                        </div>
+                    </div>
+
+                    <!-- Inline stats bar -->
+                    <div class="td-stats-bar" id="todayStats">
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--pending"><i data-lucide="clock"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statPending">—</div>
+                                <div class="td-stat-label">Pending</div>
+                                <div class="td-stat-sub" id="statPendingSub">awaiting review</div>
+                            </div>
+                        </div>
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--approved"><i data-lucide="check-circle-2"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statApproved">—</div>
+                                <div class="td-stat-label">Approved</div>
+                                <div class="td-stat-sub">active tenants</div>
+                            </div>
+                        </div>
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--listings"><i data-lucide="home"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statListings">—</div>
+                                <div class="td-stat-label">Listings</div>
+                                <div class="td-stat-sub">on platform</div>
+                            </div>
+                        </div>
+                        <div class="td-stat-item">
+                            <div class="td-stat-icon td-stat-icon--occupancy"><i data-lucide="percent"></i></div>
+                            <div class="td-stat-body">
+                                <div class="td-stat-num" id="statOccupancy">—</div>
+                                <div class="td-stat-label">Occupancy</div>
+                                <div class="td-stat-sub">of capacity filled</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7-day chart -->
+                    <div class="td-chart-card">
+                        <div class="td-chart-head">
+                            <div>
+                                <div class="td-chart-title">Performance</div>
+                                <div class="td-chart-sub">Booking activity &amp; occupancy — last 7 days</div>
+                            </div>
+                        </div>
+                        <div class="td-chart-wrap">
+                            <canvas id="todayChartCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Bookings task list -->
+                    <div>
+                        <div class="td-section-head" style="margin-bottom:12px">
+                            <h3 class="td-section-title">Move-in Requests</h3>
+                            <div class="bkFilterBar" role="tablist">
+                                <button class="bkFilterBtn active" data-status="ALL" role="tab">All</button>
+                                <button class="bkFilterBtn" data-status="PENDING" role="tab">Pending <span
+                                        class="bkFilterCount" id="bkCountPending"></span></button>
+                                <button class="bkFilterBtn" data-status="APPROVED" role="tab">Approved</button>
+                                <button class="bkFilterBtn" data-status="REJECTED" role="tab">Rejected</button>
+                                <button class="bkFilterBtn" data-status="CANCELLED" role="tab">Cancelled</button>
+                            </div>
+                        </div>
+                        <div id="bookingsList"></div>
+                    </div>
+
                 </div>
-                <div id="todayActivityList"></div>
+
+                <!-- RIGHT: sidebar -->
+                <div class="td-sidebar">
+
+                    <div class="td-owner-card">
+                        <div class="td-owner-avatar" id="sidebarAvatar">O</div>
+                        <div class="td-owner-name" id="sidebarOwnerName">—</div>
+                        <div class="td-owner-role">Property Owner</div>
+                        <div class="td-owner-badges" id="sidebarBadges"></div>
+                    </div>
+
+                    <div class="td-side-card">
+                        <div class="td-side-head">
+                            <span class="td-side-title">Today's move-ins</span>
+                            <span class="td-side-date" id="todayDateLabel2"></span>
+                        </div>
+                        <div id="todayEventsList"></div>
+                    </div>
+
+                    <div class="td-side-card">
+                        <div class="td-side-head">
+                            <span class="td-side-title">Recent activity</span>
+                        </div>
+                        <div id="todayActivityList"></div>
+                    </div>
+
+                </div>
+
             </div>
 
         </section>
-
         <!-- CALENDAR -->
         <section class="tabPanel" id="tab-calendar" data-panel="calendar" role="tabpanel">
             <div class="calendarPage calendarPage--fixed" id="calendarPage">
@@ -375,11 +436,14 @@
 
 
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="/auth/sessionGuard.js" defer></script>
     <script src="/PO-after-signup/listing-wizard/core/store.js" defer></script>
     <script src="property-owner-dashboard.js" defer></script>
     <script src="dashboard-calendar.js" defer></script>
     <script src="dashboard-messages.js" defer></script>
+    <script src="dashboard-today.js" defer></script>
+    <script src="dashboard-today.js" defer></script>
 
 
 </body>

@@ -140,14 +140,19 @@
 
     function niceDate(dt) {
       try {
-        const d = new Date(dt);
+        // Backend stores UTC datetimes without 'Z' suffix — force UTC parsing
+        // so toLocaleString with Asia/Manila shows correct PH local time
+        const iso = dt && !String(dt).includes('+') && !String(dt).endsWith('Z')
+          ? dt + 'Z' : dt;
+        const d = new Date(iso);
         if (Number.isNaN(d.getTime())) return "—";
-        return d.toLocaleString([], {
+        return d.toLocaleString("en-PH", {
           month: "short",
           day: "numeric",
           year: "numeric",
           hour: "numeric",
-          minute: "2-digit"
+          minute: "2-digit",
+          timeZone: "Asia/Manila",
         });
       } catch {
         return "—";
@@ -156,8 +161,12 @@
 
     function statusBadge(listing) {
       const st = String(listing?.status || "").toUpperCase();
+      // Check booking status for occupied/reserved display
+      const bkStatus = String(listing?.booking_status || "").toUpperCase();
+      if (st === "PUBLISHED" && bkStatus === "ACTIVE") return { text: "Occupied", cls: "occupied" };
+      if (st === "PUBLISHED" && bkStatus === "APPROVED") return { text: "Reserved", cls: "reserved" };
       if (st === "PUBLISHED") return { text: "Published", cls: "published" };
-      if (st === "READY") return { text: "Ready", cls: "ready" };
+      if (st === "READY" || listing?.complete) return { text: "Ready to publish", cls: "ready" };
       return { text: "In progress", cls: "draft" };
     }
 
@@ -299,7 +308,7 @@
         const updated = l.updated_at || l.updatedAt || l.modified_at || null;
         const step = Math.max(1, Math.min(8, Number(l.current_step || 1)));
 
-        const canSubmit = status === "READY";
+        const canSubmit = status === "READY" || l.complete;
         const isPublished = status === "PUBLISHED";
 
         const supportLine =
@@ -343,22 +352,35 @@
 
       <div class="lActionOverlay">
         <div class="lActionIcons">
-          <button type="button" class="lIconAction" data-act="edit" aria-label="Continue editing">
-            <i data-lucide="edit-3"></i>
-            <span class="lIconTip">Continue editing</span>
-          </button>
+          ${!isPublished ? `
+            <button type="button" class="lIconAction" data-act="edit" aria-label="Edit listing">
+              <i data-lucide="edit-3"></i>
+              <span class="lIconTip">Edit listing</span>
+            </button>
+          ` : `
+            <button type="button" class="lIconAction" data-act="edit" aria-label="Edit listing">
+              <i data-lucide="edit-3"></i>
+              <span class="lIconTip">Edit</span>
+            </button>
+            <button type="button" class="lIconAction warn" data-act="unpublish" aria-label="Unpublish listing">
+              <i data-lucide="eye-off"></i>
+              <span class="lIconTip">Unpublish</span>
+            </button>
+          `}
 
-          ${canSubmit ? `
+          ${canSubmit && !isPublished ? `
             <button type="button" class="lIconAction" data-act="submit" aria-label="Publish listing">
               <i data-lucide="send"></i>
               <span class="lIconTip">Publish listing</span>
             </button>
           ` : ``}
 
-          <button type="button" class="lIconAction danger" data-act="delete" aria-label="Delete listing">
-            <i data-lucide="trash-2"></i>
-            <span class="lIconTip">Delete listing</span>
-          </button>
+          ${!isPublished ? `
+            <button type="button" class="lIconAction danger" data-act="delete" aria-label="Delete listing">
+              <i data-lucide="trash-2"></i>
+              <span class="lIconTip">Delete listing</span>
+            </button>
+          ` : ``}
         </div>
       </div>
     </div>
@@ -389,13 +411,72 @@
           closeAllMenus();
 
           if (act === "edit") {
-            try {
-              await window.ListingStore.openListing(id);
-              location.href = `${WIZARD_URL}#/step-${step}`;
-            } catch (err) {
-              console.error(err);
-              alert(err?.message || err?.error || "Unable to continue editing.");
+            const isPublished = (l.status || "").toUpperCase() === "PUBLISHED";
+            if (isPublished) {
+              // Warn owner that editing will unpublish the listing
+              openModal({
+                title: "Edit published listing?",
+                message: "Your listing will be set to Draft while you make changes. Residents won't see it until you re-publish. Continue?",
+                confirmText: "Yes, edit it",
+                cancelText: "Cancel",
+                onConfirm: async () => {
+                  try {
+                    await window.ListingStore.openListing(id);
+                    location.href = `${WIZARD_URL}#/step-${step}`;
+                  } catch (err) {
+                    console.error(err);
+                    alert(err?.message || err?.error || "Unable to continue editing.");
+                  }
+                }
+              });
+            } else {
+              try {
+                await window.ListingStore.openListing(id);
+                location.href = `${WIZARD_URL}#/step-${step}`;
+              } catch (err) {
+                console.error(err);
+                alert(err?.message || err?.error || "Unable to continue editing.");
+              }
             }
+            return;
+          }
+
+          if (act === "unpublish") {
+            // Check if listing has active booking — if so, block unpublish
+            if (l.booking_status === "ACTIVE" || l.booking_status === "APPROVED") {
+              openModal({
+                title: "Cannot unpublish",
+                message: "This listing has an active reservation or move-in. It cannot be unpublished until the booking is completed or cancelled.",
+                confirmText: "Got it",
+                cancelText: null,
+                onConfirm: () => { }
+              });
+              return;
+            }
+            openModal({
+              title: "Unpublish this listing?",
+              message: "Are you sure you want to pull this listing? It will no longer be visible to residents.",
+              confirmText: "Yes, unpublish it",
+              cancelText: "Cancel",
+              onConfirm: async () => {
+                try {
+                  // Set status back to DRAFT via step-8 or a direct patch
+                  // Use submit-for-verification in reverse - set back to DRAFT
+                  // by patching step-8 with a special unpublish flag
+                  const res = await fetch(`http://127.0.0.1:5000/api/listings/${id}/pull`, {
+                    method: "POST", credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                  });
+                  if (!res.ok) {
+                    const d = await res.json().catch(() => ({}));
+                    throw new Error(d.error || "Failed to unpublish.");
+                  }
+                  await renderListings();
+                } catch (err) {
+                  alert(err.message || "Failed to unpublish.");
+                }
+              }
+            });
             return;
           }
 
@@ -463,6 +544,16 @@
           }
 
           if (act === "delete") {
+            if (l.booking_status === "ACTIVE" || l.booking_status === "APPROVED") {
+              openModal({
+                title: "Cannot delete",
+                message: "This listing has an active reservation. It cannot be deleted until the booking is completed or cancelled.",
+                confirmText: "Got it",
+                cancelText: null,
+                onConfirm: () => { }
+              });
+              return;
+            }
             openModal({
               title: "Delete listing?",
               message: "This will permanently remove the listing from the database.",
@@ -471,7 +562,11 @@
               danger: true,
               onConfirm: async () => {
                 try {
-                  await apiFetch(`/listings/${id}`, { method: "DELETE" });
+                  // Use ListingStore.deleteListing instead of raw apiFetch so
+                  // the local draft entry and localStorage map are cleaned up.
+                  // Calling apiFetch directly leaves orphan draft-* keys in
+                  // localStorage that poison future resume/create flows.
+                  await window.ListingStore.deleteListing(id);
                   await renderListings();
                 } catch (err) {
                   console.error(err);
@@ -622,7 +717,7 @@
         el.classList.toggle("active", k === key);
       });
 
-      if (key === "today") renderToday();
+      if (key === "today") { window.DashToday?.render(); window.DashToday?.bindFilterBar?.(); }
       if (key === "listings") renderListings();
 
       if (key === "calendar" && window.DashboardCalendar?.render) {
@@ -697,345 +792,103 @@
       if (saved === "list") setDensity("list");
     } catch { }
 
-    // ===== Today tab =====
-    async function renderToday() {
-      const el = id => document.getElementById(id);
-      let bookings = [];
-      let listings = [];
-      let ownerVerified = true;
 
-      try {
-        const [bData, lData] = await Promise.all([
-          apiFetch("/bookings/for-owner"),
-          apiFetch("/listings/mine"),
-        ]);
-        bookings = bData.bookings || [];
-        listings = lData.listings || [];
-        ownerVerified = lData.owner_verified !== false;
-      } catch (e) {
-        console.error("[today] load failed", e);
-      }
-
-      // ── Email verify banner ──────────────────────────────────────
-      const session = window.AuthGuard?.getSession?.();
-      const emailVerified = session?.user?.email_verified === true;
-      const emailBanner = el("emailVerifyBanner");
-      if (emailBanner) {
-        emailBanner.hidden = emailVerified;
-        if (!emailVerified) {
-          const email = encodeURIComponent(session?.user?.email || "");
-          el("emailVerifyBtn").href = `/auth/verify-email.html?email=${email}&role=OWNER`;
-        }
-      }
-
-      // ── KYC Verification banner ──────────────────────────────────────
-      const banner = el("verifyBanner");
-      if (banner) banner.hidden = !emailVerified || ownerVerified;
-
-      // ── Stat cards ───────────────────────────────────────────────
-      const pending = bookings.filter(b => b.status === "PENDING");
-      const approved = bookings.filter(b => b.status === "APPROVED");
-      const active = listings.filter(l => ["DRAFT", "READY", "PUBLISHED"].includes(l.status));
-
-      // Occupancy: approved bookings / active listings (capped at 100%)
-      const occupancyNum = active.length > 0
-        ? Math.min(100, Math.round((approved.length / active.length) * 100))
-        : null;
-
-      if (el("statPending")) el("statPending").textContent = pending.length;
-      if (el("statApproved")) el("statApproved").textContent = approved.length;
-      if (el("statListings")) el("statListings").textContent = active.length;
-      if (el("statOccupancy")) el("statOccupancy").textContent = occupancyNum !== null ? `${occupancyNum}%` : "—";
-
-      // ── Today's date label ───────────────────────────────────────
-      const todayLabel = el("todayDateLabel");
-      if (todayLabel) {
-        todayLabel.textContent = new Date().toLocaleDateString("en-PH", {
-          weekday: "long", month: "long", day: "numeric"
-        });
-      }
-
-      // ── Today's move-in events ───────────────────────────────────
-      const todayStr = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-      const moveIns = bookings.filter(b =>
-        b.status === "APPROVED" && b.move_in_date && String(b.move_in_date).slice(0, 10) === todayStr
-      );
-
-      const eventsList = el("todayEventsList");
-      if (eventsList) {
-        if (!moveIns.length) {
-          eventsList.innerHTML = `
-            <div class="todayEventsEmpty">
-              <i data-lucide="calendar-check-2"></i>
-              <span>No move-ins scheduled for today.</span>
-            </div>`;
-        } else {
-          eventsList.innerHTML = `<div class="todayEventCards">${moveIns.map(b => todayEventRow(b)).join("")}</div>`;
-        }
-      }
-
-      // ── Bookings section (full filterable list) ──────────────────
-      const bookingsList = el("bookingsList");
-      if (bookingsList) {
-        _allBookings = bookings;
-
-        // Update pending badge on Today tab
-        const badge = el("bookingsBadge");
-        const pendingCount = bookings.filter(b => b.status === "PENDING");
-        if (badge) {
-          badge.textContent = pendingCount.length;
-          badge.hidden = pendingCount.length === 0;
-        }
-
-        // Update pending count chip on filter bar
-        const countEl = el("bkCountPending");
-        if (countEl) {
-          countEl.textContent = pendingCount.length || "";
-          countEl.style.display = pendingCount.length ? "" : "none";
-        }
-
-        applyBookingFilter();
-      }
-
-      // ── Recent activity: last 5 bookings of any status ───────────
-      const activityList = el("todayActivityList");
-      if (activityList) {
-        // sort by created_at desc, take 5 non-pending (pending already shown above)
-        const recent = [...bookings]
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-          .filter(b => b.status !== "PENDING")
-          .slice(0, 5);
-
-        if (!recent.length) {
-          activityList.innerHTML = `
-            <div class="todayActivityEmpty">
-              <i data-lucide="activity"></i>
-              <span>No recent activity yet.</span>
-            </div>`;
-        } else {
-          activityList.innerHTML = `<div class="activityFeed">${recent.map(b => activityRowHTML(b)).join("")}</div>`;
-        }
-      }
-
-      lucide.createIcons();
-    }
-
-    function todayEventRow(b) {
-      const listing = b.listing || {};
-      const tenant = b.resident_name || b.resident_email || "Resident";
-
-      return `
-        <div class="todayEventCard todayEvent--in">
-          <div class="todayEventIcon"><i data-lucide="log-in"></i></div>
-          <div class="todayEventBody">
-            <div class="todayEventLabel">Move-in today</div>
-            <div class="todayEventTenant">${escapeHtml(tenant)}</div>
-            <div class="todayEventListing">${escapeHtml(listing.title || "Untitled listing")}</div>
-          </div>
-          <div class="todayEventBadge todayEvent--in">Move-in</div>
-        </div>`;
-    }
-
-    function activityRowHTML(b) {
-      const listing = b.listing || {};
-      const status = b.status || "PENDING";
-      const statusMap = {
-        APPROVED: { cls: "bkStatus--approved", label: "Approved", icon: "check-circle-2" },
-        REJECTED: { cls: "bkStatus--rejected", label: "Rejected", icon: "x-circle" },
-        CANCELLED: { cls: "bkStatus--cancelled", label: "Cancelled", icon: "ban" },
-      };
-      const { cls, label, icon } = statusMap[status] || { cls: "", label: status, icon: "circle" };
-      const tenant = b.resident_name || b.resident_email || "Resident";
-      const timeAgo = relativeTime(b.updated_at || b.created_at);
-
-      return `
-        <div class="activityRow">
-          <div class="activityIcon activityIcon--${status.toLowerCase()}">
-            <i data-lucide="${icon}"></i>
-          </div>
-          <div class="activityBody">
-            <div class="activityMain">
-              <span class="activityTenant">${escapeHtml(tenant)}</span>
-              <span class="activityVerb">booking</span>
-              <span class="bkStatus ${cls}">${label}</span>
-            </div>
-            <div class="activityMeta">${escapeHtml(listing.title || "Untitled listing")} · ${timeAgo}</div>
-          </div>
-        </div>`;
-    }
-
-    function relativeTime(dt) {
-      try {
-        const diff = Date.now() - new Date(dt).getTime();
-        const mins = Math.floor(diff / 60000);
-        if (mins < 1) return "Just now";
-        if (mins < 60) return `${mins}m ago`;
-        const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return `${hrs}h ago`;
-        const days = Math.floor(hrs / 24);
-        if (days < 7) return `${days}d ago`;
-        return new Date(dt).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
-      } catch {
-        return "";
-      }
-    }
-
-    // ===== Bookings state + filter (lives inside Today tab) =====
-    let _allBookings = [];
-    let _bkStatus = "ALL";
-
-    function applyBookingFilter() {
-      const list = document.getElementById("bookingsList");
-      if (!list) return;
-
-      const filtered = _bkStatus === "ALL"
-        ? _allBookings
-        : _allBookings.filter(b => b.status === _bkStatus);
-
-      if (!filtered.length) {
-        const label = _bkStatus === "ALL" ? "bookings" : `${_bkStatus.toLowerCase()} bookings`;
-        list.innerHTML = `
-          <div class="bkEmpty">
-            <div class="bkEmptyIcon"><i data-lucide="calendar-x-2"></i></div>
-            <div class="bkEmptyTitle">No ${label} yet</div>
-          </div>`;
-        lucide.createIcons();
-        return;
-      }
-
-      list.innerHTML = filtered.map(b => bookingCardHTML(b)).join("");
-      bindBookingActions(list, () => renderToday());
-      lucide.createIcons();
-    }
-
-    // Filter bar clicks
-    document.querySelectorAll(".bkFilterBtn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".bkFilterBtn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        _bkStatus = btn.dataset.status;
-        applyBookingFilter();
-      });
-    });
-
-    // ===== Booking card HTML =====
-    function bookingCardHTML(b) {
-      const listing = b.listing || {};
-      const status = b.status || "PENDING";
-      const isPending = status === "PENDING";
-
-      const statusMap = {
-        PENDING: { cls: "bkStatus--pending", label: "Pending" },
-        APPROVED: { cls: "bkStatus--approved", label: "Approved" },
-        REJECTED: { cls: "bkStatus--rejected", label: "Rejected" },
-        CANCELLED: { cls: "bkStatus--cancelled", label: "Cancelled" },
-      };
-      const { cls, label } = statusMap[status] || statusMap.PENDING;
-
-      const price = listing.price
-        ? `<span class="bkListingPrice">₱${Number(listing.price).toLocaleString()}<span>/mo</span></span>`
-        : "";
-
-      const coverEl = listing.cover
-        ? `<img class="bkListingThumb" src="${escapeHtml(listing.cover)}" alt="">`
-        : `<div class="bkListingThumb bkListingThumb--placeholder"><i data-lucide="home"></i></div>`;
-
-      const moveIn = b.move_in_date
-        ? `<span class="bkMeta"><i data-lucide="calendar"></i>${escapeHtml(b.move_in_date)}</span>`
-        : "";
-
-      const message = b.message
-        ? `<div class="bkMessage">"${escapeHtml(b.message)}"</div>`
-        : "";
-
-      const ownerNote = b.owner_note
-        ? `<div class="bkOwnerNote"><i data-lucide="message-square"></i>${escapeHtml(b.owner_note)}</div>`
-        : "";
-
-      const actions = isPending ? `
-        <div class="bkActions">
-          <button class="btn bkBtn bkBtn--approve" data-booking-id="${b.id}" data-action="approve">
-            <i data-lucide="check"></i> Approve
-          </button>
-          <button class="btn bkBtn bkBtn--reject" data-booking-id="${b.id}" data-action="reject">
-            <i data-lucide="x"></i> Reject
-          </button>
-        </div>` : "";
-
-      return `
-        <div class="bkCard" data-booking-id="${b.id}">
-          <div class="bkCardMain">
-            ${coverEl}
-            <div class="bkCardBody">
-              <div class="bkCardTop">
-                <div class="bkListingName">${escapeHtml(listing.title || "Untitled listing")}</div>
-                <span class="bkStatus ${cls}">${label}</span>
-              </div>
-              <div class="bkListingLoc">${escapeHtml([listing.barangay, listing.city].filter(Boolean).join(", ") || "—")}</div>
-              <div class="bkMetaRow">
-                ${moveIn}
-                <span class="bkMeta"><i data-lucide="clock-3"></i>${escapeHtml(niceDate(b.created_at))}</span>
-              </div>
-              ${message}
-              ${ownerNote}
-            </div>
-            ${price}
-          </div>
-          ${actions}
-        </div>`;
-    }
-
-    // ===== Bind approve/reject buttons =====
-    function bindBookingActions(container, onRefresh) {
-      container.querySelectorAll("[data-action]").forEach(btn => {
-        btn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          const bookingId = btn.dataset.bookingId;
-          const action = btn.dataset.action;
-
-          if (action === "approve") {
-            openModal({
-              title: "Approve booking?",
-              message: "The resident will be notified that their booking has been approved.",
-              confirmText: "Approve",
-              onConfirm: async () => {
-                try {
-                  await apiFetch(`/bookings/${bookingId}/approve`, { method: "POST" });
-                  await onRefresh();
-                } catch (err) {
-                  alert(err?.error || "Failed to approve booking.");
-                }
-              }
-            });
-          }
-
-          if (action === "reject") {
-            // Use the existing modal — note field via prompt fallback
-            const note = window.prompt("Add a note for the resident (optional):", "") ?? "";
-            openModal({
-              title: "Reject booking?",
-              message: note ? `Note to resident: "${note}"` : "The resident will be notified that their booking was not accepted.",
-              confirmText: "Reject",
-              danger: true,
-              onConfirm: async () => {
-                try {
-                  await apiFetch(`/bookings/${bookingId}/reject`, {
-                    method: "POST",
-                    body: JSON.stringify({ note: note || null }),
-                  });
-                  await onRefresh();
-                } catch (err) {
-                  alert(err?.error || "Failed to reject booking.");
-                }
-              }
-            });
-          }
-        });
-      });
-    }
 
     // Boot
     renderTabs();
 
   });
+
+  // ══════════════════════════════════════════════════════════
+  // NOTIFICATIONS — Bell dropdown (Property Owner)
+  // ══════════════════════════════════════════════════════════
+  const API_NOTIF = "http://127.0.0.1:5000/api";
+
+  function elN(id) { return document.getElementById(id); }
+
+  async function loadNotifications() {
+    try {
+      const res = await fetch(`${API_NOTIF}/notifications`, { credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+
+      const notifs = data.notifications || [];
+      const unread = data.unread ?? 0;
+
+      // Update badge
+      const badge = elN("notifBadge");
+      if (badge) {
+        badge.textContent = unread > 9 ? "9+" : unread;
+        badge.hidden = unread === 0;
+      }
+
+      // Render list
+      const list = elN("notifList");
+      if (!list) return;
+
+      if (!notifs.length) {
+        list.innerHTML = `<div class="notif-empty"><i data-lucide="bell-off"></i><p>No notifications yet</p></div>`;
+        if (window.lucide?.createIcons) lucide.createIcons();
+        return;
+      }
+
+      list.innerHTML = notifs.map(n => {
+        const time = n.created_at
+          ? new Date((n.created_at.includes("+") || n.created_at.endsWith("Z") ? n.created_at : n.created_at + "Z"))
+            .toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" })
+          : "";
+        return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}">
+                    <div class="notif-item-body">
+                        <div class="notif-item-title">${escapeHtml(n.title || "")}</div>
+                        ${n.body ? `<div class="notif-item-body-txt">${escapeHtml(n.body)}</div>` : ""}
+                        <div class="notif-item-time">${time}</div>
+                    </div>
+                </div>`;
+      }).join("");
+
+      if (window.lucide?.createIcons) lucide.createIcons();
+    } catch (err) {
+      console.warn("[Notif] load failed", err);
+    }
+  }
+
+  async function markAllRead() {
+    try {
+      await fetch(`${API_NOTIF}/notifications/mark-read`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      // Clear badge + mark items read visually
+      const badge = elN("notifBadge");
+      if (badge) { badge.textContent = "0"; badge.hidden = true; }
+      document.querySelectorAll(".notif-item.unread").forEach(el => el.classList.remove("unread"));
+    } catch (err) { console.warn("[Notif] mark-read failed", err); }
+  }
+
+  // Toggle panel
+  elN("notifBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const panel = elN("notifPanel");
+    if (!panel) return;
+    const isOpen = !panel.hidden;
+    panel.hidden = isOpen;
+    if (!isOpen) loadNotifications(); // refresh on open
+  });
+
+  // Mark all read button
+  elN("notifMarkRead")?.addEventListener("click", markAllRead);
+
+  // Close on outside click
+  document.addEventListener("click", (e) => {
+    const wrap = elN("notifWrap");
+    if (wrap && !wrap.contains(e.target)) {
+      const panel = elN("notifPanel");
+      if (panel) panel.hidden = true;
+    }
+  });
+
+  // Initial load + poll every 60s
+  loadNotifications();
+  setInterval(loadNotifications, 60_000);
+
 })();

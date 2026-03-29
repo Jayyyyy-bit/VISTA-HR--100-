@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from flask import current_app, request, g
 
+from ..extensions import db
 from ..models import User
 from ..utils.errors import json_error
 
@@ -63,7 +64,7 @@ def require_auth(fn):
         except (TypeError, ValueError):
             return json_error("Invalid token subject", 401)
 
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return json_error("User not found", 401)
 

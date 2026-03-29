@@ -8,7 +8,9 @@
     <link rel="icon" href="data:,">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="vendor/lucide.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -86,6 +88,21 @@
             </div>
         </div>
     </main>
+
+    <!-- ── Bottom tips strip ── -->
+    <div class="bts" id="bottomTipsStrip">
+        <div class="bts-inner">
+            <span class="bts-icon">
+                <i data-lucide="lightbulb"></i>
+            </span>
+            <div class="bts-list">
+                <!-- populated by SidePanel.setTips() -->
+            </div>
+            <button class="bts-close" id="btsDismiss" aria-label="Dismiss tips">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- footer -->
     <footer class="bottombar">

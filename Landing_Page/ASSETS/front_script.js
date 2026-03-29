@@ -10,24 +10,6 @@ const PATHS = {
     ownerDash: "../../Property-Owner/dashboard/property-owner-dashboard.html",
 };
 
-const MOCK = [
-    {
-        id: 1, title: "Morning Star Residence", city: "Caloocan", barangay: "Bagong Barrio", place_type: "Boarding House", price: 5500, available: true, tour: true, isNew: true,
-        cover: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-        id: 2, title: "The Scholar's Nest", city: "Caloocan", barangay: "Grace Park", place_type: "Room", price: 4200, available: true, tour: true, units: 2,
-        cover: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-        id: 3, title: "Grand Loft Caloocan", city: "Caloocan", barangay: "Grace Park East", place_type: "Apartment", price: 8000, available: false, tour: false,
-        cover: "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-        id: 4, title: "Safe Haven Dorms", city: "Caloocan", barangay: "Bagong Barrio", place_type: "Boarding House", price: 3500, available: true, tour: true,
-        cover: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=800"
-    },
-];
 
 // ── Utils ──
 function esc(s) {
@@ -243,7 +225,7 @@ async function initListings() {
         if (r.ok) { const d = await r.json(); data = (d.listings || []).slice(0, 4); }
     } catch { }
 
-    if (!data.length) data = MOCK;
+    // No MOCK fallback — show empty state if no published listings yet
 
     grid.innerHTML = data.map(cardHTML).join("");
 

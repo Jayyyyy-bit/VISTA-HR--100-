@@ -5,114 +5,205 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VISTA-HR | Choose Role</title>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
-
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap"
+        rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="roles.css" />
 </head>
 
 <body>
-    <!-- BG -->
-    <div class="bg">
+    <div class="bg" aria-hidden="true">
         <div class="blob b1"></div>
         <div class="blob b2"></div>
         <div class="grid"></div>
     </div>
 
-    <!-- Small brand top-left -->
     <header class="mini-header">
         <div class="mini-brand">
-            <span class="mini-logo"><i data-lucide="building-2"></i></span>
+            <span class="mini-logo"><i data-lucide="home"></i></span>
             <span class="mini-text">VISTA<span>-HR</span></span>
         </div>
+        <button class="back" id="backBtn" type="button">
+            <i data-lucide="arrow-left"></i> Back
+        </button>
     </header>
 
     <main class="wrap">
         <section class="hero">
-            <p class="pill">
-                <i data-lucide="sparkles"></i>
-                Let’s personalize your experience
-            </p>
-
-            <h1>How do you want to use <span>VISTA-HR</span>?</h1>
-            <p class="sub">Choose your role so we can show the right features for you.</p>
+            <p class="pill"><i data-lucide="sparkles"></i>Let's personalize your experience</p>
+            <h1>How will you use <em>VISTA-HR</em>?</h1>
+            <p class="sub">Pick your role. We'll tailor the tools, layout, and features you see from the start.</p>
         </section>
 
         <section class="cards">
+
             <!-- Property Owner -->
-            <article class="role-card" id="btnOwner" tabindex="0">
-                <div class="role-head">
-                    <div class="icon-wrap owner">
-                        <i data-lucide="key-round"></i>
+            <article class="role-card owner" id="btnOwner" tabindex="0">
+                <div class="card-visual owner">
+                    <svg class="card-illus" viewBox="0 0 420 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <rect x="60" y="60" width="70" height="130" rx="6" fill="rgba(200,136,42,.18)" />
+                        <rect x="72" y="75" width="16" height="18" rx="3" fill="rgba(200,136,42,.35)" />
+                        <rect x="96" y="75" width="16" height="18" rx="3" fill="rgba(200,136,42,.35)" />
+                        <rect x="72" y="103" width="16" height="18" rx="3" fill="rgba(200,136,42,.28)" />
+                        <rect x="96" y="103" width="16" height="18" rx="3" fill="rgba(200,136,42,.5)" />
+                        <rect x="72" y="131" width="16" height="18" rx="3" fill="rgba(200,136,42,.35)" />
+                        <rect x="96" y="131" width="16" height="18" rx="3" fill="rgba(200,136,42,.28)" />
+                        <rect x="82" y="162" width="22" height="28" rx="3" fill="rgba(122,79,24,.3)" />
+                        <rect x="155" y="30" width="100" height="160" rx="8" fill="rgba(200,136,42,.25)" />
+                        <rect x="168" y="48" width="20" height="22" rx="3" fill="rgba(200,136,42,.5)" />
+                        <rect x="198" y="48" width="20" height="22" rx="3" fill="rgba(200,136,42,.5)" />
+                        <rect x="228" y="48" width="16" height="22" rx="3" fill="rgba(200,136,42,.35)" />
+                        <rect x="168" y="82" width="20" height="22" rx="3" fill="rgba(200,136,42,.4)" />
+                        <rect x="198" y="82" width="20" height="22" rx="3" fill="rgba(255,255,255,.6)" />
+                        <rect x="228" y="82" width="16" height="22" rx="3" fill="rgba(200,136,42,.35)" />
+                        <rect x="168" y="116" width="20" height="22" rx="3" fill="rgba(200,136,42,.35)" />
+                        <rect x="198" y="116" width="20" height="22" rx="3" fill="rgba(200,136,42,.5)" />
+                        <rect x="228" y="116" width="16" height="22" rx="3" fill="rgba(255,255,255,.5)" />
+                        <rect x="188" y="158" width="32" height="32" rx="4" fill="rgba(122,79,24,.35)" />
+                        <circle cx="205" cy="22" r="10" fill="rgba(200,136,42,.5)" stroke="rgba(200,136,42,.7)"
+                            stroke-width="1.5" />
+                        <circle cx="205" cy="22" r="4" fill="rgba(200,136,42,.7)" />
+                        <rect x="285" y="80" width="65" height="110" rx="5" fill="rgba(200,136,42,.15)" />
+                        <rect x="296" y="94" width="14" height="16" rx="2" fill="rgba(200,136,42,.3)" />
+                        <rect x="318" y="94" width="14" height="16" rx="2" fill="rgba(200,136,42,.4)" />
+                        <rect x="296" y="118" width="14" height="16" rx="2" fill="rgba(200,136,42,.3)" />
+                        <rect x="318" y="118" width="14" height="16" rx="2" fill="rgba(200,136,42,.25)" />
+                        <rect x="0" y="188" width="420" height="12" fill="rgba(200,136,42,.12)" />
+                        <circle cx="140" cy="170" r="14" fill="rgba(26,107,69,.2)" />
+                        <rect x="138" y="175" width="4" height="15" fill="rgba(26,107,69,.25)" />
+                        <circle cx="370" cy="165" r="10" fill="rgba(26,107,69,.18)" />
+                        <rect x="368" y="170" width="4" height="18" fill="rgba(26,107,69,.2)" />
+                    </svg>
+                    <div class="vis-stat float-a">
+                        <div class="vs-num" id="statOwnerListings">—</div>
+                        <div class="vs-lbl">Active listings</div>
                     </div>
-
-                    <div class="role-title">
-                        <h2>Property Owner</h2>
-                        <p>Create and manage listings, upload images and 360° tours, track bookings, monitor
-                            availability, and generate reports.</p>
+                    <div class="vis-stat float-b" style="top:14px;left:16px">
+                        <div class="vs-num" id="statOwnerEarn">—</div>
+                        <div class="vs-lbl">On the platform</div>
                     </div>
-
-                    <button class="go" type="button" aria-label="Continue as Property Owner">
-                        <i data-lucide="arrow-right"></i>
-                    </button>
+                    <div class="vis-badge owner">Property Owner</div>
                 </div>
-
-                <div class="chips">
-                    <span class="chip"><i data-lucide="layout-dashboard"></i> Manage listings</span>
-                    <span class="chip"><i data-lucide="image-plus"></i> Upload media</span>
-                    <span class="chip"><i data-lucide="calendar-check"></i> Track bookings</span>
-                    <span class="chip"><i data-lucide="activity"></i> Real-time status</span>
-                    <span class="chip"><i data-lucide="bell"></i> Auto notify</span>
-                    <span class="chip"><i data-lucide="bar-chart-3"></i> Reports</span>
+                <div class="card-body">
+                    <div class="card-role owner">For landlords &amp; property managers</div>
+                    <h2 class="card-title">List, manage &amp; grow your rental business</h2>
+                    <p class="card-desc">Create detailed listings with 360° tours, track bookings in real-time, and
+                        manage all your properties from one premium dashboard.</p>
+                    <div class="feats">
+                        <div class="feat">
+                            <div class="feat-icon owner"><i data-lucide="home"></i></div>Create &amp; manage listings
+                            with photos
+                        </div>
+                        <div class="feat">
+                            <div class="feat-icon owner"><i data-lucide="calendar-check"></i></div>Track bookings &amp;
+                            availability
+                        </div>
+                        <div class="feat">
+                            <div class="feat-icon owner"><i data-lucide="bar-chart-3"></i></div>View earnings &amp;
+                            analytics reports
+                        </div>
+                    </div>
+                    <button class="card-cta owner" type="button">Continue as Owner <i
+                            data-lucide="arrow-right"></i></button>
                 </div>
             </article>
 
             <!-- Resident -->
-            <article class="role-card" id="btnResident" tabindex="0">
-                <div class="role-head">
-                    <div class="icon-wrap resident">
-                        <i data-lucide="search"></i>
+            <article class="role-card resident" id="btnResident" tabindex="0">
+                <div class="card-visual resident">
+                    <svg class="card-illus" viewBox="0 0 420 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <line x1="0" y1="50" x2="420" y2="50" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <line x1="0" y1="100" x2="420" y2="100" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <line x1="0" y1="150" x2="420" y2="150" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <line x1="70" y1="0" x2="70" y2="200" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <line x1="140" y1="0" x2="140" y2="200" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <line x1="210" y1="0" x2="210" y2="200" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <line x1="280" y1="0" x2="280" y2="200" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <line x1="350" y1="0" x2="350" y2="200" stroke="rgba(27,58,92,.08)" stroke-width="1" />
+                        <rect x="0" y="88" width="420" height="12" fill="rgba(27,58,92,.07)" />
+                        <rect x="128" y="0" width="12" height="200" fill="rgba(27,58,92,.07)" />
+                        <rect x="268" y="0" width="12" height="200" fill="rgba(27,58,92,.07)" />
+                        <rect x="20" y="20" width="40" height="30" rx="4" fill="rgba(27,58,92,.12)" />
+                        <rect x="70" y="20" width="30" height="30" rx="4" fill="rgba(27,58,92,.08)" />
+                        <rect x="155" y="20" width="50" height="35" rx="4" fill="rgba(27,58,92,.1)" />
+                        <rect x="215" y="20" width="40" height="28" rx="4" fill="rgba(27,58,92,.08)" />
+                        <rect x="295" y="20" width="45" height="32" rx="4" fill="rgba(27,58,92,.1)" />
+                        <rect x="360" y="20" width="40" height="25" rx="4" fill="rgba(27,58,92,.07)" />
+                        <rect x="20" y="110" width="50" height="28" rx="4" fill="rgba(27,58,92,.09)" />
+                        <rect x="80" y="110" width="35" height="32" rx="4" fill="rgba(27,58,92,.12)" />
+                        <rect x="155" y="110" width="45" height="25" rx="4" fill="rgba(27,58,92,.08)" />
+                        <rect x="215" y="110" width="35" height="30" rx="4" fill="rgba(27,58,92,.1)" />
+                        <rect x="295" y="110" width="50" height="28" rx="4" fill="rgba(27,58,92,.09)" />
+                        <rect x="360" y="115" width="40" height="25" rx="4" fill="rgba(27,58,92,.07)" />
+                        <rect x="20" y="160" width="45" height="28" rx="4" fill="rgba(27,58,92,.08)" />
+                        <rect x="155" y="158" width="50" height="30" rx="4" fill="rgba(27,58,92,.1)" />
+                        <rect x="295" y="160" width="40" height="28" rx="4" fill="rgba(27,58,92,.08)" />
+                        <circle cx="175" cy="72" r="14" fill="rgba(27,58,92,.18)" stroke="rgba(27,58,92,.3)"
+                            stroke-width="1.5" />
+                        <path
+                            d="M175 64 C170 64 166 68 166 73 C166 80 175 86 175 86 C175 86 184 80 184 73 C184 68 180 64 175 64Z"
+                            fill="rgba(27,58,92,.85)" />
+                        <circle cx="175" cy="73" r="3" fill="white" />
+                        <circle cx="315" cy="72" r="10" fill="rgba(27,58,92,.12)" stroke="rgba(27,58,92,.2)"
+                            stroke-width="1" />
+                        <path
+                            d="M315 66 C312.5 66 310 68.5 310 71.5 C310 76 315 80 315 80 C315 80 320 76 320 71.5 C320 68.5 317.5 66 315 66Z"
+                            fill="rgba(27,58,92,.5)" />
+                        <circle cx="315" cy="72" r="2.5" fill="white" />
+                        <circle cx="60" cy="135" r="9" fill="rgba(27,58,92,.1)" stroke="rgba(27,58,92,.18)"
+                            stroke-width="1" />
+                        <path
+                            d="M60 130 C57.5 130 55 132.5 55 135 C55 139 60 143 60 143 C60 143 65 139 65 135 C65 132.5 62.5 130 60 130Z"
+                            fill="rgba(27,58,92,.4)" />
+                        <circle cx="60" cy="135" r="2" fill="white" />
+                    </svg>
+                    <div class="vis-stat float-a">
+                        <div class="vs-num" id="statResListings">—</div>
+                        <div class="vs-lbl">Rooms available</div>
                     </div>
-
-                    <div class="role-title">
-                        <h2>Resident</h2>
-                        <p>Browse available rooms, explore 360° virtual tours, send inquiries, and manage your booking
-                            details.</p>
+                    <div class="vis-stat float-b" style="top:14px;left:16px">
+                        <div class="vs-num" id="statResMinPrice">—</div>
+                        <div class="vs-lbl">Starting price</div>
                     </div>
-
-                    <button class="go" type="button" aria-label="Continue as Resident">
-                        <i data-lucide="arrow-right"></i>
-                    </button>
+                    <div class="vis-badge resident">Resident</div>
                 </div>
-
-                <div class="chips">
-                    <span class="chip"><i data-lucide="grid-2x2"></i> View listings</span>
-                    <span class="chip"><i data-lucide="orbit"></i> 360° tours</span>
-                    <span class="chip"><i data-lucide="bell"></i> Notifications</span>
-                    <span class="chip"><i data-lucide="messages-square"></i> Inquiries</span>
+                <div class="card-body">
+                    <div class="card-role resident">For students &amp; working professionals</div>
+                    <h2 class="card-title">Find your perfect room in Metro Manila</h2>
+                    <p class="card-desc">Browse hundreds of verified listings, explore properties through 360° virtual
+                        tours, and book your next home without leaving your phone.</p>
+                    <div class="feats">
+                        <div class="feat">
+                            <div class="feat-icon resident"><i data-lucide="search"></i></div>Browse verified rooms
+                            across NCR
+                        </div>
+                        <div class="feat">
+                            <div class="feat-icon resident"><i data-lucide="map-pin"></i></div>360° virtual tours before
+                            booking
+                        </div>
+                        <div class="feat">
+                            <div class="feat-icon resident"><i data-lucide="message-square"></i></div>Message owners
+                            &amp; track your bookings
+                        </div>
+                    </div>
+                    <button class="card-cta resident" type="button">Continue as Resident <i
+                            data-lucide="arrow-right"></i></button>
                 </div>
             </article>
+
         </section>
 
-        <div class="footer-row">
-            <button class="back" id="backBtn" type="button">
-                <i data-lucide="arrow-left"></i> Back
-            </button>
-
-            <p class="small-note">You can change this later in settings.</p>
-        </div>
+        <p class="small-note" style="text-align:center;margin-top:4px">You can change your role later in account
+            settings.</p>
     </main>
 
     <script src="roles.js"></script>
     <script>lucide.createIcons();</script>
     <div class="page-transition" aria-hidden="true"></div>
-
     <script src="transition.js"></script>
-    <script src="roles.js"></script>
-
 </body>
 
 </html>

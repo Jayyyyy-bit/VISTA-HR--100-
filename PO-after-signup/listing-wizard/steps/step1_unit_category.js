@@ -103,32 +103,9 @@ window.Step1Init = function ({ nextBtn }) {
         });
     });
 
-    let submitting = false;
-
-    nextBtn.onclick = async () => {
-        if (submitting) return;
-
-        const latestDraft = readDraft();
-        if (!latestDraft.placeType) {
-            alert("Please select a place type first.");
-            return;
-        }
-
-        try {
-            submitting = true;
-            nextBtn.disabled = true;
-
-            const result = await syncStep1();
-            console.log("[Step1] sync success:", result);
-
-            // move to step 2
-            window.location.hash = "#/step-2";
-        } catch (err) {
-            console.error("[Step1] sync failed:", err);
-            alert(err?.error || err?.message || "Failed to save Step 1.");
-            nextBtn.disabled = false;
-        } finally {
-            submitting = false;
-        }
-    };
+    // Navigation is handled exclusively by router.js (nextBtn click → syncStep1 → setHash).
+    // Step1Init must NOT attach its own onclick or set location.hash — doing so causes
+    // a double-fire: router fires syncStep1 + navigates, then this handler fires syncStep1
+    // again and navigates again, which jumps the user back to step-2 on every Next click.
+    // The only job of StepNInit is: update nextBtn.disabled based on local selection state.
 };

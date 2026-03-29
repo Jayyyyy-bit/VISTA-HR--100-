@@ -1,3 +1,4 @@
+import hashlib
 import threading
 from flask import Blueprint, request, jsonify, current_app, g
 from sqlalchemy.exc import SQLAlchemyError
@@ -8,7 +9,7 @@ from ..extensions import db
 from ..models import User
 from ..auth.jwt import create_access_token, require_auth, COOKIE_NAME
 from ..utils.errors import json_error
-from ..utils.mail import send_otp_email
+from ..utils.mail import send_otp_email, send_password_reset_email
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -37,11 +38,14 @@ def _generate_otp() -> str:
     return "".join(random.choices(string.digits, k=6))
 
 
+def _hash_otp(otp: str) -> str:
+    return hashlib.sha256(otp.encode()).hexdigest()
+
 def _attach_otp(user: User) -> str:
     otp = _generate_otp()
-    user.email_otp = otp
+    user.email_otp = _hash_otp(otp)   # store hash, never plaintext
     user.email_otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-    return otp
+    return otp  # plaintext returned for emailing
 
 
 
@@ -67,6 +71,9 @@ def register():
 
     if not email or not password or role not in ("RESIDENT", "OWNER"):
         return json_error("Invalid payload. Required: email, password, role (RESIDENT|OWNER)", 400)
+
+    if len(password) < 8:
+        return json_error("Validation failed", 400, fields={"password": "Password must be at least 8 characters."})
 
     if User.query.filter_by(email=email).first():
         return json_error("Email already registered", 409)
@@ -128,7 +135,31 @@ def login():
         return json_error("Invalid credentials", 401)
 
     if getattr(user, "is_suspended", False):
-        return json_error("Account suspended", 403)
+        sus_until = getattr(user, "suspended_until", None)
+        reason    = getattr(user, "suspension_reason", None) or "Violation of platform terms."
+        strikes   = int(getattr(user, "strike_count", 0) or 0)
+
+        if sus_until:
+            if sus_until.tzinfo is None:
+                from datetime import timezone as _tz
+                sus_until = sus_until.replace(tzinfo=_tz.utc)
+            if datetime.now(timezone.utc) >= sus_until:
+                # Auto-lift — suspension period ended
+                user.is_suspended    = False
+                user.suspended_until = None
+                try: db.session.commit()
+                except: db.session.rollback()
+                # Fall through — allow login
+            else:
+                until_str = sus_until.strftime("%B %d, %Y")
+                msg = f"Your account is suspended until {until_str}. Reason: {reason}"
+                return json_error(msg, 403, code="ACCOUNT_SUSPENDED",
+                                  fields={"strikes": strikes})
+        else:
+            msg = "Your account has been permanently suspended."
+            if reason: msg += f" Reason: {reason}"
+            return json_error(msg, 403, code="ACCOUNT_SUSPENDED",
+                              fields={"strikes": strikes})
 
     # Allow login even if email not verified — actions are gated per role on dashboard
     token = create_access_token(user)
@@ -200,7 +231,7 @@ def verify_email():
     if bool(user.email_verified):
         return json_error("Email already verified", 400)
 
-    if not user.email_otp or user.email_otp != otp:
+    if not user.email_otp or user.email_otp != _hash_otp(otp):
         return json_error("Incorrect verification code", 400)
 
     expires = user.email_otp_expires_at
@@ -267,6 +298,59 @@ def update_profile():
         return json_error("Database error", 500)
 
 # ======================================================
+# CHANGE PASSWORD
+# ======================================================
+@auth_bp.patch("/auth/me/password")
+@require_auth
+def change_password():
+    user = g.current_user
+    data = request.get_json(silent=True) or {}
+
+    current = (data.get("current_password") or "").strip()
+    new_pw  = (data.get("new_password")     or "").strip()
+    confirm = (data.get("confirm_password") or "").strip()
+
+    if not current:
+        return json_error("Validation failed", 400, fields={"current_password": "Current password is required."})
+    if not new_pw:
+        return json_error("Validation failed", 400, fields={"new_password": "New password is required."})
+    if len(new_pw) < 8:
+        return json_error("Validation failed", 400, fields={"new_password": "Password must be at least 8 characters."})
+    if new_pw != confirm:
+        return json_error("Validation failed", 400, fields={"confirm_password": "Passwords do not match."})
+    if not user.check_password(current):
+        return json_error("Validation failed", 400, fields={"current_password": "Incorrect current password."})
+    if user.check_password(new_pw):
+        return json_error("Validation failed", 400, fields={"new_password": "New password must be different from current."})
+
+    user.set_password(new_pw)
+    try:
+        db.session.commit()
+        return jsonify({"message": "Password updated successfully."}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+
+
+
+# ======================================================
+# MARK ONBOARDING COMPLETE
+# ======================================================
+@auth_bp.patch("/auth/me/onboarding")
+@require_auth
+def complete_onboarding():
+    user = g.current_user
+    if not bool(getattr(user, "has_completed_onboarding", False)):
+        user.has_completed_onboarding = True
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            return json_error("Database error", 500)
+    return jsonify({"message": "Onboarding marked complete", "user": user.to_dict()}), 200
+
+# ======================================================
 # LOGOUT (clear cookie)
 # ======================================================
 @auth_bp.post("/auth/logout")
@@ -274,3 +358,169 @@ def logout():
     resp = jsonify({"message": "Logged out"})
     resp.delete_cookie(COOKIE_NAME, path="/")
     return resp, 200
+
+# ══════════════════════════════════════════════════════════
+# FORGOT PASSWORD — Step 1: Look up account (Meta-style)
+# Returns masked user info so user can confirm "is this you?"
+# Does NOT send OTP yet — prevents email enumeration abuse
+# ══════════════════════════════════════════════════════════
+@auth_bp.post("/auth/forgot-password")
+def forgot_password():
+    """Look up account by email. Returns masked name + email for confirmation."""
+    data  = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return json_error("Email is required.", 400)
+
+    user = User.query.filter_by(email=email).first()
+
+    # Always return 200 with same shape to prevent email enumeration
+    if not user:
+        return jsonify({
+            "found": False,
+            "message": "No account found with that email address.",
+        }), 200
+
+    # Mask the display name: "Juan D." or just "User"
+    first = (user.first_name or "").strip()
+    last  = (user.last_name  or "").strip()
+    masked_name = f"{first} {last[0]}." if first and last else (first or "Account holder")
+
+    # Mask the email: c***o@gmail.com
+    parts     = email.split("@")
+    local     = parts[0]
+    domain    = parts[1] if len(parts) > 1 else ""
+    if len(local) <= 2:
+        masked_email = local[0] + "***@" + domain
+    else:
+        masked_email = local[0] + ("*" * (len(local) - 2)) + local[-1] + "@" + domain
+
+    role = str(user.role.value if hasattr(user.role, "value") else user.role)
+
+    return jsonify({
+        "found":        True,
+        "masked_name":  masked_name,
+        "masked_email": masked_email,
+        "role":         role,
+    }), 200
+
+
+# ══════════════════════════════════════════════════════════
+# FORGOT PASSWORD — Step 2: User confirmed → Send OTP
+# ══════════════════════════════════════════════════════════
+@auth_bp.post("/auth/forgot-password/send-otp")
+def forgot_password_send_otp():
+    """User confirmed their identity — now actually send the reset OTP."""
+    data  = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return json_error("Email is required.", 400)
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        # Still 200 to prevent enumeration
+        return jsonify({"message": "Reset code sent."}), 200
+
+    otp = _attach_otp(user)   # stores sha256(otp) in DB
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+    name = f"{user.first_name or ''} {user.last_name or ''}".strip() or ""
+    _send_async(send_password_reset_email, email, otp, name)
+
+    return jsonify({"message": "Reset code sent."}), 200
+
+
+# ══════════════════════════════════════════════════════════
+# FORGOT PASSWORD — Step 2: Verify OTP
+# ══════════════════════════════════════════════════════════
+@auth_bp.post("/auth/verify-reset-otp")
+def verify_reset_otp():
+    """Verify the reset OTP — returns a short-lived reset token."""
+    data  = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    otp   = (data.get("otp")   or "").strip()
+
+    if not email or not otp:
+        return json_error("Email and OTP are required.", 400)
+
+    user = User.query.filter_by(email=email).first()
+    if not user or not user.email_otp:
+        return json_error("Invalid or expired reset code.", 400)
+
+    if user.email_otp != _hash_otp(otp):
+        return json_error("Invalid reset code.", 400)
+
+    expires = user.email_otp_expires_at
+    if expires:
+        if expires.tzinfo is None:
+            from datetime import timezone as tz
+            expires = expires.replace(tzinfo=tz.utc)
+        if datetime.now(timezone.utc) > expires:
+            return json_error("Reset code has expired. Please request a new one.", 400)
+
+    # OTP valid — clear it so it can only be used once
+    # Generate a temporary reset token (reuse OTP slot with a special prefix)
+    import secrets
+    reset_token = secrets.token_urlsafe(32)
+    user.email_otp = _hash_otp(reset_token)  # store hash of reset token
+    user.email_otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+    return jsonify({"message": "OTP verified.", "reset_token": reset_token}), 200
+
+
+# ══════════════════════════════════════════════════════════
+# FORGOT PASSWORD — Step 3: Set new password
+# ══════════════════════════════════════════════════════════
+@auth_bp.post("/auth/reset-password")
+def reset_password():
+    """Set a new password using the reset token from step 2."""
+    data         = request.get_json(silent=True) or {}
+    email        = (data.get("email")        or "").strip().lower()
+    reset_token  = (data.get("reset_token")  or "").strip()
+    new_password = (data.get("new_password") or "").strip()
+
+    if not email or not reset_token or not new_password:
+        return json_error("Email, reset token, and new password are required.", 400)
+
+    if len(new_password) < 8:
+        return json_error("Validation failed", 400,
+                          fields={"new_password": "Password must be at least 8 characters."})
+
+    user = User.query.filter_by(email=email).first()
+    if not user or not user.email_otp:
+        return json_error("Invalid or expired reset session. Please start again.", 400)
+
+    if user.email_otp != _hash_otp(reset_token):
+        return json_error("Invalid reset token.", 400)
+
+    expires = user.email_otp_expires_at
+    if expires:
+        if expires.tzinfo is None:
+            from datetime import timezone as tz
+            expires = expires.replace(tzinfo=tz.utc)
+        if datetime.now(timezone.utc) > expires:
+            return json_error("Reset session expired. Please start again.", 400)
+
+    # Set new password + clear OTP
+    user.set_password(new_password)
+    user.email_otp            = None
+    user.email_otp_expires_at = None
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Password reset successfully. You can now log in."}), 200
+    except Exception:
+        db.session.rollback()
+        return json_error("Database error", 500)

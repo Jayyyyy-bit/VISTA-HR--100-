@@ -1,4 +1,4 @@
-/* VISTA-HR | Messages
+/* VISTA-HR | Messages — real API
    ------------------------------------------------------------ */
 (() => {
     const QUICK_REPLIES = [
@@ -9,315 +9,312 @@
         "Please send your requirements.",
     ];
 
-    const THREADS = [
-        {
-            id: 1, name: "Angela Cruz", initials: "AC", unread: true,
-            time: "10:42 AM", preview: "Hi! Is the unit still available?",
-            tag: "new", tagLabel: "New inquiry",
-            property: "Condo Unit 1", propertyMeta: "Makati City · ₱18,500/mo",
-            propertyStatus: "Ready to publish",
-            phone: "+63 912 345 6789", email: "angela.cruz@email.com",
-            moveIn: "2026-04-01", moveInLabel: "Apr 1, 2026",
-            rating: 4.5, ratingCount: 12,
-            notes: "",
-            messages: [
-                { id: "m1", from: "them", text: "Hi! Is the unit still available?", time: "10:30 AM", read: true, reactions: {}, starred: false },
-                { id: "m2", from: "me", text: "Hi Angela! Yes, it's available. Would you like to schedule a viewing?", time: "10:35 AM", read: true, reactions: {}, starred: false },
-                { id: "m3", from: "them", text: "That would be great! How about this Saturday?", time: "10:38 AM", read: true, reactions: {}, starred: false },
-                { id: "m4", from: "me", text: "Saturday works! Let's say 10AM?", time: "10:40 AM", read: true, reactions: {}, starred: false },
-                { id: "m5", from: "them", text: "Hi! Is the unit still available?", time: "10:42 AM", read: false, reactions: {}, starred: false },
-            ]
-        },
-        {
-            id: 2, name: "Mark Santos", initials: "MS", unread: true,
-            time: "9:15 AM", preview: "When can I move in?",
-            tag: "viewing", tagLabel: "Viewing scheduled",
-            property: "Studio Apartment A", propertyMeta: "BGC, Taguig · ₱14,000/mo",
-            propertyStatus: "Ready to publish",
-            phone: "+63 917 234 5678", email: "mark.santos@email.com",
-            moveIn: "2026-03-18", moveInLabel: "Mar 18, 2026",
-            rating: 3.8, ratingCount: 5,
-            notes: "Prefers ground floor. Has a small dog.",
-            messages: [
-                { id: "m1", from: "them", text: "Hello! I'm interested in the studio.", time: "9:00 AM", read: true, reactions: {}, starred: false },
-                { id: "m2", from: "me", text: "Hi Mark! Which unit are you interested in?", time: "9:05 AM", read: true, reactions: {}, starred: false },
-                { id: "m3", from: "them", text: "Studio Apartment A. When can I move in?", time: "9:15 AM", read: false, reactions: {}, starred: false },
-            ]
-        },
-        {
-            id: 3, name: "Paolo Reyes", initials: "PR", unread: false,
-            time: "Yesterday", preview: "Thanks for the info!",
-            tag: "negotiating", tagLabel: "Negotiating",
-            property: "Room 3B", propertyMeta: "Pasay City · ₱8,500/mo",
-            propertyStatus: "Draft",
-            phone: "+63 908 765 4321", email: "p.reyes@email.com",
-            moveIn: "2026-03-20", moveInLabel: "Mar 20, 2026",
-            rating: 5.0, ratingCount: 8,
-            notes: "Asking for a discount on the 2nd month.",
-            messages: [
-                { id: "m1", from: "them", text: "Good morning! I wanted to ask about the parking situation.", time: "Yesterday", read: true, reactions: {}, starred: false },
-                { id: "m2", from: "me", text: "Hi Paolo! There's one assigned slot per unit.", time: "Yesterday", read: true, reactions: {}, starred: false },
-                { id: "m3", from: "them", text: "Perfect. And utilities are included right?", time: "Yesterday", read: true, reactions: {}, starred: false },
-                { id: "m4", from: "me", text: "Water is included. Electricity is metered separately.", time: "Yesterday", read: true, reactions: {}, starred: false },
-                { id: "m5", from: "them", text: "Thanks for the info!", time: "Yesterday", read: true, reactions: {}, starred: true },
-            ]
-        },
-        {
-            id: 4, name: "Denise Lim", initials: "DL", unread: true,
-            time: "Mon", preview: "Can I see it this week?",
-            tag: "new", tagLabel: "New inquiry",
-            property: "Condo Unit 1", propertyMeta: "Makati City · ₱18,500/mo",
-            propertyStatus: "Ready to publish",
-            phone: "+63 919 111 2222", email: "denise.lim@email.com",
-            moveIn: "2026-03-28", moveInLabel: "Mar 28, 2026",
-            rating: 4.2, ratingCount: 3,
-            notes: "",
-            messages: [
-                { id: "m1", from: "them", text: "Hi, I saw your listing online. Can I see it this week?", time: "Mon", read: false, reactions: {}, starred: false },
-            ]
-        }
-    ];
+    const state = {
+        conversations: [],
+        activeThread: null,
+        messages: [],
+        searchQuery: "",
+        localReactions: {},
+        localStarred: {},
+        localNotes: {},
+    };
 
-    let activeId = null;
-    let searchQuery = "";
-    let typingTimer = null;
+    let pollTimer = null;
 
     function esc(s) {
-        return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        return String(s || "")
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    function starsHtml(rating) {
-        let h = "";
-        for (let i = 1; i <= 5; i++) {
-            h += `<span class="${i <= Math.round(rating) ? 'msgInfoStar' : 'msgInfoStarEmpty'}">★</span>`;
-        }
-        return h;
-    }
-
-    function daysUntil(dateStr) {
-        const target = new Date(dateStr + "T00:00:00");
+    function fmtTime(isoStr) {
+        if (!isoStr) return "";
+        const d = new Date(isoStr);
         const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        return Math.max(0, Math.round((target - now) / 86400000));
+        const diffDays = Math.floor((now - d) / 86400000);
+        if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        if (diffDays === 1) return "Yesterday";
+        if (diffDays < 7) return d.toLocaleDateString([], { weekday: "short" });
+        return d.toLocaleDateString([], { month: "short", day: "numeric" });
     }
 
-    // ── Nav badge ──
-    function updateNavBadge() {
+    function initials(name) {
+        const parts = (name || "").trim().split(" ");
+        return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase();
+    }
+
+    function threadKey(t) { return `${t.listing_id}_${t.other_user_id}`; }
+
+    const API_BASE = "http://127.0.0.1:5000/api";
+
+    async function apiFetch(path, opts = {}) {
+        const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+        const res = await fetch(url, {
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            ...opts,
+        });
+        const data = await res.json();
+        if (!res.ok) throw data;
+        return data;
+    }
+
+    async function loadConversations() {
+        try {
+            const data = await apiFetch("/messages/conversations");
+            state.conversations = data.conversations || [];
+        } catch (e) {
+            console.error("[messages] loadConversations failed", e);
+            state.conversations = [];
+        }
+    }
+
+    async function loadThread(listing_id, other_user_id) {
+        try {
+            const data = await apiFetch(`/messages/conversations/${listing_id}/${other_user_id}`);
+            state.messages = data.messages || [];
+        } catch (e) {
+            console.error("[messages] loadThread failed", e);
+            state.messages = [];
+        }
+    }
+
+    async function sendMessage(text) {
+        if (!state.activeThread || !text.trim()) return;
+        const { listing_id, other_user_id } = state.activeThread;
+        try {
+            const data = await apiFetch("/messages", {
+                method: "POST",
+                body: JSON.stringify({ receiver_id: other_user_id, listing_id, text: text.trim() }),
+            });
+            state.messages.push(data.data);
+            renderBubbles();
+            await loadConversations();
+            renderThreadList();
+        } catch (e) {
+            console.error("[messages] sendMessage failed", e);
+            alert("Failed to send message. Please try again.");
+        }
+    }
+
+    async function loadUnreadBadge() {
+        try {
+            const data = await apiFetch("/messages/unread-count");
+            updateNavBadge(data.unread || 0);
+        } catch { /* silent */ }
+    }
+
+    function updateNavBadge(count) {
         const tab = document.querySelector('.dashTab[data-tab="messages"]');
         if (!tab) return;
         let badge = tab.querySelector(".msgNavBadge");
-        const hasUnread = THREADS.some(t => t.unread);
-        if (hasUnread) {
+        if (count > 0) {
             if (!badge) { badge = document.createElement("span"); badge.className = "msgNavBadge"; tab.appendChild(badge); }
         } else {
             badge?.remove();
         }
     }
 
-    // ── Thread list ──
     function renderThreadList() {
         const el = document.getElementById("msgThreadList");
         if (!el) return;
 
-        const q = searchQuery.toLowerCase();
-        const filtered = THREADS.filter(t =>
-            !q || t.name.toLowerCase().includes(q) ||
-            t.preview.toLowerCase().includes(q) ||
-            t.property.toLowerCase().includes(q)
+        const q = state.searchQuery.toLowerCase();
+        const filtered = state.conversations.filter(t =>
+            !q ||
+            t.other_name.toLowerCase().includes(q) ||
+            t.last_message.toLowerCase().includes(q) ||
+            t.listing_title.toLowerCase().includes(q)
         );
 
         if (!filtered.length) {
-            el.innerHTML = `<div style="padding:20px 16px;font-size:12px;color:rgba(18,52,88,0.40);text-align:center;">No conversations found</div>`;
+            el.innerHTML = `<div style="padding:20px 16px;font-size:12px;color:rgba(18,52,88,0.40);text-align:center;">${state.conversations.length ? "No conversations found" : "No messages yet"}</div>`;
             return;
         }
 
-        el.innerHTML = filtered.map(t => `
-            <div class="msgThread${t.unread ? ' isUnread' : ''}${t.id === activeId ? ' isActive' : ''}" data-tid="${t.id}">
-                <div class="msgThreadAvatar">${esc(t.initials)}</div>
+        const activeKey = state.activeThread ? threadKey(state.activeThread) : null;
+
+        el.innerHTML = filtered.map(t => {
+            const key = threadKey(t);
+            const ini = t.initials || initials(t.other_name);
+            return `
+            <div class="msgThread${t.unread ? " isUnread" : ""}${key === activeKey ? " isActive" : ""}" data-listing="${t.listing_id}" data-other="${t.other_user_id}">
+                <div class="msgThreadAvatar">${esc(ini)}</div>
                 <div class="msgThreadBody">
                     <div class="msgThreadRow">
-                        <span class="msgThreadName">${esc(t.name)}</span>
-                        <span class="msgThreadTime">${esc(t.time)}</span>
+                        <span class="msgThreadName">${esc(t.other_name)}</span>
+                        <span class="msgThreadTime">${esc(fmtTime(t.last_time))}</span>
                     </div>
-                    <div class="msgThreadPreview">${esc(t.preview)}</div>
-                    <span class="msgThreadTag tag-${esc(t.tag)}">${esc(t.tagLabel)}</span>
+                    <div class="msgThreadPreview">${esc(t.last_message)}</div>
+                    <span class="msgThreadTag tag-listing">${esc(t.listing_title)}</span>
                 </div>
-                ${t.unread ? '<span class="msgUnreadDot"></span>' : ''}
-            </div>
-        `).join("");
+                ${t.unread ? '<span class="msgUnreadDot"></span>' : ""}
+            </div>`;
+        }).join("");
 
-        el.querySelectorAll(".msgThread[data-tid]").forEach(el => {
-            el.addEventListener("click", () => openThread(Number(el.dataset.tid)));
+        el.querySelectorAll(".msgThread[data-listing]").forEach(row => {
+            row.addEventListener("click", () =>
+                openThread(Number(row.dataset.listing), Number(row.dataset.other))
+            );
         });
 
         const pill = document.getElementById("msgUnreadPill");
-        const count = THREADS.filter(t => t.unread).length;
+        const count = state.conversations.filter(t => t.unread).length;
         if (pill) { pill.textContent = count; pill.style.display = count ? "" : "none"; }
-
-        updateNavBadge();
     }
 
-    // ── Open thread ──
-    function openThread(id) {
-        const thread = THREADS.find(t => t.id === id);
-        if (!thread) return;
-
-        activeId = id;
-        thread.unread = false;
+    async function openThread(listing_id, other_user_id) {
+        const meta = state.conversations.find(t => t.listing_id === listing_id && t.other_user_id === other_user_id);
+        state.activeThread = meta || { listing_id, other_user_id };
 
         document.getElementById("msgMainEmpty").hidden = true;
         document.getElementById("msgChatWrap").hidden = false;
         document.getElementById("msgInfoPanel").hidden = false;
 
+        if (meta) meta.unread = 0;
         renderThreadList();
-        renderChatHeader(thread);
-        renderBubbles(thread);
+        renderChatHeader();
+        renderInfoPanel();
+
+        await loadThread(listing_id, other_user_id);
+        renderBubbles();
         renderQuickReplies();
-        renderInfoPanel(thread);
-        updateNavBadge();
+        loadUnreadBadge();
 
         if (window.lucide) lucide.createIcons();
 
-        // Simulate typing after 1.5s
-        clearTimeout(typingTimer);
-        typingTimer = setTimeout(() => showTyping(thread), 1500);
+        clearInterval(pollTimer);
+        pollTimer = setInterval(async () => {
+            if (!state.activeThread) return;
+            const prev = state.messages.length;
+            await loadThread(state.activeThread.listing_id, state.activeThread.other_user_id);
+            if (state.messages.length !== prev) {
+                renderBubbles();
+                await loadConversations();
+                renderThreadList();
+                loadUnreadBadge();
+            }
+        }, 8000);
     }
 
-    // ── Chat header ──
-    function renderChatHeader(thread) {
+    function renderChatHeader() {
         const el = document.getElementById("msgChatHeader");
-        if (!el) return;
+        const t = state.activeThread;
+        if (!el || !t) return;
+        const ini = t.initials || initials(t.other_name || "");
         el.innerHTML = `
-            <div class="msgChatHeaderAvatar">${esc(thread.initials)}</div>
+            <div class="msgChatHeaderAvatar">${esc(ini)}</div>
             <div class="msgChatHeaderInfo">
-                <div class="msgChatHeaderName">${esc(thread.name)}</div>
-                <div class="msgChatHeaderSub">${esc(thread.email)}</div>
+                <div class="msgChatHeaderName">${esc(t.other_name || "")}</div>
+                <div class="msgChatHeaderSub">${esc(t.other_email || "")}</div>
             </div>
             <div class="msgPropertyChip">
                 <i data-lucide="home" style="width:11px;height:11px;stroke-width:2"></i>
-                ${esc(thread.property)}
-            </div>
-        `;
+                ${esc(t.listing_title || "")}
+            </div>`;
+        if (window.lucide) lucide.createIcons();
     }
 
-    // ── Bubbles ──
-    function renderBubbles(thread) {
+    function renderBubbles() {
         const el = document.getElementById("msgBubbleList");
         if (!el) return;
 
         const reactionEmojis = ["👍", "❤️", "✓"];
 
-        el.innerHTML = `<div class="msgDateDivider">Today</div>` +
-            thread.messages.map((m) => {
-                const isOwn = m.from === "me";
-                const receipt = isOwn ? `<span class="msgReceipt ${m.read ? 'isRead' : 'isSent'}">${m.read ? '✓✓' : '✓'}</span>` : "";
+        if (!state.messages.length) {
+            el.innerHTML = `<div style="padding:32px;text-align:center;font-size:13px;color:rgba(18,52,88,0.35);font-weight:600;">No messages yet. Say hello! 👋</div>`;
+            return;
+        }
 
-                const reactionsHtml = Object.entries(m.reactions || {}).length
-                    ? `<div class="msgBubbleReactions">${Object.entries(m.reactions).map(([e, c]) =>
-                        `<div class="msgReactionChip" data-msgid="${m.id}" data-emoji="${esc(e)}">${esc(e)}<span>${c}</span></div>`
-                    ).join("")}</div>` : "";
+        let lastDate = null;
+        el.innerHTML = state.messages.map(m => {
+            const isOwn = m.from === "me";
+            const msgDate = m.created_at ? new Date(m.created_at).toDateString() : null;
+            let dateDivider = "";
+            if (msgDate && msgDate !== lastDate) {
+                lastDate = msgDate;
+                const today = new Date().toDateString();
+                const yesterday = new Date(Date.now() - 86400000).toDateString();
+                const label = msgDate === today ? "Today"
+                    : msgDate === yesterday ? "Yesterday"
+                        : new Date(m.created_at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
+                dateDivider = `<div class="msgDateDivider">${label}</div>`;
+            }
 
-                return `
-                <div class="msgBubbleGroup ${isOwn ? 'isOwn' : 'isOther'}">
-                    <div class="msgBubbleWrap">
-                        <div class="msgReactBar">
-                            ${reactionEmojis.map(e => `<button class="msgReactBtn" data-msgid="${m.id}" data-emoji="${esc(e)}">${e}</button>`).join("")}
-                            <button class="msgReactBtn" data-msgid="${m.id}" data-star="1" title="Star message">⭐</button>
-                        </div>
-                        <div class="msgBubble" data-msgid="${m.id}">${esc(m.text)}</div>
+            const receipt = isOwn
+                ? `<span class="msgReceipt ${m.is_read ? "isRead" : "isSent"}">${m.is_read ? "✓✓" : "✓"}</span>`
+                : "";
+
+            const reactions = state.localReactions[m.id] || {};
+            const reactionsHtml = Object.entries(reactions).length
+                ? `<div class="msgBubbleReactions">${Object.entries(reactions).map(([e, c]) =>
+                    `<div class="msgReactionChip" data-msgid="${m.id}" data-emoji="${esc(e)}">${esc(e)}<span>${c}</span></div>`
+                ).join("")}</div>` : "";
+
+            const isStarred = !!state.localStarred[m.id];
+
+            return `${dateDivider}
+            <div class="msgBubbleGroup ${isOwn ? "isOwn" : "isOther"}">
+                <div class="msgBubbleWrap">
+                    <div class="msgReactBar">
+                        ${reactionEmojis.map(e => `<button class="msgReactBtn" data-msgid="${m.id}" data-emoji="${esc(e)}">${e}</button>`).join("")}
+                        <button class="msgReactBtn${isStarred ? " isStarred" : ""}" data-msgid="${m.id}" data-star="1" title="Star">⭐</button>
                     </div>
-                    ${reactionsHtml}
-                    <div class="msgBubbleMeta">${receipt}<span>${esc(m.time)}</span></div>
-                </div>`;
-            }).join("");
+                    <div class="msgBubble" data-msgid="${m.id}">${esc(m.text)}</div>
+                </div>
+                ${reactionsHtml}
+                <div class="msgBubbleMeta">${receipt}<span>${esc(fmtTime(m.created_at))}</span></div>
+            </div>`;
+        }).join("");
 
-        // Bind reaction buttons
-        el.querySelectorAll(".msgReactBtn[data-emoji]").forEach(btn => {
+        el.querySelectorAll(".msgReactBtn").forEach(btn => {
             btn.addEventListener("click", () => {
-                if (btn.dataset.star) { toggleStar(thread, btn.dataset.msgid); return; }
-                addReaction(thread, btn.dataset.msgid, btn.dataset.emoji);
+                if (btn.dataset.star) { toggleStar(btn.dataset.msgid); return; }
+                addReaction(btn.dataset.msgid, btn.dataset.emoji);
             });
         });
 
-        // Bind reaction chips (toggle off)
         el.querySelectorAll(".msgReactionChip").forEach(chip => {
-            chip.addEventListener("click", () => addReaction(thread, chip.dataset.msgid, chip.dataset.emoji));
+            chip.addEventListener("click", () => addReaction(chip.dataset.msgid, chip.dataset.emoji));
         });
 
         el.scrollTop = el.scrollHeight;
         updateJumpBtn();
     }
 
-    function addReaction(thread, msgId, emoji) {
-        const msg = thread.messages.find(m => m.id === msgId);
-        if (!msg) return;
-        msg.reactions = msg.reactions || {};
-        if (msg.reactions[emoji]) {
-            msg.reactions[emoji]--;
-            if (msg.reactions[emoji] <= 0) delete msg.reactions[emoji];
+    function addReaction(msgId, emoji) {
+        if (!state.localReactions[msgId]) state.localReactions[msgId] = {};
+        if (state.localReactions[msgId][emoji]) {
+            delete state.localReactions[msgId][emoji];
         } else {
-            msg.reactions[emoji] = (msg.reactions[emoji] || 0) + 1;
+            state.localReactions[msgId][emoji] = 1;
         }
-        renderBubbles(thread);
+        renderBubbles();
     }
 
-    function toggleStar(thread, msgId) {
-        const msg = thread.messages.find(m => m.id === msgId);
-        if (!msg) return;
-        msg.starred = !msg.starred;
-        renderBubbles(thread);
-        renderInfoPanel(thread); // refresh starred section
+    function toggleStar(msgId) {
+        state.localStarred[msgId] = !state.localStarred[msgId];
+        if (!state.localStarred[msgId]) delete state.localStarred[msgId];
+        renderBubbles();
+        renderInfoPanel();
     }
 
-    // ── Typing indicator ──
-    function showTyping(thread) {
-        const el = document.getElementById("msgBubbleList");
-        if (!el || activeId !== thread.id) return;
-
-        const indicator = document.createElement("div");
-        indicator.className = "msgBubbleGroup isOther";
-        indicator.id = "msgTyping";
-        indicator.innerHTML = `
-            <div class="msgBubbleWrap">
-                <div class="msgTypingIndicator">
-                    <div class="msgTypingDot"></div>
-                    <div class="msgTypingDot"></div>
-                    <div class="msgTypingDot"></div>
-                </div>
-            </div>`;
-        el.appendChild(indicator);
-        el.scrollTop = el.scrollHeight;
-
-        // Remove after 2.5s
-        setTimeout(() => { indicator.remove(); }, 2500);
-    }
-
-    // ── Jump to unread button ──
     function updateJumpBtn() {
         const btn = document.getElementById("msgJumpBtn");
         if (!btn) return;
-        const thread = THREADS.find(t => t.id === activeId);
-        const hasUnread = thread?.messages.some(m => !m.read && m.from === "them");
+        const hasUnread = state.messages.some(m => !m.is_read && m.from === "them");
         btn.classList.toggle("isHidden", !hasUnread);
     }
 
-    // ── Quick replies ──
     function renderQuickReplies() {
         const el = document.getElementById("msgQuickReplies");
         if (!el) return;
-        el.innerHTML = QUICK_REPLIES.map(r =>
-            `<button class="msgQuickReply" type="button">${esc(r)}</button>`
-        ).join("");
+        el.innerHTML = QUICK_REPLIES.map(r => `<button class="msgQuickReply" type="button">${esc(r)}</button>`).join("");
         el.classList.add("hasReplies");
-
         el.querySelectorAll(".msgQuickReply").forEach(btn => {
             btn.addEventListener("click", () => {
                 const input = document.getElementById("msgInput");
-                if (input) {
-                    input.value = btn.textContent;
-                    input.focus();
-                    dismissQuickReplies();
-                }
+                if (input) { input.value = btn.textContent; input.focus(); dismissQuickReplies(); }
             });
         });
     }
@@ -326,59 +323,43 @@
         const el = document.getElementById("msgQuickReplies");
         if (!el) return;
         el.style.transition = "opacity 150ms ease, transform 150ms ease";
-        el.style.opacity = "0";
-        el.style.transform = "translateY(6px)";
-        setTimeout(() => {
-            el.innerHTML = "";
-            el.classList.remove("hasReplies");
-            el.style.opacity = "";
-            el.style.transform = "";
-        }, 150);
+        el.style.opacity = "0"; el.style.transform = "translateY(6px)";
+        setTimeout(() => { el.innerHTML = ""; el.classList.remove("hasReplies"); el.style.opacity = ""; el.style.transform = ""; }, 150);
     }
 
-    // ── Info panel ──
-    function renderInfoPanel(thread) {
+    function renderInfoPanel() {
         const el = document.getElementById("msgInfoInner");
-        if (!el) return;
+        const t = state.activeThread;
+        if (!el || !t) return;
 
-        const days = daysUntil(thread.moveIn);
-        const pct = Math.max(5, Math.min(95, 100 - (days / 90 * 100)));
-
-        const starred = thread.messages.filter(m => m.starred);
+        const key = threadKey(t);
+        const notes = state.localNotes[key] || "";
+        const starred = state.messages.filter(m => state.localStarred[m.id]);
+        const ini = t.initials || initials(t.other_name || "");
 
         el.innerHTML = `
-            <div class="msgInfoAvatar">${esc(thread.initials)}</div>
-            <div class="msgInfoName">${esc(thread.name)}</div>
-            <div class="msgInfoRole">Prospective tenant</div>
-            <div class="msgInfoRating">
-                ${starsHtml(thread.rating)}
-                <span class="msgInfoRatingText">${thread.rating.toFixed(1)} (${thread.ratingCount} reviews)</span>
-            </div>
+            <div class="msgInfoAvatar">${esc(ini)}</div>
+            <div class="msgInfoName">${esc(t.other_name || "")}</div>
+            <div class="msgInfoRole">${esc(t.other_role === "RESIDENT" ? "Prospective tenant" : "Property owner")}</div>
 
             <div class="msgInfoSection">
                 <div class="msgInfoSectionLabel">Contact</div>
-                <div class="msgInfoRow"><span class="msgInfoRowLabel">Phone</span><span class="msgInfoRowValue">${esc(thread.phone)}</span></div>
-                <div class="msgInfoRow"><span class="msgInfoRowLabel">Email</span><span class="msgInfoRowValue" style="font-size:11px">${esc(thread.email)}</span></div>
-                <div class="msgInfoRow">
-                    <span class="msgInfoRowLabel">Move-in</span>
-                    <span class="msgInfoRowValue">${esc(thread.moveInLabel)}</span>
-                </div>
-                <div class="msgMoveInTimeline">
-                    <div class="msgMoveInBar"><div class="msgMoveInFill" style="width:${pct}%"></div></div>
-                    <div class="msgMoveInLabel"><span>Today</span><span>${days > 0 ? days + ' days away' : 'Today!'}</span></div>
-                </div>
+                <div class="msgInfoRow"><span class="msgInfoRowLabel">Email</span><span class="msgInfoRowValue" style="font-size:11px">${esc(t.other_email || "—")}</span></div>
+                <div class="msgInfoRow"><span class="msgInfoRowLabel">Phone</span><span class="msgInfoRowValue">${esc(t.other_phone || "—")}</span></div>
             </div>
 
             <div class="msgInfoSection">
-                <div class="msgInfoSectionLabel">Interested in</div>
+                <div class="msgInfoSectionLabel">Listing</div>
                 <div class="msgPropertyCard">
-                    <div class="msgPropertyImg" style="background:linear-gradient(135deg,rgba(212,201,190,0.8),rgba(180,170,155,0.6));display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="home" style="width:26px;height:26px;stroke-width:1.4;color:rgba(18,52,88,0.35)"></i>
+                    <div class="msgPropertyImg" style="background:linear-gradient(135deg,rgba(212,201,190,0.8),rgba(180,170,155,0.6));display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:8px;">
+                        ${t.listing_cover
+                ? `<img src="${esc(t.listing_cover)}" style="width:100%;height:100%;object-fit:cover;">`
+                : `<i data-lucide="home" style="width:26px;height:26px;stroke-width:1.4;color:rgba(18,52,88,0.35)"></i>`}
                     </div>
                     <div class="msgPropertyBody">
-                        <div class="msgPropertyName">${esc(thread.property)}</div>
-                        <div class="msgPropertyMeta">${esc(thread.propertyMeta)}</div>
-                        <span class="msgPropertyStatus">${esc(thread.propertyStatus)}</span>
+                        <div class="msgPropertyName">${esc(t.listing_title || "")}</div>
+                        <div class="msgPropertyMeta">${esc(t.listing_meta || "")}</div>
+                        <span class="msgPropertyStatus">${esc(t.listing_status || "")}</span>
                     </div>
                 </div>
             </div>
@@ -399,71 +380,40 @@
 
             <div class="msgInfoSection">
                 <div class="msgInfoSectionLabel">Private notes</div>
-                <textarea class="msgNotesTextarea" id="msgNotes" placeholder="Add notes about this tenant…">${esc(thread.notes)}</textarea>
+                <textarea class="msgNotesTextarea" id="msgNotes" placeholder="Add private notes about this tenant…">${esc(notes)}</textarea>
             </div>
 
             ${starred.length ? `
             <div class="msgInfoSection">
                 <div class="msgInfoSectionLabel">⭐ Starred messages</div>
                 <div class="msgStarredList">
-                    ${starred.map(m => `
-                        <div class="msgStarredItem">
-                            ${esc(m.text)}
-                            <div class="msgStarredTime">${esc(m.time)}</div>
-                        </div>
-                    `).join("")}
+                    ${starred.map(m => `<div class="msgStarredItem">${esc(m.text)}<div class="msgStarredTime">${esc(fmtTime(m.created_at))}</div></div>`).join("")}
                 </div>
             </div>` : ""}
         `;
 
-        // Save notes
-        document.getElementById("msgNotes")?.addEventListener("input", e => {
-            thread.notes = e.target.value;
-        });
+        document.getElementById("msgNotes")?.addEventListener("input", e => { state.localNotes[key] = e.target.value; });
+        document.getElementById("msgBtnViewing")?.addEventListener("click", () => alert(`Schedule viewing with ${t.other_name} — coming soon!`));
+        document.getElementById("msgBtnContract")?.addEventListener("click", () => alert(`Send contract to ${t.other_email} — coming soon!`));
 
-        // Action buttons (mockup alert for now)
-        document.getElementById("msgBtnViewing")?.addEventListener("click", () =>
-            alert(`Viewing scheduled with ${thread.name} — connect to backend to implement!`)
-        );
-        document.getElementById("msgBtnContract")?.addEventListener("click", () =>
-            alert(`Contract sent to ${thread.email} — connect to backend to implement!`)
-        );
+        if (window.lucide) lucide.createIcons();
     }
 
-    // ── Send message ──
     function bindSend() {
         const btn = document.getElementById("msgSendBtn");
         const input = document.getElementById("msgInput");
 
-        function sendMessage() {
-            if (!activeId || !input) return;
+        async function doSend() {
+            if (!input) return;
             const text = input.value.trim();
             if (!text) return;
-
-            const thread = THREADS.find(t => t.id === activeId);
-            if (!thread) return;
-
-            const msgId = "m" + Date.now();
-            thread.messages.push({ id: msgId, from: "me", text, time: "Just now", read: false, reactions: {}, starred: false });
-            thread.preview = text;
-            thread.time = "Just now";
-
-            input.value = "";
-            input.style.height = "";
-            renderBubbles(thread);
-            renderThreadList();
-
-            // Simulate read receipt after 1.5s
-            setTimeout(() => {
-                const msg = thread.messages.find(m => m.id === msgId);
-                if (msg) { msg.read = true; renderBubbles(thread); }
-            }, 1500);
+            input.value = ""; input.style.height = "";
+            dismissQuickReplies();
+            await sendMessage(text);
         }
 
-        btn?.addEventListener("click", sendMessage);
-        input?.addEventListener("keydown", e => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-        });
+        btn?.addEventListener("click", doSend);
+        input?.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); doSend(); } });
         input?.addEventListener("input", () => {
             input.style.height = "auto";
             input.style.height = Math.min(input.scrollHeight, 120) + "px";
@@ -471,42 +421,34 @@
         });
     }
 
-    // ── Jump button ──
     function bindJumpBtn() {
         const btn = document.getElementById("msgJumpBtn");
         const list = document.getElementById("msgBubbleList");
-        btn?.addEventListener("click", () => {
-            if (list) { list.scrollTop = list.scrollHeight; }
-            btn.classList.add("isHidden");
-        });
+        btn?.addEventListener("click", () => { if (list) list.scrollTop = list.scrollHeight; btn.classList.add("isHidden"); });
     }
 
-    // ── Search ──
     function bindSearch() {
-        document.getElementById("msgSearchInput")?.addEventListener("input", e => {
-            searchQuery = e.target.value;
-            renderThreadList();
-        });
+        document.getElementById("msgSearchInput")?.addEventListener("input", e => { state.searchQuery = e.target.value; renderThreadList(); });
     }
 
-    // ── Init ──
-    function initMessages() {
+    async function initMessages() {
+        if (!initMessages._bound) {
+            bindSend();
+            bindJumpBtn();
+            bindSearch();
+            initMessages._bound = true;
+        }
+        await loadConversations();
         renderThreadList();
-        renderQuickReplies();
-        bindSend();
-        bindJumpBtn();
-        bindSearch();
-        updateNavBadge();
+        loadUnreadBadge();
         if (window.lucide) lucide.createIcons();
     }
 
-    document.querySelector('.dashTab[data-tab="messages"]')
-        ?.addEventListener("click", () => setTimeout(initMessages, 50));
-
+    document.querySelector('.dashTab[data-tab="messages"]')?.addEventListener("click", () => setTimeout(initMessages, 50));
     document.addEventListener("DOMContentLoaded", () => {
         if (document.getElementById("tab-messages")?.classList.contains("active")) initMessages();
-        updateNavBadge();
+        loadUnreadBadge();
     });
 
-    window._initMessages = initMessages;
+    window.MessagesPanel = { init: initMessages, openThread };
 })();

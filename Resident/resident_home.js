@@ -7,65 +7,6 @@
 ============================================================ */
 
 const API = "http://127.0.0.1:5000/api";
-const CITIES = ["Caloocan", "Quezon City", "Manila", "Makati", "Pasay", "Taguig", "Mandaluyong"];
-
-const MOCK = [
-  {
-    id: 1, title: "Morning Star Residence", city: "Caloocan", barangay: "Bagong Barrio", place_type: "Boarding House", price: 5500, available: true, tour: true, badge: "Guest fave",
-    cover: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=800",
-    tour_url: "https://pannellum.org/images/alma.jpg",
-    capacity: { guests: 1, beds: 1 }, highlights: ["Near UCC", "WiFi included", "With bathroom"], amenities: { appliances: ["Electric fan", "Ref", "Microwave"], safety: ["CCTV", "24hr guard"] }, description: "Well-maintained room perfect for students. Walking distance to University of Caloocan City. All utilities included."
-  },
-  {
-    id: 2, title: "The Scholar's Nest", city: "Caloocan", barangay: "Grace Park", place_type: "Room", price: 4200, available: true, tour: true, badge: "New",
-    cover: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=800",
-    tour_url: "https://pannellum.org/images/cerro-toco-0.jpg",
-    capacity: { guests: 1, beds: 1 }, highlights: ["Near MCU", "Study area", "With WiFi"], amenities: { appliances: ["AC", "Ref"], safety: ["Guard"] }, description: "Cozy room near MCU Monumento. Perfect for nursing and engineering students."
-  },
-  {
-    id: 3, title: "Affordable Bedspace", city: "Caloocan", barangay: "Camarin", place_type: "Bedspace", price: 2500, available: true, tour: false,
-    cover: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80&w=800",
-    capacity: { guests: 1, beds: 1 }, highlights: ["Budget-friendly", "Near transport", "Meals available"], amenities: { appliances: ["Electric fan"], safety: ["CCTV"] }, description: "Affordable bedspace for students on a tight budget."
-  },
-  {
-    id: 4, title: "Safe Haven Dorms", city: "Caloocan", barangay: "Bagong Barrio", place_type: "Boarding House", price: 3500, available: true, tour: true,
-    cover: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=800",
-    tour_url: "https://pannellum.org/images/alma.jpg",
-    capacity: { guests: 1, beds: 1 }, highlights: ["Girls dorm", "Meals included", "Curfew 10pm"], amenities: { appliances: ["AC", "Ref"], safety: ["Female guard", "CCTV"] }, description: "Safe dormitory for female students with meals included."
-  },
-  {
-    id: 5, title: "Grand Loft Caloocan", city: "Caloocan", barangay: "Grace Park East", place_type: "Apartment", price: 8000, available: false, tour: false,
-    cover: "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&q=80&w=800",
-    capacity: { guests: 2, beds: 1 }, highlights: ["Fully furnished", "Modern kitchen", "Secure building"], amenities: { appliances: ["AC", "Ref", "Stove"], safety: ["Guard", "CCTV"] }, description: "Modern loft apartment in Grace Park East. Fully furnished and ready to move in."
-  },
-  {
-    id: 6, title: "BGC-style Condo Unit", city: "Caloocan", barangay: "Bagumbong", place_type: "Condo", price: 12000, available: true, tour: true, badge: "Guest fave",
-    cover: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&q=80&w=800",
-    tour_url: "https://pannellum.org/images/cerro-toco-0.jpg",
-    capacity: { guests: 2, beds: 1 }, highlights: ["Pool access", "Gym", "High floor"], amenities: { appliances: ["AC", "Ref", "Smart TV"], activities: ["Pool", "Gym"], safety: ["24hr security"] }, description: "Premium condo unit with resort-like amenities. High floor with city views."
-  },
-  {
-    id: 7, title: "Transient Room near LRT", city: "Manila", barangay: "Tondo", place_type: "Room", price: 4200, available: true, tour: true,
-    cover: "https://images.unsplash.com/photo-1586105251261-72a756497a11?auto=format&fit=crop&q=80&w=800",
-    tour_url: "https://pannellum.org/images/alma.jpg",
-    capacity: { guests: 1, beds: 1 }, highlights: ["Near LRT-1", "Private entrance", "Fast WiFi"], amenities: { appliances: ["AC", "Electric fan"], safety: ["Guard"] }, description: "Convenient room just steps from LRT-1 Tayuman. Best for daily commuters."
-  },
-  {
-    id: 8, title: "Shared Apartment Makati", city: "Makati", barangay: "Guadalupe", place_type: "Apartment", price: 6500, available: true, tour: false,
-    cover: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&q=80&w=800",
-    capacity: { guests: 3, beds: 2 }, highlights: ["Near Ayala", "Share-able", "Good neighborhood"], amenities: { appliances: ["AC", "Ref", "Stove", "Washing machine"], safety: ["Guard"] }, description: "Spacious apartment to share near Makati CBD. Great location, well-maintained."
-  },
-  {
-    id: 9, title: "Cozy Room w/ Own Bath", city: "Caloocan", barangay: "Deparo", place_type: "Room", price: 3800, available: true, tour: true,
-    cover: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800",
-    capacity: { guests: 1, beds: 1 }, highlights: ["Private bathroom", "WiFi", "Air-conditioned"], amenities: { appliances: ["AC", "Ref"], safety: ["CCTV"] }, description: "Private room with own bathroom. Clean and well-ventilated, near public transport."
-  },
-  {
-    id: 10, title: "Budget Room near Monumento", city: "Caloocan", barangay: "Grace Park", place_type: "Room", price: 2800, available: true, tour: false,
-    cover: "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&q=80&w=800",
-    capacity: { guests: 1, beds: 1 }, highlights: ["Near Monumento", "Very affordable", "Clean"], amenities: { appliances: ["Electric fan"], safety: ["CCTV"] }, description: "Budget-friendly room very close to Monumento station. Ideal for students."
-  },
-];
 
 // ── State ──
 const state = {
@@ -97,10 +38,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupCategoryBar();
   setupFilterPanel();
   setupDropdownClose();
-  setupDrawerClose();
 
   await loadListings();
   checkURLParams();
+  // Escape key closes booking modal
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    const mo = $("bmModal");
+    if (mo && !mo.hidden) {
+      mo.hidden = true;
+      const ov = $("bmOverlay");
+      if (ov) ov.hidden = true;
+      document.body.style.overflow = "";
+    }
+  });
 });
 
 /* ════════════════════════════════════════
@@ -131,10 +82,13 @@ function setupHeader() {
     menu?.classList.remove("open");
     location.href = "/auth/account-settings.html";
   });
+  $("udMessages")?.addEventListener("click", () => {
+    menu?.classList.remove("open");
+    location.href = "/Resident/resident_messages.html";
+  });
   $("udBookings")?.addEventListener("click", () => {
     menu?.classList.remove("open");
-    // Will be a full bookings page — for now scroll to top as placeholder
-    location.href = "/auth/account-settings.html";
+    location.href = "/Resident/my-bookings.html";
   });
 
   $("udLogout")?.addEventListener("click", async () => {
@@ -185,7 +139,6 @@ async function loadListings() {
     }
   } catch { }
 
-  if (!state.all.length) state.all = MOCK;
 
   renderDefaultRows();
 }
@@ -197,6 +150,9 @@ function normalizeAPIListing(l) {
   const tourUrl = l.tour_url || l.pano_url || null;
   // monthly_rent is the canonical price field; fall back to legacy price
   const price = l.price ?? cap.monthly_rent ?? cap.price ?? null;
+  // Normalize photos array to always be an array of URL strings
+  const photoUrls = photos.map(p => typeof p === "object" ? p?.url : p).filter(Boolean);
+
   return {
     id: l.id, title: l.title || "Untitled space",
     city: l.city || "", barangay: l.barangay || "",
@@ -206,7 +162,7 @@ function normalizeAPIListing(l) {
     available: l.status === "PUBLISHED",
     tour: !!(tourUrl || l.has_tour),
     tour_url: tourUrl,
-    cover, capacity: cap,
+    cover, photos: photoUrls, capacity: cap,
     highlights: l.highlights || [],
     amenities: l.amenities || {},
     description: l.description || "",
@@ -231,21 +187,72 @@ function showRowSkeletons() {
    RENDER DEFAULT ROWS
 ════════════════════════════════════════ */
 function renderDefaultRows() {
-  const nearUE = state.all.filter(l => l.city === "Caloocan").slice(0, 8);
-  const budget = state.all.filter(l => l.price && l.price <= 4000).slice(0, 8);
-  const tours = state.all.filter(l => l.tour).slice(0, 8);
-  const avail = state.all.filter(l => l.available !== false).slice(0, 8);
+  const all = state.all;
 
-  fillRow("scrollUE", nearUE);
+  // ── Row 1: Top city (most listings) — dynamic title ──────
+  const cityCount = {};
+  all.forEach(l => { if (l.city) cityCount[l.city] = (cityCount[l.city] || 0) + 1; });
+  const topCity = Object.entries(cityCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  const nearCity = topCity
+    ? all.filter(l => l.city === topCity).slice(0, 8)
+    : [];
+  // Update row title and "Show all" button dynamically
+  const rowUETitleEl = document.querySelector("#rowUE .row-title");
+  const rowUEBtn = document.querySelector("#rowUE .row-see-all");
+  if (rowUETitleEl) rowUETitleEl.textContent = topCity ? `Listings in ${topCity}` : "Top listings";
+  if (rowUEBtn) { rowUEBtn.dataset.city = topCity; }
+
+  // ── Row 2: Budget picks — dynamic threshold ───────────────
+  const prices = all.map(l => l.price).filter(Boolean).sort((a, b) => a - b);
+  // Use ~40th percentile as budget threshold (or ₱5000 as fallback)
+  const threshold = prices.length
+    ? Math.max(3000, prices[Math.floor(prices.length * 0.4)] || 5000)
+    : 5000;
+  const rounded = Math.ceil(threshold / 500) * 500; // round to nearest ₱500
+  const budget = all.filter(l => l.price && l.price <= rounded).slice(0, 8);
+  const rowBudgetTitleEl = document.querySelector("#rowBudget .row-title");
+  const rowBudgetBtn = document.querySelector("#rowBudget .row-see-all");
+  if (rowBudgetTitleEl) rowBudgetTitleEl.textContent = `Budget picks · Under ₱${rounded.toLocaleString()}`;
+  if (rowBudgetBtn) rowBudgetBtn.dataset.maxprice = rounded;
+
+  // ── Row 3: 360° Tour listings ─────────────────────────────
+  const tours = all.filter(l => l.tour).slice(0, 8);
+
+  // ── Row 4: Recently added (newest 8) ──────────────────────
+  // "Available now" is meaningless since all published = available
+  // Show newest listings instead (they come back sorted by updated_at desc already)
+  const recent = all.slice(0, 8);
+  const rowAvailTitleEl = document.querySelector("#rowAvail .row-title");
+  if (rowAvailTitleEl) rowAvailTitleEl.textContent = "Recently added";
+
+  fillRow("scrollUE", nearCity);
   fillRow("scrollBudget", budget);
   fillRow("scrollTour", tours);
-  fillRow("scrollAvail", avail);
+  fillRow("scrollAvail", recent);
 
-  // Hide rows with no data
-  hideEmptyRow("rowUE", nearUE);
+  hideEmptyRow("rowUE", nearCity);
   hideEmptyRow("rowBudget", budget);
   hideEmptyRow("rowTour", tours);
-  hideEmptyRow("rowAvail", avail);
+  hideEmptyRow("rowAvail", recent);
+
+  // ── Build city chips from real data ───────────────────────
+  const cities = [...new Set(all.map(l => l.city).filter(Boolean))].sort();
+  state.realCities = cities;
+  const chipsEl = $("sdCityChips");
+  if (chipsEl) {
+    chipsEl.innerHTML = cities.map(c =>
+      `<button class="city-chip" data-city="${c}">${c}</button>`
+    ).join("");
+    chipsEl.querySelectorAll(".city-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        chipsEl.querySelectorAll(".city-chip").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.filters.city = btn.dataset.city;
+        set("spWhereVal", btn.dataset.city);
+        $("spWhereVal")?.classList.add("active");
+      });
+    });
+  }
 
   lucide.createIcons();
 }
@@ -255,7 +262,7 @@ function fillRow(containerId, listings) {
   if (!el) return;
 
   if (!listings.length) {
-    el.innerHTML = `<p style="color:var(--ink-60);font-size:13px;padding:16px 0">No listings available.</p>`;
+    el.innerHTML = "";
     return;
   }
 
@@ -264,7 +271,7 @@ function fillRow(containerId, listings) {
   el.querySelectorAll(".lcard[data-id]").forEach(card => {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".lcard-save")) return;
-      openDrawer(parseInt(card.dataset.id));
+      location.href = `/Resident/listing_detail.html?id=${card.dataset.id}`;
     });
     card.querySelector(".lcard-save")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -361,21 +368,11 @@ function showDefaultView() {
 function setupSearchPill() {
   const drop = $("searchDrop");
 
-  // City chips
+  // City chips — built dynamically from real listing data in renderDefaultRows()
+  // Placeholder until listings load
   const chipsEl = $("sdCityChips");
-  if (chipsEl) {
-    chipsEl.innerHTML = CITIES.map(c =>
-      `<button class="city-chip" data-city="${c}">${c}</button>`
-    ).join("");
-    chipsEl.querySelectorAll(".city-chip").forEach(btn => {
-      btn.addEventListener("click", () => {
-        chipsEl.querySelectorAll(".city-chip").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.filters.city = btn.dataset.city;
-        set("spWhereVal", btn.dataset.city);
-        $("spWhereVal")?.classList.add("active");
-      });
-    });
+  if (chipsEl && !chipsEl.children.length) {
+    chipsEl.innerHTML = `<span style="font-size:12px;color:var(--ink-60)">Loading cities…</span>`;
   }
 
   // Price presets
@@ -525,29 +522,57 @@ function closeFilterPanel() {
 /* ════════════════════════════════════════
    APPLY FILTERS → FILTERED VIEW
 ════════════════════════════════════════ */
-function applyFilters() {
-  let results = [...state.all];
+async function applyFilters() {
+  // Build query params for server-side filtering
+  const f = state.filters;
+  const params = new URLSearchParams({ limit: 60 });
+  if (f.type) params.set("type", f.type.toLowerCase());
+  if (f.city) params.set("city", f.city);
+  if (f.minPrice) params.set("min_price", f.minPrice);
+  if (f.maxPrice) params.set("max_price", f.maxPrice);
 
-  if (state.filters.type)
-    results = results.filter(l => (l.place_type || "").toLowerCase() === state.filters.type.toLowerCase());
-  if (state.filters.city)
-    results = results.filter(l => (l.city || "").toLowerCase().includes(state.filters.city.toLowerCase()));
-  if (state.filters.minPrice)
-    results = results.filter(l => (l.price || 0) >= state.filters.minPrice);
-  if (state.filters.maxPrice)
-    results = results.filter(l => (l.price || 0) <= state.filters.maxPrice);
-  if (state.filters.availOnly)
-    results = results.filter(l => l.available !== false);
-  if (state.filters.tourOnly)
-    results = results.filter(l => l.tour);
+  // Show loading state
+  showFilteredView(null, true);
 
-  showFilteredView(results);
+  try {
+    const r = await fetch(`${API}/listings/feed?${params}`, { credentials: "include" });
+    if (!r.ok) throw new Error("Feed failed");
+    const d = await r.json();
+    let results = (d.listings || []).map(normalizeAPIListing);
+
+    // Client-side only: tour filter (backend doesn't have this field yet)
+    if (f.tourOnly) results = results.filter(l => l.tour);
+
+    showFilteredView(results);
+  } catch {
+    // Fallback to client-side if fetch fails
+    let results = [...state.all];
+    if (f.type) results = results.filter(l => (l.place_type || "").toLowerCase() === f.type.toLowerCase());
+    if (f.city) results = results.filter(l => (l.city || "").toLowerCase().includes(f.city.toLowerCase()));
+    if (f.minPrice) results = results.filter(l => (l.price || 0) >= f.minPrice);
+    if (f.maxPrice) results = results.filter(l => (l.price || 0) <= f.maxPrice);
+    if (f.tourOnly) results = results.filter(l => l.tour);
+    showFilteredView(results);
+  }
 }
 
-function showFilteredView(results) {
+function showFilteredView(results, loading = false) {
   $("defaultView").hidden = true;
   $("emptyState").hidden = true;
   $("filteredView").hidden = false;
+
+  if (loading) {
+    const grid = $("listingGrid");
+    if (grid) grid.innerHTML = Array.from({ length: 8 }, () => `
+      <div class="lcard grid-mode">
+        <div class="lcard-photo"><div class="sk-photo" style="height:210px;border-radius:16px"></div></div>
+        <div class="sk-line w70" style="height:12px;border-radius:6px;margin-top:10px"></div>
+        <div class="sk-line w45" style="height:10px;border-radius:6px;margin-top:8px"></div>
+      </div>`).join("");
+    set("filteredTitle", "Searching…");
+    set("filteredCount", "");
+    return;
+  }
 
   if (!results.length) {
     $("filteredView").hidden = true;
@@ -586,7 +611,7 @@ function renderFilteredCards(results, reset) {
     card.dataset.bound = "1";
     card.addEventListener("click", (e) => {
       if (e.target.closest(".lcard-save")) return;
-      openDrawer(parseInt(card.dataset.id));
+      location.href = `/Resident/listing_detail.html?id=${card.dataset.id}`;
     });
     card.querySelector(".lcard-save")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -610,7 +635,13 @@ function clearAll() {
   set("spTypeVal", "Any type");
   set("spBudgetVal", "Add budget"); $("spBudgetVal")?.classList.remove("active");
   document.querySelectorAll(".cat-item").forEach((b, i) => b.classList.toggle("active", i === 0));
+  document.querySelectorAll(".city-chip").forEach(b => b.classList.remove("active"));
   $("filterToggle")?.classList.remove("active");
+  // Reset filter panel inputs
+  const fpMin = $("fpMin"); const fpMax = $("fpMax");
+  if (fpMin) fpMin.value = ""; if (fpMax) fpMax.value = "";
+  $("fpAvailToggle")?.setAttribute("aria-checked", "false");
+  $("fpTourToggle")?.setAttribute("aria-checked", "false");
   showDefaultView();
 }
 
@@ -630,308 +661,39 @@ function toggleSave(id, btn) {
 }
 
 /* ════════════════════════════════════════
-   DETAIL DRAWER
-════════════════════════════════════════ */
-function openDrawer(id) {
-  const l = state.all.find(x => x.id === id);
-  if (!l) return;
-
-  const inner = $("ddInner");
-  if (!inner) return;
-
-  const allAmenities = [
-    ...(l.amenities?.appliances || []),
-    ...(l.amenities?.activities || []),
-    ...(l.amenities?.safety || []),
-  ];
-
-  const hasTour = !!(l.tour_url || l.tour);
-  const tourUrl = l.tour_url || null;
-
-  // Check if current user is a verified student
-  let isStudentVerified = false;
-  try { isStudentVerified = window.AuthGuard?.getSession?.()?.user?.student_verified === true; } catch { }
-
-  const discount = l.student_discount || 0;
-  const showDiscount = isStudentVerified && discount > 0 && l.price;
-  const discountedPrice = showDiscount ? Math.round(l.price * (1 - discount / 100)) : null;
-
-  const price = l.price
-    ? `<div>
-        ${showDiscount
-      ? `<div class="dd-price-num">₱${Number(discountedPrice).toLocaleString()}</div>
-             <div class="dd-price-lbl" style="display:flex;gap:8px;align-items:center">
-               <s style="color:var(--ink-35)">₱${Number(l.price).toLocaleString()}</s>
-               <span style="background:rgba(34,197,94,.12);color:#166534;font-weight:700;font-size:10px;padding:2px 8px;border-radius:999px">
-                 ${discount}% student discount
-               </span>
-             </div>`
-      : `<div class="dd-price-num">₱${Number(l.price).toLocaleString()}</div>
-             <div class="dd-price-lbl">${discount > 0 ? `<span style="font-size:11px;color:var(--navy);font-weight:700">${discount}% off for verified students</span>` : "per month"}</div>`
-    }
-      </div>`
-    : `<div class="dd-price-num" style="font-size:18px">Price on request</div>`;
-
-  // ── Media area: photo + optional tour tabs ──
-  const mediaTabs = hasTour ? `
-    <div class="dd-media-tabs">
-      <button class="dd-mtab active" id="ddTabPhoto">
-        <i data-lucide="image"></i> Photos
-      </button>
-      <button class="dd-mtab" id="ddTabTour">
-        <i data-lucide="rotate-3d"></i> 360° Tour
-      </button>
-    </div>` : "";
-
-  const photoPanel = l.cover
-    ? `<img class="dd-photo" id="ddPhotoImg" src="${esc(l.cover)}" alt="${esc(l.title)}">`
-    : `<div class="dd-photo-placeholder"><i data-lucide="home"></i></div>`;
-
-  const tourPanel = hasTour ? `
-    <div class="dd-tour-panel" id="ddTourPanel" hidden>
-      <div class="dd-tour-loading" id="ddTourLoading">
-        <div class="tour-spinner"></div>
-        <span>Loading 360° view…</span>
-      </div>
-      <div id="ddPannellum" class="dd-pannellum-container"></div>
-    </div>` : "";
-
-  inner.innerHTML = `
-    <div class="dd-topbar">
-      <button class="dd-close" id="ddClose"><i data-lucide="x"></i></button>
-      <span class="dd-close-label">${esc(l.place_type || "Room")}</span>
-      ${hasTour ? `<span class="dd-tour-badge-sm"><i data-lucide="rotate-3d"></i>360° Available</span>` : ""}
-    </div>
-
-    <div class="dd-media-wrap">
-      ${mediaTabs}
-      <div class="dd-media-body">
-        <div class="dd-photo-panel" id="ddPhotoPanel">${photoPanel}</div>
-        ${tourPanel}
-      </div>
-    </div>
-
-    <div class="dd-content">
-      <div class="dd-tags">
-        <span class="dd-tag">${esc(l.place_type || "Room")}</span>
-        ${l.available !== false ? `<span class="dd-tag avail">Available now</span>` : ""}
-        ${hasTour ? `<span class="dd-tag tour-tag"><i data-lucide="rotate-3d"></i>360° Tour</span>` : ""}
-      </div>
-
-      <h2 class="dd-title">${esc(l.title)}</h2>
-
-      <div class="dd-loc">
-        <i data-lucide="map-pin"></i>
-        ${esc([l.barangay, l.city].filter(Boolean).join(", ") || "Caloocan")}
-      </div>
-
-      <div class="dd-price-row">
-        <div>${price}</div>
-        <button class="dd-book-btn" id="ddBook">Reserve now</button>
-      </div>
-
-      ${(l.capacity?.guests || l.capacity?.beds) ? `
-        <div class="dd-specs">
-          ${l.capacity.guests ? `<div class="dd-spec"><span class="dd-spec-n">${l.capacity.guests}</span><span class="dd-spec-l">Guests</span></div>` : ""}
-          ${l.capacity.beds ? `<div class="dd-spec"><span class="dd-spec-n">${l.capacity.beds}</span><span class="dd-spec-l">Beds</span></div>` : ""}
-          ${l.capacity.baths ? `<div class="dd-spec"><span class="dd-spec-n">${l.capacity.baths}</span><span class="dd-spec-l">Baths</span></div>` : ""}
-        </div>` : ""}
-
-      ${l.description ? `
-        <div class="dd-sec">
-          <div class="dd-sec-title">About this place</div>
-          <p class="dd-desc">${esc(l.description)}</p>
-        </div>` : ""}
-
-      ${(l.highlights || []).length ? `
-        <div class="dd-sec">
-          <div class="dd-sec-title">Highlights</div>
-          <div class="dd-highlights">${l.highlights.map(h => `<span class="dd-hl">${esc(h)}</span>`).join("")}</div>
-        </div>` : ""}
-
-      ${allAmenities.length ? `
-        <div class="dd-sec">
-          <div class="dd-sec-title">Amenities</div>
-          <div class="dd-amenities">${allAmenities.map(a => `
-            <div class="dd-amenity"><i data-lucide="check"></i>${esc(a)}</div>`).join("")}
-          </div>
-        </div>` : ""}
-    </div>`;
-
-  // ── Close ──
-  $("ddClose")?.addEventListener("click", closeDrawer);
-  $("ddBook")?.addEventListener("click", () => openBookingModal(l));
-
-  // ── Photo / Tour tab switching ──
-  if (hasTour) {
-    let pannellumViewer = null;
-
-    $("ddTabPhoto")?.addEventListener("click", () => {
-      $("ddTabPhoto")?.classList.add("active");
-      $("ddTabTour")?.classList.remove("active");
-      $("ddPhotoPanel").hidden = false;
-      $("ddTourPanel").hidden = true;
-    });
-
-    $("ddTabTour")?.addEventListener("click", () => {
-      $("ddTabTour")?.classList.add("active");
-      $("ddTabPhoto")?.classList.remove("active");
-      $("ddPhotoPanel").hidden = true;
-      $("ddTourPanel").hidden = false;
-
-      // Init Pannellum only once
-      if (!pannellumViewer) {
-        initPannellum(tourUrl || l.cover, l.title);
-      }
-    });
-  }
-
-  // ── Open ──
-  $("drawerOverlay")?.classList.add("open");
-  $("detailDrawer")?.classList.add("open");
-  $("detailDrawer")?.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-  lucide.createIcons();
-}
-
-/* ════════════════════════════════════════
-   PANNELLUM 360° VIEWER
-════════════════════════════════════════ */
-function initPannellum(imageUrl, title) {
-  const container = $("ddPannellum");
-  const loadingEl = $("ddTourLoading");
-
-  if (!container) return;
-
-  // Load Pannellum CSS + JS dynamically (CDN, no install)
-  if (!document.getElementById("pannellum-css")) {
-    const link = document.createElement("link");
-    link.id = "pannellum-css";
-    link.rel = "stylesheet";
-    link.href = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css";
-    document.head.appendChild(link);
-  }
-
-  const loadViewer = () => {
-    if (loadingEl) loadingEl.hidden = false;
-    container.innerHTML = "";
-
-    // eslint-disable-next-line no-undef
-    window.pannellum.viewer(container, {
-      type: "equirectangular",
-      panorama: imageUrl,
-      title: title,
-      autoLoad: true,
-      autoRotate: -2,
-      compass: false,
-      showZoomCtrl: true,
-      showFullscreenCtrl: true,
-      hfov: 100,
-      strings: {
-        loadButtonLabel: "Click to<br>Load Panorama",
-        loadingLabel: "Loading 360° view…",
-        bylineLabel: "VISTA-HR",
-      },
-      // Hide loading overlay once loaded
-      onLoad: () => {
-        if (loadingEl) loadingEl.hidden = true;
-      },
-      onError: (err) => {
-        if (loadingEl) {
-          loadingEl.innerHTML = `
-            <div class="tour-error">
-              <i data-lucide="camera-off"></i>
-              <p>360° tour unavailable</p>
-              <span>The panorama image could not be loaded.</span>
-            </div>`;
-          loadingEl.hidden = false;
-          lucide.createIcons();
-        }
-        console.warn("Pannellum error:", err);
-      }
-    });
-  };
-
-  // Load Pannellum JS if not already loaded
-  if (window.pannellum) {
-    loadViewer();
-  } else {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js";
-    script.onload = loadViewer;
-    script.onerror = () => {
-      if (loadingEl) {
-        loadingEl.innerHTML = `<div class="tour-error"><i data-lucide="wifi-off"></i><p>Failed to load viewer</p><span>Check your internet connection.</span></div>`;
-        loadingEl.hidden = false;
-        lucide.createIcons();
-      }
-    };
-    document.head.appendChild(script);
-  }
-}
-
-function closeDrawer() {
-  $("drawerOverlay")?.classList.remove("open");
-  $("detailDrawer")?.classList.remove("open");
-  document.body.style.overflow = "";
-}
-
-function setupDrawerClose() {
-  $("drawerOverlay")?.addEventListener("click", closeDrawer);
-  document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
-}
-
-/* ════════════════════════════════════════
-   URL PARAMS (open=id from landing page)
-════════════════════════════════════════ */
-function checkURLParams() {
-  const p = new URLSearchParams(location.search);
-  const openId = p.get("open");
-  const city = p.get("city");
-  const type = p.get("type");
-
-  if (openId) {
-    setTimeout(() => openDrawer(parseInt(openId)), 600);
-  }
-
-  if (city || type) {
-    if (city) state.filters.city = city;
-    if (type) state.filters.type = type;
-    state.mode = "filtered";
-    applyFilters();
-  }
-}
-
-/* ════════════════════════════════════════
    BOOKING MODAL
 ════════════════════════════════════════ */
 function openBookingModal(l) {
-  const overlay = $("bmOverlay");
-  const modal = $("bmModal");
-  const listingEl = $("bmListing");
-  const body = $("bmBody");
-  const success = $("bmSuccess");
-  const footer = $("bmFooter");
-  const errorEl = $("bmError");
+  if (!$("bmModal")) return;
 
-  if (!modal) return;
+  // ── Step 1: Clone persistent nodes FIRST to wipe all stale listeners.
+  // freshNode() replaces the element in the DOM, destroying every previously
+  // attached handler. Must run before we read any of these nodes below.
+  function freshNode(id) {
+    const el = $(id);
+    if (!el || !el.parentNode) return el;
+    const clone = el.cloneNode(true);
+    el.parentNode.replaceChild(clone, el);
+    return clone;
+  }
+  const freshSubmit = freshNode("bmSubmit");
+  const freshCancel = freshNode("bmCancel");
+  const freshClose = freshNode("bmClose");
+  const freshOverlay = freshNode("bmOverlay");
 
-  // Reset state
-  body.hidden = false;
-  success.hidden = true;
-  footer.hidden = false;
-  errorEl.hidden = true;
+  // ── Step 2: Reset form state on the now-live cloned nodes ──
+  $("bmBody").hidden = false;
+  $("bmSuccess").hidden = true;
+  $("bmFooter").hidden = false;
+  $("bmError").hidden = true;
   $("bmMoveIn").value = "";
   $("bmMessage").value = "";
-  $("bmSubmit").disabled = false;
   $("bmSubmitLabel").hidden = false;
   $("bmSpinner").hidden = true;
+  if (freshSubmit) freshSubmit.disabled = false;
+  $("bmMoveIn").min = new Date().toISOString().split("T")[0];
 
-  // Set min date to today
-  const today = new Date().toISOString().split("T")[0];
-  $("bmMoveIn").min = today;
-
-  // Listing snapshot
+  // ── Step 3: Populate listing snapshot ──
   const photoEl = l.cover
     ? `<img class="bm-listing-photo" src="${esc(l.cover)}" alt="${esc(l.title)}">`
     : `<div class="bm-listing-photo-placeholder"><i data-lucide="home"></i></div>`;
@@ -940,7 +702,6 @@ function openBookingModal(l) {
   const bmDiscount = l.student_discount || 0;
   const bmDiscounted = bmStudentVerified && bmDiscount > 0 && l.price
     ? Math.round(l.price * (1 - bmDiscount / 100)) : null;
-
   const priceEl = l.price
     ? bmDiscounted
       ? `<div class="bm-listing-price" style="text-align:right">
@@ -949,8 +710,7 @@ function openBookingModal(l) {
          </div>`
       : `<div class="bm-listing-price">₱${Number(l.price).toLocaleString()}<span>/mo</span></div>`
     : "";
-
-  listingEl.innerHTML = `
+  $("bmListing").innerHTML = `
     ${photoEl}
     <div class="bm-listing-info">
       <div class="bm-listing-title">${esc(l.title)}</div>
@@ -958,33 +718,39 @@ function openBookingModal(l) {
     </div>
     ${priceEl}`;
 
-  overlay.hidden = false;
-  modal.hidden = false;
+  // ── Step 4: Show modal — animate overlay and modal separately ──
+  // freshOverlay is the live node after cloneNode replacement above.
+  // void el.offsetWidth forces a reflow so the animation restarts cleanly.
+  if (freshOverlay) {
+    freshOverlay.hidden = false;
+    void freshOverlay.offsetWidth;
+    freshOverlay.style.animation = "fadeIn 200ms ease both";
+  }
+  const modalEl = $("bmModal");
+  if (modalEl) {
+    modalEl.hidden = false;
+    void modalEl.offsetWidth;
+    modalEl.style.animation = "modalIn 260ms var(--ease-o) both";
+  }
   document.body.style.overflow = "hidden";
   lucide.createIcons();
 
-  // ── Submit ──
+  // ── Step 5: Submit handler ──
   const submitHandler = async () => {
-    // Check email verification before allowing booking
     let sessionUser = null;
     try { sessionUser = window.AuthGuard?.getSession?.()?.user || null; } catch { }
     if (sessionUser && sessionUser.email_verified === false) {
       const email = encodeURIComponent(sessionUser.email || "");
-      errorEl.textContent = "Please verify your email before booking.";
-      errorEl.hidden = false;
-      // Add a verify link inside the error
-      errorEl.innerHTML = `Email not verified. <a href="/auth/verify-email.html?email=${email}&role=RESIDENT" style="color:inherit;font-weight:800;text-decoration:underline">Verify now →</a>`;
+      $("bmError").innerHTML = `Email not verified. <a href="/auth/verify-email.html?email=${email}&role=RESIDENT" style="color:inherit;font-weight:800;text-decoration:underline">Verify now →</a>`;
+      $("bmError").hidden = false;
       return;
     }
-
     const moveIn = $("bmMoveIn").value || null;
     const message = $("bmMessage").value.trim() || null;
-
-    $("bmSubmit").disabled = true;
+    if (freshSubmit) freshSubmit.disabled = true;
     $("bmSubmitLabel").hidden = true;
     $("bmSpinner").hidden = false;
-    errorEl.hidden = true;
-
+    $("bmError").hidden = true;
     try {
       const res = await fetch(`${API}/bookings`, {
         method: "POST",
@@ -993,37 +759,112 @@ function openBookingModal(l) {
         body: JSON.stringify({ listing_id: l.id, move_in_date: moveIn, message }),
       });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to submit booking request.");
-      }
-
-      // Show success
-      body.hidden = true;
-      footer.hidden = true;
-      success.hidden = false;
+      if (!res.ok) throw new Error(data.error || "Failed to submit booking request.");
+      $("bmBody").hidden = true;
+      $("bmFooter").hidden = true;
+      $("bmSuccess").hidden = false;
       lucide.createIcons();
-
-      // Auto-close after 3s
       setTimeout(closeBookingModal, 3000);
     } catch (err) {
-      errorEl.textContent = err.message;
-      errorEl.hidden = false;
-      $("bmSubmit").disabled = false;
+      $("bmError").textContent = err.message;
+      $("bmError").hidden = false;
+      if (freshSubmit) freshSubmit.disabled = false;
       $("bmSubmitLabel").hidden = false;
       $("bmSpinner").hidden = true;
     }
   };
 
-  // Use { once: true } to prevent duplicate handlers on re-open
-  $("bmSubmit")?.addEventListener("click", submitHandler, { once: true });
-  $("bmCancel")?.addEventListener("click", closeBookingModal, { once: true });
-  $("bmClose")?.addEventListener("click", closeBookingModal, { once: true });
-  $("bmOverlay")?.addEventListener("click", closeBookingModal, { once: true });
+  // ── Step 6: Attach listeners to the freshly cloned nodes ──
+  freshSubmit?.addEventListener("click", submitHandler);
+  freshCancel?.addEventListener("click", closeBookingModal);
+  freshClose?.addEventListener("click", closeBookingModal);
+  // Only close when clicking the dark backdrop itself, not modal content bubbling through.
+  freshOverlay?.addEventListener("click", (e) => {
+    if (e.target === freshOverlay) closeBookingModal();
+  });
 }
 
 function closeBookingModal() {
-  $("bmOverlay").hidden = true;
-  $("bmModal").hidden = true;
+  const ov = $("bmOverlay");
+  const mo = $("bmModal");
+  if (ov) { ov.style.animation = ""; ov.hidden = true; }
+  if (mo) { mo.style.animation = ""; mo.hidden = true; }
   document.body.style.overflow = "";
 }
+
+// ══ NOTIFICATIONS — Resident ══════════════════════════════
+(function () {
+  const API = "http://127.0.0.1:5000/api";
+  const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const el = id => document.getElementById(id);
+
+  async function loadNotif() {
+    try {
+      const res = await fetch(`${API}/notifications`, { credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+
+      const notifs = data.notifications || [];
+      const unread = data.unread ?? 0;
+
+      const badge = el("notifBadge");
+      if (badge) { badge.textContent = unread > 9 ? "9+" : unread; badge.hidden = unread === 0; }
+
+      const list = el("notifList");
+      if (!list) return;
+
+      if (!notifs.length) {
+        list.innerHTML = `<div class="notif-empty"><i data-lucide="bell-off"></i><p>No notifications yet</p></div>`;
+        if (window.lucide?.createIcons) lucide.createIcons();
+        return;
+      }
+
+      list.innerHTML = notifs.map(n => {
+        const iso = n.created_at
+          ? (n.created_at.includes("+") || n.created_at.endsWith("Z") ? n.created_at : n.created_at + "Z")
+          : null;
+        const time = iso
+          ? new Date(iso).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" })
+          : "";
+        return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}">
+                    <div class="notif-item-title">${esc(n.title || "")}</div>
+                    ${n.body ? `<div class="notif-item-body-txt">${esc(n.body)}</div>` : ""}
+                    <div class="notif-item-time">${time}</div>
+                </div>`;
+      }).join("");
+
+      if (window.lucide?.createIcons) lucide.createIcons();
+    } catch (err) { console.warn("[Notif]", err); }
+  }
+
+  async function markRead() {
+    try {
+      await fetch(`${API}/notifications/mark-read`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" } });
+      const badge = el("notifBadge");
+      if (badge) { badge.textContent = "0"; badge.hidden = true; }
+      document.querySelectorAll(".notif-item.unread").forEach(el => el.classList.remove("unread"));
+    } catch { }
+  }
+
+  el("notifBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const panel = el("notifPanel");
+    if (!panel) return;
+    const open = !panel.hidden;
+    panel.hidden = open;
+    if (!open) loadNotif();
+  });
+
+  el("notifMarkRead")?.addEventListener("click", markRead);
+
+  document.addEventListener("click", (e) => {
+    const wrap = el("notifWrap");
+    if (wrap && !wrap.contains(e.target)) {
+      const panel = el("notifPanel");
+      if (panel) panel.hidden = true;
+    }
+  });
+
+  loadNotif();
+  setInterval(loadNotif, 60_000);
+})();

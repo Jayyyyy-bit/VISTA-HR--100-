@@ -439,14 +439,23 @@ body {
 
 .listingGrid.isList .lTitle {
     font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .listingGrid.isList .lSub {
     font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .listingGrid.isList .lSupport {
     font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* hide photo count + shade in list mode */
@@ -796,6 +805,8 @@ body {
     flex-direction: column;
     gap: 4px;
     padding: 0 1px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .lTitle {
@@ -804,6 +815,10 @@ body {
     line-height: 1.16;
     letter-spacing: -0.02em;
     color: var(--dash-ink-strong);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .lSub {
@@ -811,6 +826,10 @@ body {
     line-height: 1.35;
     font-weight: 750;
     color: #506176;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .lSupport {
@@ -818,6 +837,10 @@ body {
     line-height: 1.35;
     font-weight: 850;
     color: #6b7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 /* ===== Inline Action Tray ===== */
@@ -1006,7 +1029,8 @@ button.disabled {
     }
 
     .rightTools {
-        justify-self: start;
+        justify-self: end;
+        margin-left: auto;
     }
 
     .listingsHeader {
@@ -1044,801 +1068,251 @@ button.disabled {
     line-height: 1;
 }
 
-/* ══════════════════════════════════════
-   TODAY TAB — STATS ROW
-══════════════════════════════════════ */
-.todayStats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 32px;
+.notif-wrap {
+    position: relative;
 }
 
-.statCard {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 20px 24px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 20px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
-.statIcon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.statIcon svg {
-    width: 20px;
-    height: 20px;
-    stroke-width: 2;
-}
-
-.statIcon--pending {
-    background: rgba(234, 179, 8, 0.12);
-    color: #b45309;
-}
-
-.statIcon--approved {
-    background: rgba(34, 197, 94, 0.12);
-    color: #15803d;
-}
-
-.statIcon--listings {
-    background: rgba(27, 63, 110, 0.10);
-    color: #1B3F6E;
-}
-
-.statNum {
-    font-size: 28px;
-    font-weight: 900;
-    color: #111;
-    line-height: 1;
-}
-
-.statLabel {
-    font-size: 12px;
-    color: rgba(0, 0, 0, .55);
-    margin-top: 3px;
-    font-weight: 500;
-}
-
-/* Today section */
-.todaySection {
-    margin-top: 8px;
-}
-
-.todaySectionHead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.todaySectionTitle {
-    font-size: 16px;
-    font-weight: 800;
-    color: #111;
-}
-
-.todaySeeAll {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1B3F6E;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-
-/* ══════════════════════════════════════
-   BOOKINGS PAGE
-══════════════════════════════════════ */
-
-/* Filter tab bar */
-.bkFilterBar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0;
-}
-
-.bkFilterBtn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
-    border: none;
+.notif-btn {
     background: none;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(0, 0, 0, .5);
+    border: none;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    border-radius: 0;
-    transition: color 120ms, border-color 120ms;
-    white-space: nowrap;
-}
-
-.bkFilterBtn:hover {
-    color: #111;
-}
-
-.bkFilterBtn.active {
-    color: #1B3F6E;
-    border-bottom-color: #1B3F6E;
-}
-
-.bkFilterCount {
-    display: inline-flex;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: #e53e3e;
+    color: inherit;
+    position: relative;
+}
+
+.notif-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.notif-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #ef4444;
     color: #fff;
     font-size: 10px;
-    font-weight: 800;
-    line-height: 1;
-}
-
-/* Loading */
-.bkLoading {
-    padding: 40px 0;
-    text-align: center;
-    color: rgba(0, 0, 0, .45);
-    font-size: 14px;
-}
-
-/* Empty state */
-.bkEmpty {
-    padding: 60px 24px;
-    text-align: center;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 20px;
-}
-
-.bkEmptyIcon {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: #f3f4f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 12px;
-    color: rgba(0, 0, 0, .3);
-}
-
-.bkEmptyIcon svg {
-    width: 22px;
-    height: 22px;
-    stroke-width: 1.8;
-}
-
-.bkEmptyTitle {
-    font-size: 15px;
     font-weight: 700;
-    color: #111;
-    margin-bottom: 4px;
-}
-
-.bkEmptySub {
-    font-size: 13px;
-    color: rgba(0, 0, 0, .45);
-}
-
-/* ── Booking Card ── */
-.bkCard {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 18px;
-    overflow: hidden;
-    margin-bottom: 12px;
-    transition: box-shadow 160ms;
-}
-
-.bkCard:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.bkCardMain {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 18px 20px;
-}
-
-/* Listing thumbnail */
-.bkListingThumb {
-    width: 80px;
-    height: 64px;
-    border-radius: 12px;
-    object-fit: cover;
-    flex-shrink: 0;
-    background: #e5e7eb;
-}
-
-.bkListingThumb--placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(0, 0, 0, .25);
-}
-
-.bkListingThumb--placeholder svg {
-    width: 24px;
-    height: 24px;
-    stroke-width: 1.5;
-}
-
-.bkCardBody {
-    flex: 1;
-    min-width: 0;
-}
-
-.bkCardTop {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 3px;
-}
-
-.bkListingName {
-    font-size: 14px;
-    font-weight: 700;
-    color: #111;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.bkListingLoc {
-    font-size: 12px;
-    color: rgba(0, 0, 0, .5);
-    margin-bottom: 8px;
-    font-weight: 500;
-}
-
-.bkMetaRow {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
-}
-
-.bkMeta {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: rgba(0, 0, 0, .5);
-    font-weight: 500;
-}
-
-.bkMeta svg {
-    width: 12px;
-    height: 12px;
-    stroke-width: 2;
-    flex-shrink: 0;
-}
-
-.bkMessage {
-    font-size: 13px;
-    color: rgba(0, 0, 0, .6);
-    font-style: italic;
-    line-height: 1.5;
-    background: rgba(0, 0, 0, .03);
-    border-left: 3px solid #e5e7eb;
-    padding: 6px 10px;
-    border-radius: 0 6px 6px 0;
-    margin-top: 6px;
-}
-
-.bkOwnerNote {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    font-size: 12px;
-    color: rgba(0, 0, 0, .5);
-    margin-top: 6px;
-    font-style: italic;
-}
-
-.bkOwnerNote svg {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-/* Price */
-.bkListingPrice {
-    font-size: 15px;
-    font-weight: 800;
-    color: #1B3F6E;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.bkListingPrice span {
-    font-size: 11px;
-    font-weight: 500;
-    color: rgba(0, 0, 0, .45);
-}
-
-/* Status badge */
-.bkStatus {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
     border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-.bkStatus--pending {
-    background: rgba(234, 179, 8, 0.12);
-    color: #92400e;
-    border: 1px solid rgba(234, 179, 8, 0.25);
-}
-
-.bkStatus--approved {
-    background: rgba(34, 197, 94, 0.12);
-    color: #166534;
-    border: 1px solid rgba(34, 197, 94, 0.25);
-}
-
-.bkStatus--rejected {
-    background: rgba(239, 68, 68, 0.10);
-    color: #991b1b;
-    border: 1px solid rgba(239, 68, 68, 0.20);
-}
-
-.bkStatus--cancelled {
-    background: rgba(0, 0, 0, 0.05);
-    color: rgba(0, 0, 0, .45);
-    border: 1px solid rgba(0, 0, 0, .12);
-}
-
-/* Action buttons */
-.bkActions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px 16px;
-    border-top: 1px solid #f3f4f6;
-}
-
-.bkBtn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 20px;
-    border-radius: 999px;
-    border: none;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 130ms, transform 140ms;
-}
-
-.bkBtn svg {
-    width: 14px;
-    height: 14px;
-    stroke-width: 2.5;
-}
-
-.bkBtn--approve {
-    background: rgba(34, 197, 94, 0.12);
-    color: #166534;
-    border: 1.5px solid rgba(34, 197, 94, 0.30);
-}
-
-.bkBtn--approve:hover {
-    background: rgba(34, 197, 94, 0.22);
-    transform: scale(1.02);
-}
-
-.bkBtn--reject {
-    background: rgba(239, 68, 68, 0.08);
-    color: #991b1b;
-    border: 1.5px solid rgba(239, 68, 68, 0.20);
-}
-
-.bkBtn--reject:hover {
-    background: rgba(239, 68, 68, 0.16);
-    transform: scale(1.02);
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-
-    .bkCardMain {
-        flex-wrap: wrap;
-    }
-
-    .bkListingThumb {
-        width: 100%;
-        height: 140px;
-        border-radius: 10px 10px 0 0;
-    }
-}
-
-/* ══════════════════════════════════════
-   TODAY — VERIFICATION BANNER
-══════════════════════════════════════ */
-.verifyBanner {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    background: #fffbeb;
-    border: 1px solid #fcd34d;
-    border-left: 4px solid #f59e0b;
-    border-radius: 14px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-}
-
-.verifyBannerIcon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: rgba(245, 158, 11, 0.14);
-    color: #b45309;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.verifyBannerIcon svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 2;
-}
-
-.verifyBannerTitle {
-    font-size: 14px;
-    font-weight: 700;
-    color: #92400e;
-    margin-bottom: 3px;
-}
-
-.verifyBannerSub {
-    font-size: 13px;
-    color: #78350f;
-    line-height: 1.5;
-}
-
-/* ══════════════════════════════════════
-   TODAY — STATS: OCCUPANCY CARD COLOR
-══════════════════════════════════════ */
-
-.statIcon--occupancy {
-    background: rgba(139, 92, 246, 0.10);
-    color: #7c3aed;
-}
-
-/* ══════════════════════════════════════
-   TODAY — DATE LABEL
-══════════════════════════════════════ */
-.todayDateLabel {
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(0, 0, 0, .42);
-}
-
-/* ══════════════════════════════════════
-   TODAY — SCHEDULE EVENTS
-══════════════════════════════════════ */
-.todayEventCards {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.todayEventCard {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 18px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.todayEventIcon {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.todayEventIcon svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 2;
-}
-
-.todayEvent--in .todayEventIcon {
-    background: rgba(34, 197, 94, 0.10);
-    color: #15803d;
-}
-
-.todayEventBody {
-    flex: 1;
-    min-width: 0;
-}
-
-.todayEventLabel {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: rgba(0, 0, 0, .4);
-    margin-bottom: 2px;
-}
-
-.todayEventTenant {
-    font-size: 14px;
-    font-weight: 700;
-    color: #111;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.todayEventListing {
-    font-size: 13px;
-    color: rgba(0, 0, 0, .5);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 1px;
-}
-
-.todayEventBadge {
-    font-size: 12px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 20px;
-    flex-shrink: 0;
-}
-
-.todayEventBadge.todayEvent--in {
-    background: rgba(34, 197, 94, 0.10);
-    color: #15803d;
-}
-
-.todayEventsEmpty {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 16px 0;
-    color: rgba(0, 0, 0, .38);
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.todayEventsEmpty svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 1.8;
-    flex-shrink: 0;
-}
-
-/* ══════════════════════════════════════
-   TODAY — ACTIVITY FEED
-══════════════════════════════════════ */
-.activityFeed {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.activityRow {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    transition: background 0.15s;
-}
-
-.activityRow:hover {
-    background: rgba(0, 0, 0, .03);
-}
-
-.activityIcon {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.activityIcon svg {
-    width: 16px;
+    min-width: 16px;
     height: 16px;
-    stroke-width: 2;
+    line-height: 16px;
+    text-align: center;
+    padding: 0 4px;
 }
 
-.activityIcon--approved {
-    background: rgba(34, 197, 94, 0.12);
-    color: #15803d;
+.notif-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 340px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .14);
+    z-index: 1000;
+    overflow: hidden;
 }
 
-.activityIcon--rejected {
-    background: rgba(239, 68, 68, 0.10);
-    color: #dc2626;
+/* Explicitly show when not hidden */
+.notif-panel:not([hidden]) {
+    display: block !important;
 }
 
-.activityIcon--cancelled {
-    background: rgba(107, 114, 128, 0.10);
-    color: #6b7280;
-}
-
-.activityBody {
-    flex: 1;
-    min-width: 0;
-}
-
-.activityMain {
+.notif-head {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    font-size: 13.5px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    font-weight: 700;
 }
 
-.activityTenant {
+.notif-mark-read {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1B3F6E;
+}
+
+.notif-list {
+    max-height: 360px;
+    overflow-y: auto;
+    display: block;
+}
+
+.notif-item {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 13px;
+}
+
+.notif-item.unread {
+    background: #f0f4ff;
+}
+
+.notif-icon {
+    font-size: 18px;
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+.notif-title {
     font-weight: 700;
     color: #111;
+    margin: 0 0 2px;
 }
 
-.activityVerb {
-    color: rgba(0, 0, 0, .5);
+.notif-title.read {
     font-weight: 400;
 }
 
-.activityMeta {
+.notif-body {
+    color: #666;
+    margin: 0 0 3px;
+    line-height: 1.4;
+}
+
+.notif-time {
+    color: #aaa;
+    font-size: 11px;
+}
+
+.notif-empty {
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+    padding: 28px 0;
+}
+
+/* ── Notification item classes (JS renders these) ──────── */
+.notif-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-title {
+    font-weight: 700;
+    color: #111;
+    font-size: 13px;
+    margin: 0 0 2px;
+    line-height: 1.4;
+}
+
+.notif-item-body-txt {
+    color: #555;
     font-size: 12px;
-    color: rgba(0, 0, 0, .38);
-    margin-top: 2px;
+    margin: 0 0 3px;
+    line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.todayActivityEmpty {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 16px 0;
-    color: rgba(0, 0, 0, .38);
-    font-size: 13px;
-    font-weight: 500;
+.notif-item-time {
+    color: #aaa;
+    font-size: 11px;
 }
 
-.todayActivityEmpty svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 1.8;
-    flex-shrink: 0;
+.notif-item.unread .notif-item-title {
+    font-weight: 800;
 }
 
-/* ══════════════════════════════════════
-   TODAY — RESPONSIVE OVERRIDES
-══════════════════════════════════════ */
-@media (max-width: 860px) {
-    .todayStats {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
+.notif-item.unread {
+    background: #f0f4ff;
 }
 
-@media (max-width: 640px) {
-    .todayStats {
-        grid-template-columns: 1fr !important;
-    }
-
-    .verifyBanner {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .todayEventCard {
-        flex-wrap: wrap;
-    }
-
-    .todayEventBadge {
-        margin-left: auto;
-    }
+/* ── Listing status chips — Occupied / Reserved ─────── */
+.lStatusChip.occupied {
+    background: rgba(220, 38, 38, .15);
+    color: #991b1b;
+    border: 1px solid rgba(220, 38, 38, .25);
 }
 
-/* ── Verify banner CTA button ── */
-.verifyBannerCta {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-left: auto;
-    flex-shrink: 0;
-    padding: 9px 18px;
-    border-radius: 999px;
-    background: #b45309;
-    color: #fff;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
+.lStatusChip.reserved {
+    background: rgba(124, 58, 237, .15);
+    color: #5b21b6;
+    border: 1px solid rgba(124, 58, 237, .25);
+}
+
+/* Unpublish icon action */
+.lIconAction.warn {
+    background: rgba(245, 158, 11, .15);
+    color: #92400e;
+    border: 1px solid rgba(245, 158, 11, .3);
+}
+
+.lIconAction.warn:hover {
+    background: rgba(245, 158, 11, .25);
+}
+
+/* ── Notification item — correct class names (matching JS) ── */
+.notif-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-title {
     font-weight: 700;
-    text-decoration: none;
+    color: #111;
+    font-size: 13px;
+    margin: 0 0 2px;
+    line-height: 1.4;
+}
+
+.notif-item.unread .notif-item-title {
+    font-weight: 800;
+    color: #123458;
+}
+
+.notif-item-body-txt {
+    color: #555;
+    font-size: 12px;
+    margin: 0 0 3px;
+    line-height: 1.4;
     white-space: nowrap;
-    transition: background 130ms, transform 140ms;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
 }
 
-.verifyBannerCta:hover {
-    background: #92400e;
-    transform: scale(1.02);
+.notif-item-time {
+    color: #aaa;
+    font-size: 11px;
 }
 
-.verifyBannerCta svg {
-    width: 14px;
-    height: 14px;
-    stroke-width: 2.2;
+.notif-item.unread {
+    background: #f0f4ff;
+    border-left: 3px solid #123458;
 }
 
-@media (max-width: 640px) {
-    .verifyBanner {
-        flex-wrap: wrap;
-    }
-
-    .verifyBannerCta {
-        margin-left: 0;
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-/* Email verify banner (blue variant) */
-.emailVerifyBanner {
+.notif-empty {
     display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    background: rgba(27, 63, 110, .06);
-    border: 1px solid rgba(27, 63, 110, .2);
-    border-left: 4px solid #1B3F6E;
-    border-radius: 14px;
-    padding: 16px 20px;
-    margin-bottom: 16px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 28px 16px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 13px;
 }
 
-.verifyBannerCta--blue {
-    background: #1B3F6E;
+.notif-empty svg {
+    width: 24px;
+    height: 24px;
+    color: #d1d5db;
 }
 
-.verifyBannerCta--blue:hover {
-    background: #0F2545;
+.notif-empty p {
+    margin: 0;
 }

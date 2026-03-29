@@ -1,243 +1,187 @@
-/* auth/verify-email.js */
+/* Property-Owner/verification/verify.js */
 (() => {
-    const API_BASE = "http://127.0.0.1:5000/api";
+    const API = "http://127.0.0.1:5000/api";
+    const MAX_SIZE = 5 * 1024 * 1024;
+    const uploads = { front: null, back: null, selfie: null };
 
-    // Read email + role + next destination from query string
-    // e.g. /auth/verify-email.html?email=foo@bar.com&role=OWNER&next=/Property-Owner/verification/verify.html
-    const params = new URLSearchParams(location.search);
-    const email = decodeURIComponent(params.get("email") || "");
-    const role = (params.get("role") || "").toUpperCase();
-    const next = params.get("next") || null;
+    function el(id) { return document.getElementById(id); }
 
-    if (!email) {
-        // Nothing to verify — go home
-        location.replace("/auth/login.html");
-        return;
-    }
-
-    // ── DOM refs ──────────────────────────────────────────────
-    const emailDisplay = document.getElementById("emailDisplay");
-    const otpBoxes = Array.from(document.querySelectorAll(".otpBox"));
-    const verifyBtn = document.getElementById("verifyBtn");
-    const btnLabel = verifyBtn.querySelector(".btnLabel");
-    const btnSpinner = verifyBtn.querySelector(".btnSpinner");
-    const errMsg = document.getElementById("errMsg");
-    const resendBtn = document.getElementById("resendBtn");
-    const resendTimer = document.getElementById("resendTimer");
-    const verifyCard = document.getElementById("verifyCard");
-    const successCard = document.getElementById("successCard");
-    const successSub = document.getElementById("successSub");
-    const continueBtn = document.getElementById("continueBtn");
-
-    if (emailDisplay) emailDisplay.textContent = email;
-
-    // ── OTP input wiring ──────────────────────────────────────
-    otpBoxes.forEach((box, i) => {
-        box.addEventListener("input", e => {
-            const val = e.target.value.replace(/\D/g, "").slice(-1);
-            box.value = val;
-            box.classList.toggle("filled", !!val);
-            clearErr();
-            if (val && i < otpBoxes.length - 1) otpBoxes[i + 1].focus();
-            updateVerifyBtn();
-        });
-
-        box.addEventListener("keydown", e => {
-            if (e.key === "Backspace" && !box.value && i > 0) {
-                otpBoxes[i - 1].value = "";
-                otpBoxes[i - 1].classList.remove("filled");
-                otpBoxes[i - 1].focus();
-                updateVerifyBtn();
-            }
-            // Allow paste on first box
-            if (e.key === "v" && (e.ctrlKey || e.metaKey)) return;
-        });
-
-        box.addEventListener("paste", e => {
-            e.preventDefault();
-            const pasted = (e.clipboardData || window.clipboardData)
-                .getData("text").replace(/\D/g, "").slice(0, 6);
-            pasted.split("").forEach((ch, j) => {
-                if (otpBoxes[j]) {
-                    otpBoxes[j].value = ch;
-                    otpBoxes[j].classList.add("filled");
-                }
-            });
-            const nextEmpty = otpBoxes.find(b => !b.value);
-            (nextEmpty || otpBoxes[otpBoxes.length - 1]).focus();
-            clearErr();
-            updateVerifyBtn();
-        });
-
-        // Mobile: select all on focus for easy replacement
-        box.addEventListener("focus", () => box.select());
-    });
-
-    function getOtp() {
-        return otpBoxes.map(b => b.value).join("");
-    }
-
-    function updateVerifyBtn() {
-        verifyBtn.disabled = getOtp().length < 6;
-    }
-
-    function clearErr() {
-        errMsg.hidden = true;
-        errMsg.textContent = "";
-        otpBoxes.forEach(b => b.classList.remove("error"));
-    }
-
-    function showErr(msg) {
-        errMsg.textContent = msg;
-        errMsg.hidden = false;
-        otpBoxes.forEach(b => b.classList.add("error"));
-        // Shake animation re-trigger
-        otpBoxes.forEach(b => {
-            b.classList.remove("error");
-            void b.offsetWidth;
-            b.classList.add("error");
-        });
-    }
-
-    function setLoading(on) {
-        verifyBtn.disabled = on;
-        btnLabel.hidden = on;
-        btnSpinner.hidden = !on;
-    }
-
-    // ── Verify ────────────────────────────────────────────────
-    verifyBtn.addEventListener("click", async () => {
-        const otp = getOtp();
-        if (otp.length < 6) return;
-
-        clearErr();
-        setLoading(true);
-
-        try {
-            const res = await fetch(`${API_BASE}/auth/verify-email`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ email, otp }),
-            });
-            const data = await res.json().catch(() => ({}));
-
-            if (!res.ok) {
-                showErr(data.error || "Incorrect code. Please try again.");
-                setLoading(false);
-                return;
-            }
-
-            // Update session cache
-            if (data.user && window.AuthGuard?.saveSession) {
-                window.AuthGuard.saveSession({ user: data.user });
-            }
-
-            showSuccess(data.user);
-
-        } catch {
-            showErr("Network error. Please check your connection.");
-            setLoading(false);
-        }
-    });
-
-    // Allow Enter to submit
-    document.addEventListener("keydown", e => {
-        if (e.key === "Enter" && !verifyBtn.disabled) verifyBtn.click();
-    });
-
-    // ── Success ───────────────────────────────────────────────
-    function showSuccess(user) {
-        verifyCard.hidden = true;
-        successCard.hidden = false;
-
-        const userRole = (user?.role || role || "").toUpperCase();
-
-        if (userRole === "OWNER") {
-            successSub.textContent =
-                "Email confirmed. Next, verify your identity so your listings can go live.";
-            continueBtn.textContent = "Start identity verification →";
-        } else {
-            successSub.textContent =
-                "Your account is ready. Welcome to VISTA-HR!";
-            continueBtn.textContent = "Go to my account →";
-        }
-
+    /* ── Show one state, hide others ── */
+    function showState(s) {
+        el("kycFormCard").hidden = s !== "form";
+        el("kycPendingCard").hidden = s !== "pending";
+        el("kycRejectedCard").hidden = s !== "rejected";
         if (window.lucide?.createIcons) lucide.createIcons();
     }
 
-    continueBtn.addEventListener("click", () => {
-        if (next) {
-            location.href = next;
-            return;
-        }
-        const userRole = role || "RESIDENT";
-        if (userRole === "OWNER") {
-            location.href = "/Property-Owner/verification/verify.html";
-        } else {
-            location.href = "/Resident/resident_home.html";
-        }
-    });
+    /* ── Boot ── */
+    async function init() {
+        let user = null;
+        try {
+            const r = await fetch(`${API}/auth/me`, { credentials: "include" });
+            if (!r.ok) { location.replace("/auth/login.html"); return; }
+            user = (await r.json().catch(() => ({}))).user;
+        } catch { location.replace("/auth/login.html"); return; }
 
-    // ── Resend with 60-second cooldown ───────────────────────
-    let cooldown = 0;
-    let cooldownTimer = null;
+        if (!user || user.role !== "OWNER") { location.replace("/auth/login.html"); return; }
+        if (user.kyc_status === "APPROVED") {
+            location.replace("/Property-Owner/dashboard/property-owner-dashboard.html"); return;
+        }
 
-    function startCooldown(seconds = 60) {
-        cooldown = seconds;
-        resendBtn.disabled = true;
-        tick();
+        /* Live status check */
+        try {
+            const r = await fetch(`${API}/kyc/status`, { credentials: "include" });
+            const data = await r.json().catch(() => ({}));
+            const st = data.kyc_status || user.kyc_status || "NONE";
+
+            if (st === "PENDING") { showState("pending"); bindResubmit(); return; }
+            if (st === "REJECTED") {
+                const reason = data.kyc_reject_reason || user.kyc_reject_reason || "";
+                if (reason) el("rejectReasonText").textContent =
+                    `Your documents could not be verified. Reason: ${reason}`;
+                showState("rejected"); bindResubmit(); return;
+            }
+        } catch (e) { console.warn("KYC status fetch failed, showing form:", e); }
+
+        showState("form");
+        setupDropzones();
+        el("submitBtn").addEventListener("click", handleSubmit, { once: true });
+        lucide.createIcons();
     }
 
-    function tick() {
-        if (cooldown <= 0) {
-            resendBtn.disabled = false;
-            resendTimer.textContent = "";
-            return;
-        }
-        resendTimer.textContent = `(${cooldown}s)`;
-        cooldown--;
-        cooldownTimer = setTimeout(tick, 1000);
+    function bindResubmit() {
+        el("resubmitBtn")?.addEventListener("click", () => {
+            showState("form");
+            setupDropzones();
+            el("submitBtn").addEventListener("click", handleSubmit, { once: true });
+            lucide.createIcons();
+        }, { once: true });
     }
 
-    resendBtn.addEventListener("click", async () => {
-        resendBtn.disabled = true;
-        clearErr();
+    /* ── Dropzones ── */
+    function setupDropzones() {
+        uploads.front = uploads.back = uploads.selfie = null;
+        updateBtn();
+        wire("dropFront", "inputFront", "dropContentFront", "previewFront", "previewImgFront", "removeFront", "errFront", "front");
+        wire("dropBack", "inputBack", "dropContentBack", "previewBack", "previewImgBack", "removeBack", "errBack", "back");
+        wire("dropSelfie", "inputSelfie", "dropContentSelfie", "previewSelfie", "previewImgSelfie", "removeSelfie", null, "selfie");
+    }
+
+    function wire(dropId, inputId, contentId, previewId, imgId, removeId, errId, slot) {
+        const drop = el(dropId), input = el(inputId),
+            content = el(contentId), preview = el(previewId),
+            img = el(imgId), remove = el(removeId),
+            errEl = errId ? el(errId) : null;
+        if (!drop || !input) return;
+
+        drop.addEventListener("click", e => { if (!e.target.closest(".remove-btn")) input.click(); });
+        drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("dragover"); });
+        drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+        drop.addEventListener("drop", e => {
+            e.preventDefault(); drop.classList.remove("dragover");
+            const f = e.dataTransfer.files?.[0]; if (f) onFile(f, slot, img, content, preview, drop, errEl);
+        });
+        input.addEventListener("change", () => {
+            const f = input.files?.[0]; if (f) onFile(f, slot, img, content, preview, drop, errEl);
+            input.value = "";
+        });
+        remove?.addEventListener("click", e => {
+            e.stopPropagation();
+            uploads[slot] = null;
+            if (preview) preview.hidden = true;
+            if (content) content.hidden = false;
+            drop.classList.remove("has-file");
+            if (img) img.src = "";
+            if (errEl) errEl.textContent = "";
+            updateBtn();
+        });
+    }
+
+    function onFile(file, slot, img, content, preview, drop, errEl) {
+        if (errEl) errEl.textContent = "";
+        if (!file.type.startsWith("image/")) { if (errEl) errEl.textContent = "Only image files (JPG, PNG, WEBP)."; return; }
+        if (file.size > MAX_SIZE) { if (errEl) errEl.textContent = "File too large — max 5 MB."; return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            if (img) img.src = e.target.result;
+            if (preview) preview.hidden = false;
+            if (content) content.hidden = true;
+            drop.classList.add("has-file");
+        };
+        reader.readAsDataURL(file);
+        uploads[slot] = file;
+        updateBtn();
+    }
+
+    function updateBtn() {
+        const btn = el("submitBtn");
+        if (btn) btn.disabled = !uploads.front || !uploads.back;
+    }
+
+    /* ── Cloudinary ── */
+    async function getSig(folder) {
+        const r = await fetch(`${API}/uploads/sign`, {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || "Signature failed.");
+        return d;
+    }
+
+    async function upload(file, folder) {
+        const sig = await getSig(folder);
+        const fd = new FormData();
+        fd.append("file", file); fd.append("api_key", sig.apiKey);
+        fd.append("timestamp", sig.timestamp); fd.append("signature", sig.signature);
+        fd.append("folder", sig.folder);
+        const r = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: "POST", body: fd });
+        const out = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(out.error?.message || "Upload failed.");
+        return out.secure_url;
+    }
+
+    /* ── Submit ── */
+    async function handleSubmit() {
+        const btn = el("submitBtn"), label = btn.querySelector(".btn-label"), spinner = btn.querySelector(".btn-spinner");
+        const errEl = el("globalErr");
+        if (!uploads.front || !uploads.back) return;
+
+        errEl.hidden = true; errEl.textContent = "";
+        el("errFront").textContent = ""; el("errBack").textContent = "";
+        btn.disabled = true; label.hidden = true; spinner.hidden = false;
 
         try {
-            const res = await fetch(`${API_BASE}/auth/send-otp`, {
-                method: "POST",
+            const folder = "vista_hr/kyc";
+            let frontUrl, backUrl, selfieUrl = null;
+
+            try { frontUrl = await upload(uploads.front, folder); }
+            catch { el("errFront").textContent = "Front upload failed. Try again."; throw new Error("u"); }
+
+            try { backUrl = await upload(uploads.back, folder); }
+            catch { el("errBack").textContent = "Back upload failed. Try again."; throw new Error("u"); }
+
+            if (uploads.selfie) selfieUrl = await upload(uploads.selfie, folder).catch(() => null);
+
+            const r = await fetch(`${API}/kyc/submit`, {
+                method: "POST", credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ email }),
+                body: JSON.stringify({ id_front_url: frontUrl, id_back_url: backUrl, selfie_url: selfieUrl }),
             });
-            const data = await res.json().catch(() => ({}));
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || "Submission failed.");
 
-            if (!res.ok) {
-                errMsg.textContent = data.error || "Could not resend. Try again.";
-                errMsg.hidden = false;
-                resendBtn.disabled = false;
-                return;
-            }
-
-            // Clear inputs
-            otpBoxes.forEach(b => { b.value = ""; b.classList.remove("filled"); });
-            otpBoxes[0].focus();
-            updateVerifyBtn();
-            startCooldown(60);
-
-        } catch {
-            errMsg.textContent = "Network error.";
-            errMsg.hidden = false;
-            resendBtn.disabled = false;
+            if (data.user && window.AuthGuard?.saveSession) window.AuthGuard.saveSession({ user: data.user });
+            showState("pending");
+        } catch (err) {
+            if (err.message !== "u") { errEl.textContent = err.message || "Something went wrong."; errEl.hidden = false; }
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
+            btn.addEventListener("click", handleSubmit, { once: true });
         }
-    });
+    }
 
-    // Start with a 60s cooldown (just registered, code was just sent)
-    startCooldown(60);
-
-    // Focus first box
-    otpBoxes[0]?.focus();
-
-    if (window.lucide?.createIcons) lucide.createIcons();
+    /* ── Boot ── */
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
 })();

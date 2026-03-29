@@ -1,0 +1,879 @@
+/* ============================================================
+   VISTA-HR · listing_detail.js
+   Full-featured listing detail page
+============================================================ */
+const API = "http://127.0.0.1:5000/api";
+const STAR_LABELS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
+
+const AMEN_ICONS = {
+    wifi: "wifi", "air conditioning": "wind", ac: "wind", fan: "fan",
+    refrigerator: "refrigerator", fridge: "refrigerator",
+    "washing machine": "washing-machine", washer: "washing-machine",
+    television: "tv", tv: "tv", microwave: "microwave",
+    "water heater": "flame", "hot water": "flame",
+    cctv: "camera", "security camera": "camera",
+    "fire extinguisher": "flame-kindling",
+    "smoke detector": "bell-ring", "smoke alarm": "bell-ring",
+    "first aid": "cross", "security guard": "shield-check", guard: "shield-check",
+    gate: "door-open", gated: "door-open",
+    parking: "car", "parking space": "car",
+    gym: "dumbbell", fitness: "dumbbell",
+    pool: "waves", "swimming pool": "waves",
+    garden: "leaf", balcony: "grid-2x2",
+    kitchen: "utensils", "shared kitchen": "utensils",
+    "study room": "book-open", laundry: "shirt",
+    "common area": "sofa",
+};
+
+function amenIcon(name) {
+    const l = (name || "").toLowerCase();
+    for (const [k, v] of Object.entries(AMEN_ICONS)) if (l.includes(k)) return v;
+    return "check-circle";
+}
+
+const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const $ = id => document.getElementById(id);
+const on = (id, ev, fn) => $(id)?.addEventListener(ev, fn);
+
+// ── State ──
+let listing = null;
+let allPhotos = [];
+let lbIdx = 0;
+let slideIdx = 0;
+let rvPage = 1;
+let allRevs = [];
+let revTotal = 0;
+let selRating = 0;
+let ownerId = null;
+let ownerName = "";
+let pannellumViewer = null;
+
+// ── Boot ──────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", async () => {
+    const params = new URLSearchParams(location.search);
+    const lid = parseInt(params.get("id"));
+    if (!lid) { showErr("No listing specified."); return; }
+
+    if (window.AuthGuard?.requireResident) {
+        const ok = await window.AuthGuard.requireResident();
+        if (!ok) return;
+    }
+
+    await Promise.all([
+        loadListing(lid),
+        loadReviews(lid, true),
+    ]);
+
+    checkEligibility(lid);
+    loadSimilar(lid);
+    setupScrollNav();
+    setupShare(lid);
+    setupSave(lid);
+    setupBooking(lid);
+    setupMessage();
+    setupReviewModal(lid);
+    setupDateSync();
+
+    lucide.createIcons();
+});
+
+// ── Load listing ──────────────────────────────────────────
+async function loadListing(lid) {
+    try {
+        const r = await fetch(`${API}/listings/${lid}/public`, { credentials: "include" });
+        if (!r.ok) { showErr("Listing not found."); return; }
+        const d = await r.json();
+        listing = d.listing;
+        render(listing);
+    } catch {
+        showErr("Failed to load listing. Please check your connection.");
+    }
+}
+
+function render(l) {
+    document.title = `VISTA-HR · ${l.title || "Listing"}`;
+
+    // Photos
+    const raw = l.photos || [];
+    allPhotos = raw.map(p => typeof p === "object" ? p?.url : p).filter(Boolean);
+    buildPhotoGrid(allPhotos, l.title);
+    buildMobileSlides(allPhotos);
+
+    // Title
+    $("ldTitle").textContent = l.title || "Untitled space";
+
+    // Badges
+    const badges = [];
+    if (l.place_type) badges.push(`<span class="ld-badge type">${esc(l.place_type)}</span>`);
+    if (l.status === "PUBLISHED") badges.push(`<span class="ld-badge avail">Available</span>`);
+    if (l.student_discount) badges.push(`<span class="ld-badge disc">${l.student_discount}% student discount</span>`);
+    $("ldBadges").innerHTML = badges.join("");
+
+    // Location
+    const loc = l.location || {};
+    const locParts = [loc.barangay, loc.city || l.city, loc.province].filter(Boolean);
+    $("ldLocTxt").textContent = locParts.join(", ") || "Metro Manila";
+
+    // Rating
+    if (l.avg_rating && l.review_count > 0) {
+        $("ldRatingRow").hidden = false;
+        $("ldStarsSm").innerHTML = miniStars(l.avg_rating);
+        $("ldRevLink").textContent = `${l.review_count} review${l.review_count !== 1 ? "s" : ""}`;
+    }
+
+    // Host
+    const owner = l.owner;
+    if (owner) {
+        ownerId = owner.id;
+        ownerName = owner.name || "Property Owner";
+        const init = (ownerName[0] || "P").toUpperCase();
+        $("ldHostAv").textContent = init;
+        $("ldHostName").textContent = ownerName;
+        $("ldHostSince").textContent = owner.member_since ? `Member since ${owner.member_since}` : "";
+        if (owner.email) {
+            const btn = $("ldMsgOwnerBtn");
+            if (btn) btn.hidden = false;
+        }
+    }
+
+    // Room breakdown cards
+    const cap = l.capacity || {};
+    const rbEl = $("ldRoomBreakdown");
+    if (rbEl) {
+        const spaceType = l.space_type || l.placeType || null;
+        const specItems = [
+            { icon: "users", n: cap.guests, label: cap.guests === 1 ? "Guest" : "Guests" },
+            { icon: "door-open", n: cap.bedrooms, label: cap.bedrooms === 1 ? "Bedroom" : "Bedrooms" },
+            { icon: "bed-single", n: cap.beds, label: cap.beds === 1 ? "Bed" : "Beds" },
+            { icon: "bath", n: cap.bathrooms, label: cap.bathrooms === 1 ? "Bath" : "Baths" },
+        ].filter(s => s.n);
+        rbEl.innerHTML =
+            (spaceType ? `<div class="ld-room-type-row">${esc(spaceType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()))}</div>` : "") +
+            specItems.map(s => `
+        <div class="ld-room-card">
+          <i data-lucide="${s.icon}"></i>
+          <div class="ld-room-num">${s.n}</div>
+          <div class="ld-room-lbl">${esc(s.label)}</div>
+        </div>`).join("");
+    }
+
+    // Description — 3 lines clamped, show more → modal
+    const descEl = $("ldDesc");
+    if (descEl) {
+        const fullDesc = l.description || "";
+        descEl.textContent = fullDesc;
+        const showMore = $("ldShowMore");
+        if (showMore) {
+            // Always show "show more" if description is non-empty
+            if (fullDesc.trim()) {
+                showMore.hidden = false;
+                showMore.innerHTML = `Show more <i data-lucide="chevron-right"></i>`;
+                showMore.addEventListener("click", () => {
+                    // Build modal body — split by newlines for paragraphs
+                    const body = $("descModalBody");
+                    if (body) {
+                        body.innerHTML = fullDesc.split(/\n+/).filter(p => p.trim()).map(p =>
+                            `<p>${esc(p.trim())}</p>`
+                        ).join("");
+                    }
+                    $("descOv").hidden = false;
+                    $("descModal").hidden = false;
+                    document.body.style.overflow = "hidden";
+                    lucide.createIcons();
+                });
+            }
+        }
+    }
+    // Desc modal close
+    const closeDesc = () => { $("descOv").hidden = true; $("descModal").hidden = true; document.body.style.overflow = ""; };
+    on("descClose", "click", closeDesc);
+    on("descOv", "click", closeDesc);
+
+    // Virtual tour
+    const tourUrl = l.tour_url || l.pano_url || (l.virtualTour?.panoUrl);
+    if (tourUrl) {
+        $("ldTourSec").hidden = false;
+        $("ldTourHr") && ($("ldTourHr").hidden = false);
+        on("ldTourLaunch", "click", () => launchTour(tourUrl, l.title));
+    }
+
+    // Highlights
+    const hl = l.highlights || [];
+    function niceLabel(s) {
+        return String(s || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    }
+    if (hl.length) {
+        $("ldHighSec").hidden = false;
+        $("ldHighlights").innerHTML = hl.map(h =>
+            `<div class="ld-hl"><i data-lucide="star"></i>${esc(niceLabel(h))}</div>`).join("");
+    }
+
+    // Amenities
+    const amen = l.amenities || {};
+    const groups = [
+        { label: "Appliances", items: amen.appliances || [] },
+        { label: "Activities & common areas", items: amen.activities || [] },
+        { label: "Safety", items: amen.safety || [] },
+    ].filter(g => g.items.length);
+    if (groups.length) {
+        $("ldAmenSec").hidden = false;
+        // Flatten all items, show first 6 in preview grid
+        const flatAmen = groups.flatMap(g => g.items);
+        const preview = flatAmen.slice(0, 6);
+        $("ldAmenGrid").innerHTML = preview.map(a =>
+            `<div class="ld-amen"><i data-lucide="${amenIcon(a)}"></i>${esc(niceLabel(a))}</div>`
+        ).join("");
+
+        // Show all button
+        const showAllAmen = $("ldShowAllAmen");
+        if (showAllAmen) {
+            showAllAmen.hidden = false;
+            showAllAmen.innerHTML = `Show all ${flatAmen.length} amenities`;
+            showAllAmen.addEventListener("click", () => {
+                const body = $("amenModalBody");
+                if (body) {
+                    body.innerHTML = groups.map(g =>
+                        `<div class="amen-group-hd">${esc(g.label)}</div>
+             <div class="amen-full-grid">
+               ${g.items.map(a => `<div class="amen-full-item"><i data-lucide="${amenIcon(a)}"></i>${esc(niceLabel(a))}</div>`).join("")}
+             </div>`
+                    ).join("");
+                }
+                $("amenOv").hidden = false;
+                $("amenModal").hidden = false;
+                document.body.style.overflow = "hidden";
+                lucide.createIcons();
+            });
+        }
+        const closeAmen = () => { $("amenOv").hidden = true; $("amenModal").hidden = true; document.body.style.overflow = ""; };
+        on("amenClose", "click", closeAmen);
+        on("amenOv", "click", closeAmen);
+    }
+
+    // Map
+    if (loc.lat && loc.lng) {
+        initMap(loc.lat, loc.lng, l.title, locParts.join(", "));
+    } else {
+        document.querySelector(".ld-map-wrap")?.style && (document.querySelector(".ld-map-wrap").style.display = "none");
+        $("ldMapNote").textContent = locParts.join(", ");
+    }
+    const dirBtn = $("ldDirBtn");
+    if (dirBtn) {
+        dirBtn.hidden = false;
+        dirBtn.addEventListener("click", () => {
+            const dest = (loc.lat && loc.lng) ? `${loc.lat},${loc.lng}` : encodeURIComponent(locParts.join(", "));
+            window.open(`https://maps.google.com/maps?daddr=${dest}`, "_blank");
+        });
+    }
+
+    // Booking card price
+    const rent = cap.monthly_rent || cap.price;
+    const priceHtml = rent
+        ? `₱${Number(rent).toLocaleString()}<span>/mo</span>` : `Price on request`;
+    $("ldBookPrice").innerHTML = priceHtml;
+    $("ldMobPrice").innerHTML = rent ? `₱${Number(rent).toLocaleString()}<span style="font-size:12px;font-weight:400;color:rgba(26,26,26,.6)">/mo</span>` : "";
+
+    // Booking card rating
+    if (l.avg_rating && l.review_count > 0) {
+        const ratEl = $("ldBookRating");
+        if (ratEl) {
+            ratEl.hidden = false;
+            ratEl.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="${"#F59E0B"}" stroke="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg> ${l.avg_rating.toFixed(1)} · ${l.review_count} review${l.review_count !== 1 ? "s" : ""}`;
+        }
+    }
+
+    // Show message buttons if owner found
+    if (ownerId) {
+        const mob = $("ldMobMsgBtn");
+        const card = $("ldCardMsgBtn");
+        if (mob) mob.hidden = false;
+        if (card) card.hidden = false;
+    }
+
+    // Set today as min date for move-in
+    const today = new Date().toISOString().split("T")[0];
+    [$("ldMoveIn"), $("bmDate")].forEach(el => { if (el) el.min = today; });
+
+    lucide.createIcons();
+}
+
+// ── Photo grid ────────────────────────────────────────────
+function buildPhotoGrid(photos, title) {
+    const slots = ["ldPhotoMain", "ldPhotoSide1", "ldPhotoSide2", "ldPhotoSide3", "ldPhotoSide4"];
+    slots.forEach((id, i) => {
+        const el = $(id);
+        if (!el) return;
+        const url = photos[i];
+        if (url) {
+            const keep = i === 4 ? el.querySelector(".ld-showall") : null;
+            el.innerHTML = `<img src="${esc(url)}" alt="${esc(title)} ${i + 1}" loading="${i === 0 ? "eager" : "lazy"}">`;
+            if (keep) el.appendChild(keep);
+            el.querySelector("img")?.addEventListener("click", () => openLightbox(i));
+        }
+    });
+    const showAll = $("ldShowAll");
+    if (showAll && photos.length > 0) {
+        showAll.hidden = false;
+        showAll.textContent = `Show all ${photos.length} photos`;
+        showAll.innerHTML = `<i data-lucide="grid-2x2"></i> Show all ${photos.length} photos`;
+        showAll.addEventListener("click", () => openLightbox(0));
+    }
+}
+
+// ── Mobile slideshow ──────────────────────────────────────
+function buildMobileSlides(photos) {
+    const track = $("ldSlidesTrack");
+    const ctr = $("ldSlideCounter");
+    if (!track || !photos.length) return;
+    track.innerHTML = photos.map((url, i) =>
+        `<img src="${esc(url)}" alt="Photo ${i + 1}" loading="${i === 0 ? "eager" : "lazy"}" style="flex-shrink:0;width:100%;height:100%;object-fit:cover;">`
+    ).join("");
+    if (ctr) ctr.textContent = `1 / ${photos.length}`;
+
+    function goSlide(idx) {
+        slideIdx = (idx + photos.length) % photos.length;
+        track.style.transform = `translateX(-${slideIdx * 100}%)`;
+        if (ctr) ctr.textContent = `${slideIdx + 1} / ${photos.length}`;
+    }
+
+    on("ldSlidePrev", "click", () => goSlide(slideIdx - 1));
+    on("ldSlideNext", "click", () => goSlide(slideIdx + 1));
+
+    let tx = 0;
+    const mob = $("ldMobSlides");
+    if (mob) {
+        mob.addEventListener("touchstart", e => { tx = e.touches[0].clientX; }, { passive: true });
+        mob.addEventListener("touchend", e => {
+            const dx = tx - e.changedTouches[0].clientX;
+            if (Math.abs(dx) > 40) goSlide(slideIdx + (dx > 0 ? 1 : -1));
+        });
+    }
+}
+
+// ── Lightbox ──────────────────────────────────────────────
+function openLightbox(startIdx) {
+    lbIdx = startIdx;
+    const lb = $("ldLb");
+    if (!lb) return;
+    lb.hidden = false;
+    document.body.style.overflow = "hidden";
+
+    // Strip
+    const strip = $("ldLbStrip");
+    if (strip) {
+        strip.innerHTML = allPhotos.map((url, i) =>
+            `<div class="ld-lb-thumb${i === lbIdx ? " active" : ""}" data-i="${i}"><img src="${esc(url)}" loading="lazy"></div>`
+        ).join("");
+        strip.querySelectorAll(".ld-lb-thumb").forEach(t => {
+            t.addEventListener("click", () => updateLb(parseInt(t.dataset.i)));
+        });
+    }
+    updateLb(lbIdx);
+
+    on("ldLbClose", "click", closeLightbox);
+    on("ldLbPrev", "click", () => updateLb(lbIdx - 1));
+    on("ldLbNext", "click", () => updateLb(lbIdx + 1));
+
+    document._lbKey = e => {
+        if (e.key === "Escape") closeLightbox();
+        if (e.key === "ArrowLeft") updateLb(lbIdx - 1);
+        if (e.key === "ArrowRight") updateLb(lbIdx + 1);
+    };
+    document.addEventListener("keydown", document._lbKey);
+}
+
+function updateLb(idx) {
+    lbIdx = (idx + allPhotos.length) % allPhotos.length;
+    const img = $("ldLbImg");
+    if (img) { img.src = allPhotos[lbIdx]; img.alt = `Photo ${lbIdx + 1}`; }
+    const ctr = $("ldLbCtr");
+    if (ctr) ctr.textContent = `${lbIdx + 1} / ${allPhotos.length}`;
+    document.querySelectorAll(".ld-lb-thumb").forEach((t, i) => t.classList.toggle("active", i === lbIdx));
+    document.querySelectorAll(".ld-lb-thumb")[lbIdx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+}
+
+function closeLightbox() {
+    $("ldLb").hidden = true;
+    document.body.style.overflow = "";
+    document.removeEventListener("keydown", document._lbKey);
+}
+
+// ── Virtual Tour (Pannellum) ──────────────────────────────
+function launchTour(url, title) {
+    const cover = $("ldTourCover");
+    const pann = $("ldPannellum");
+    if (!cover || !pann) return;
+    cover.hidden = true;
+    pann.hidden = false;
+
+    if (window.pannellum) {
+        initPann(url, title);
+    } else {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js";
+        s.onload = () => initPann(url, title);
+        document.head.appendChild(s);
+        const c = document.createElement("link");
+        c.rel = "stylesheet";
+        c.href = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css";
+        document.head.appendChild(c);
+    }
+}
+
+function initPann(url, title) {
+    if (pannellumViewer) return;
+    pannellumViewer = window.pannellum.viewer("ldPannellum", {
+        type: "equirectangular", panorama: url,
+        title: title, autoLoad: true, autoRotate: -2,
+        compass: false, showZoomCtrl: true, showFullscreenCtrl: true, hfov: 100,
+    });
+}
+
+// ── Map ───────────────────────────────────────────────────
+function initMap(lat, lng, title, addr) {
+    try {
+        const map = L.map("ldMap", { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 16);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 }).addTo(map);
+        const icon = L.divIcon({
+            className: "",
+            html: `<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:#123458;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);transform:rotate(-45deg)"></div>`,
+            iconSize: [34, 34], iconAnchor: [17, 34],
+        });
+        L.marker([lat, lng], { icon }).addTo(map).bindPopup(title || "Listing");
+
+        const note = $("ldMapNote");
+        if (note) note.textContent = addr;
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                const dist = haversine(pos.coords.latitude, pos.coords.longitude, lat, lng);
+                if (note) note.textContent = `${addr} · ${dist < 1 ? Math.round(dist * 1000) + "m" : dist.toFixed(1) + "km"} from you`;
+            }, () => { });
+        }
+    } catch { /* leaflet not loaded */ }
+}
+
+function haversine(la1, lo1, la2, lo2) {
+    const R = 6371, dL = (la2 - la1) * Math.PI / 180, dO = (lo2 - lo1) * Math.PI / 180;
+    const a = Math.sin(dL / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dO / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Reviews ───────────────────────────────────────────────
+async function loadReviews(lid, reset = false) {
+    if (reset) { rvPage = 1; allRevs = []; }
+    try {
+        const r = await fetch(`${API}/listings/${lid}/reviews?page=${rvPage}&per_page=6`);
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        revTotal = d.total;
+        allRevs = reset ? d.reviews : [...allRevs, ...d.reviews];
+        renderRevSummary(d.avg_rating, d.total, d.rating_breakdown);
+        renderRevList(allRevs);
+        const lm = $("ldLoadMore");
+        if (lm) {
+            lm.hidden = allRevs.length >= revTotal;
+            lm.onclick = async () => { rvPage++; await loadReviews(lid, false); };
+        }
+    } catch { /* silent */ }
+}
+
+function miniStars(rating) {
+    return Array.from({ length: 5 }, (_, i) =>
+        `<svg class="ld-star-sm${i >= Math.round(rating) ? " e" : ""}" viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`
+    ).join("");
+}
+
+function starSvg(filled, cls = "ld-rev-s") {
+    return `<svg class="${cls}${filled ? "" : " e"}" viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`;
+}
+
+function renderRevSummary(avg, total, breakdown) {
+    const title = $("ldRevTitle");
+    if (title) title.textContent = total ? `${avg?.toFixed(1) ?? ""} · ${total} review${total !== 1 ? "s" : ""}` : "Reviews";
+    const sum = $("ldRevSummary");
+    if (!sum) return;
+    if (!total) { sum.hidden = true; return; }
+    sum.hidden = false;
+    const bars = [5, 4, 3, 2, 1].map(n => {
+        const ct = breakdown?.[String(n)] || 0;
+        const pct = total ? Math.round((ct / total) * 100) : 0;
+        return `<div class="ld-bar-row"><span class="ld-bar-n">${n}</span><div class="ld-bar-track"><div class="ld-bar-fill" style="width:${pct}%"></div></div><span class="ld-bar-ct">${ct}</span></div>`;
+    }).join("");
+    sum.innerHTML = `
+    <div class="ld-rev-big">
+      <div class="ld-rev-score">${avg?.toFixed(1) ?? "—"}</div>
+      <div class="ld-rev-stars">${Array.from({ length: 5 }, (_, i) => starSvg(i < Math.round(avg ?? 0), "ld-rev-star")).join("")}</div>
+      <div class="ld-rev-total">${total} review${total !== 1 ? "s" : ""}</div>
+    </div>
+    <div class="ld-rev-bars">${bars}</div>`;
+}
+
+function renderRevList(revs) {
+    const grid = $("ldRevGrid");
+    if (!grid) return;
+    if (!revs.length) { grid.innerHTML = `<p class="ld-no-rev">No reviews yet. Be the first!</p>`; return; }
+    grid.innerHTML = revs.map(rv => {
+        const date = rv.created_at
+            ? new Date(rv.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" })
+            : "";
+        const init = (rv.resident_name?.[0] || "R").toUpperCase();
+        return `<div class="ld-rev-card">
+      <div class="ld-rev-top">
+        <div class="ld-rev-av">${esc(init)}</div>
+        <div><div class="ld-rev-name">${esc(rv.resident_name || "Resident")}</div><div class="ld-rev-date">${esc(date)}</div></div>
+      </div>
+      <div class="ld-rev-stars2">${Array.from({ length: 5 }, (_, i) => starSvg(i < rv.rating, "ld-rev-s")).join("")}</div>
+      ${rv.comment ? `<p class="ld-rev-txt">${esc(rv.comment)}</p>` : ""}
+    </div>`;
+    }).join("");
+}
+
+// ── Eligibility check ─────────────────────────────────────
+async function checkEligibility(lid) {
+    try {
+        const session = window.AuthGuard?.getSession?.()?.user;
+        if (!session) return;
+        const r = await fetch(`${API}/bookings/mine`, { credentials: "include" });
+        if (!r.ok) return;
+        const d = await r.json();
+        const eligible = (d.bookings || []).some(b => b.listing_id === lid && ["ACTIVE", "COMPLETED"].includes(b.status));
+        const reviewed = allRevs.some(rv => rv.resident_id === session.id);
+        if (eligible && !reviewed) {
+            const btn = $("ldWriteRev");
+            if (btn) btn.hidden = false;
+        }
+    } catch { /* silent */ }
+}
+
+// ── Similar listings ──────────────────────────────────────
+async function loadSimilar(lid) {
+    if (!listing) return;
+    try {
+        const city = (listing.location?.city || listing.city || "").toLowerCase();
+        const type = (listing.place_type || "").toLowerCase();
+        const params = new URLSearchParams({ limit: 8 });
+        if (city) params.set("city", city);
+        if (type) params.set("type", type);
+        const r = await fetch(`${API}/listings/feed?${params}`, { credentials: "include" });
+        if (!r.ok) return;
+        const d = await r.json();
+        const others = (d.listings || []).filter(x => x.id !== lid).slice(0, 6);
+        if (!others.length) return;
+        $("ldSimilarSec").hidden = false;
+        $("ldSimilarRow").innerHTML = others.map(l => {
+            const cap = l.capacity || {};
+            const price = l.price ?? cap.monthly_rent ?? cap.price;
+            const cover = l.cover || null;
+            const loc = [l.barangay, l.city].filter(Boolean).join(", ");
+            return `<div class="ld-sim-card" data-id="${l.id}">
+        ${cover ? `<img class="ld-sim-img" src="${esc(cover)}" alt="${esc(l.title)}" loading="lazy">` : `<div class="ld-sim-img" style="background:#e8e4df;display:flex;align-items:center;justify-content:center;"><i data-lucide="home" style="width:24px;height:24px;color:rgba(26,26,26,.3)"></i></div>`}
+        <div class="ld-sim-loc">${esc(loc)}</div>
+        <div class="ld-sim-type">${esc(l.place_type || "Room")}</div>
+        <div class="ld-sim-price">${price ? `₱${Number(price).toLocaleString()}/mo` : "Price on request"}</div>
+      </div>`;
+        }).join("");
+        $("ldSimilarRow").querySelectorAll(".ld-sim-card").forEach(card => {
+            card.addEventListener("click", () => { location.href = `/Resident/listing_detail.html?id=${card.dataset.id}`; });
+        });
+        lucide.createIcons();
+    } catch { /* silent */ }
+}
+
+// ── Share ─────────────────────────────────────────────────
+function setupShare(lid) {
+    on("ldShareBtn", "click", async () => {
+        const url = `${location.origin}/Resident/listing_detail.html?id=${lid}`;
+        const title = listing?.title || "VISTA-HR Listing";
+        if (navigator.share) {
+            try { await navigator.share({ title, url }); return; } catch { /* fallback */ }
+        }
+        try { await navigator.clipboard.writeText(url); } catch { /* fallback */ }
+        showToast("Link copied!");
+    });
+}
+
+function showToast(msg) {
+    const t = $("ldToast");
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ── Save ──────────────────────────────────────────────────
+function setupSave(lid) {
+    const btn = $("ldSaveBtn");
+    if (!btn) return;
+    let saved = false;
+    try { saved = JSON.parse(localStorage.getItem("vista_saved") || "[]").includes(lid); } catch { }
+    updateSaveBtn(btn, saved);
+    btn.addEventListener("click", () => {
+        try {
+            const arr = JSON.parse(localStorage.getItem("vista_saved") || "[]");
+            const next = saved ? arr.filter(x => x !== lid) : [...arr, lid];
+            localStorage.setItem("vista_saved", JSON.stringify(next));
+            saved = !saved;
+            updateSaveBtn(btn, saved);
+            showToast(saved ? "Saved!" : "Removed from saved");
+        } catch { }
+    });
+}
+
+function updateSaveBtn(btn, saved) {
+    btn.classList.toggle("saved", saved);
+    const sv = btn.querySelector("svg");
+    if (sv) { sv.style.fill = saved ? "#DC2626" : "none"; sv.style.stroke = saved ? "#DC2626" : "currentColor"; }
+}
+
+// ── Booking ───────────────────────────────────────────────
+function setupBooking(lid) {
+    const openBm = () => openBookingModal(lid);
+    on("ldReserveBtn", "click", openBm);
+    on("ldMobReserveBtn", "click", openBm);
+    on("bmClose", "click", closeBm);
+    on("bmCancel", "click", closeBm);
+    on("bmOv", "click", closeBm);
+    on("bmSend", "click", () => sendBooking(lid));
+}
+
+function openBookingModal(lid) {
+    // Sync date from card input
+    const dateVal = $("ldMoveIn")?.value || "";
+    if (dateVal && $("bmDate")) $("bmDate").value = dateVal;
+    const today = new Date().toISOString().split("T")[0];
+    if ($("bmDate")) $("bmDate").min = today;
+
+    // Snapshot
+    const cap = listing?.capacity || {};
+    const rent = cap.monthly_rent || cap.price;
+    const cover = allPhotos[0];
+    const locParts = [listing?.location?.barangay, listing?.location?.city || listing?.city].filter(Boolean);
+    $("bmSnap").innerHTML = `
+    ${cover ? `<img class="bm-snap-img" src="${esc(cover)}" alt="">` : `<div class="bm-snap-ph"><i data-lucide="home"></i></div>`}
+    <div><div class="bm-snap-title">${esc(listing?.title || "")}</div><div class="bm-snap-sub">${esc(listing?.place_type || "")} · ${esc(locParts.join(", "))}</div></div>
+    ${rent ? `<div class="bm-snap-price">₱${Number(rent).toLocaleString()}<span>/mo</span></div>` : ""}`;
+
+    $("bmBd").hidden = false;
+    $("bmOk").hidden = true;
+    $("bmFt").hidden = false;
+    $("bmErr").hidden = true;
+    $("bmSend").disabled = false;
+    $("bmLbl").hidden = false;
+    $("bmSpin").hidden = true;
+    $("bmOv").hidden = false;
+    $("bmModal").hidden = false;
+    document.body.style.overflow = "hidden";
+    lucide.createIcons();
+}
+
+function closeBm() {
+    $("bmOv").hidden = true;
+    $("bmModal").hidden = true;
+    document.body.style.overflow = "";
+}
+
+async function sendBooking(lid) {
+    const session = window.AuthGuard?.getSession?.()?.user;
+    if (session?.email_verified === false) {
+        $("bmErr").textContent = "Please verify your email first.";
+        $("bmErr").hidden = false;
+        return;
+    }
+    $("bmSend").disabled = true;
+    $("bmLbl").hidden = true;
+    $("bmSpin").hidden = false;
+    $("bmErr").hidden = true;
+    try {
+        const res = await fetch(`${API}/bookings`, {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ listing_id: lid, move_in_date: $("bmDate")?.value || null, message: $("bmNote")?.value.trim() || null }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed.");
+        $("bmBd").hidden = true; $("bmFt").hidden = true; $("bmOk").hidden = false;
+        lucide.createIcons();
+        setTimeout(closeBm, 3000);
+    } catch (err) {
+        $("bmErr").textContent = err.message; $("bmErr").hidden = false;
+        $("bmSend").disabled = false; $("bmLbl").hidden = false; $("bmSpin").hidden = true;
+    }
+}
+
+// ── Message owner ─────────────────────────────────────────
+function setupMessage() {
+    const openMsg = () => {
+        if (!ownerId) return;
+        $("msgText").value = ""; $("msgCt").textContent = "0";
+        $("msgErr").hidden = true; $("msgSend").disabled = false;
+        $("msgLbl").hidden = false; $("msgSpin").hidden = true;
+        $("msgOv").hidden = false; $("msgModal").hidden = false;
+        document.body.style.overflow = "hidden";
+        $("msgText")?.focus();
+    };
+    const closeMsg = () => { $("msgOv").hidden = true; $("msgModal").hidden = true; document.body.style.overflow = ""; };
+
+    // ldMsgOwnerBtn removed — message via card button only
+    on("ldCardMsgBtn", "click", openMsg);
+    on("ldMobMsgBtn", "click", openMsg);
+    on("msgClose", "click", closeMsg);
+    on("msgCancel", "click", closeMsg);
+    on("msgOv", "click", closeMsg);
+    on("msgSend", "click", sendMessage);
+
+    $("msgText")?.addEventListener("input", () => {
+        $("msgCt").textContent = $("msgText").value.length;
+    });
+}
+
+async function sendMessage() {
+    const text = $("msgText")?.value.trim();
+    if (!text) { $("msgErr").textContent = "Please write a message."; $("msgErr").hidden = false; return; }
+    if (!ownerId || !listing?.id) { $("msgErr").textContent = "Cannot find owner."; $("msgErr").hidden = false; return; }
+    $("msgSend").disabled = true; $("msgLbl").hidden = true; $("msgSpin").hidden = false; $("msgErr").hidden = true;
+    try {
+        const res = await fetch(`${API}/messages`, {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ receiver_id: ownerId, listing_id: listing.id, text }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send.");
+        $("msgOv").hidden = true; $("msgModal").hidden = true; document.body.style.overflow = "";
+        // Show toast then redirect to messages inbox for the conversation
+        showToast("Message sent! Opening your inbox…");
+        setTimeout(() => {
+            location.href = `/Resident/resident_messages.html?listing=${listing.id}&owner=${ownerId}`;
+        }, 1200);
+    } catch (err) {
+        $("msgErr").textContent = err.message; $("msgErr").hidden = false;
+        $("msgSend").disabled = false; $("msgLbl").hidden = false; $("msgSpin").hidden = true;
+    }
+}
+
+// ── Review modal ──────────────────────────────────────────
+function setupReviewModal(lid) {
+    const open = () => {
+        selRating = 0; $("rvText").value = ""; $("rvCt").textContent = "0";
+        $("rvErr").hidden = true; $("rvSend").disabled = true;
+        $("rvLbl2").hidden = false; $("rvSpin").hidden = true;
+        updateStars(0); $("rvLbl").textContent = "Tap a star to rate";
+        $("rvOv").hidden = false; $("rvModal").hidden = false;
+        document.body.style.overflow = "hidden"; lucide.createIcons();
+    };
+    const close = () => { $("rvOv").hidden = true; $("rvModal").hidden = true; document.body.style.overflow = ""; };
+
+    on("ldWriteRev", "click", open);
+    on("rvClose", "click", close);
+    on("rvCancel", "click", close);
+    on("rvOv", "click", close);
+
+    document.querySelectorAll("#ldStarRow button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            selRating = parseInt(btn.dataset.s);
+            updateStars(selRating);
+            $("rvLbl").textContent = STAR_LABELS[selRating] || "";
+            $("rvSend").disabled = false;
+        });
+        btn.addEventListener("mouseover", () => updateStars(parseInt(btn.dataset.s), true));
+        btn.addEventListener("mouseout", () => updateStars(selRating));
+    });
+
+    $("rvText")?.addEventListener("input", () => { $("rvCt").textContent = $("rvText").value.length; });
+
+    on("rvSend", "click", async () => {
+        if (!selRating) return;
+        $("rvSend").disabled = true; $("rvLbl2").hidden = true; $("rvSpin").hidden = false; $("rvErr").hidden = true;
+        try {
+            const res = await fetch(`${API}/listings/${lid}/reviews`, {
+                method: "POST", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ rating: selRating, comment: $("rvText")?.value.trim() || null }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed.");
+            close();
+            await Promise.all([loadReviews(lid, true), loadListing(lid)]);
+            $("ldWriteRev").hidden = true;
+            showToast("Review submitted!");
+        } catch (err) {
+            $("rvErr").textContent = err.message; $("rvErr").hidden = false;
+            $("rvSend").disabled = false; $("rvLbl2").hidden = false; $("rvSpin").hidden = true;
+        }
+    });
+}
+
+function updateStars(n, hover = false) {
+    document.querySelectorAll("#ldStarRow button").forEach((btn, i) => {
+        btn.classList.toggle("on", !hover && i < n);
+        btn.classList.toggle("hov", hover && i < n);
+    });
+    lucide.createIcons();
+}
+
+// ── Scroll nav ───────────────────────────────────────────
+function setupScrollNav() {
+    const nav = $("ldScrollNav");
+    const photos = $("ldPhotosWrap");
+    if (!nav || !photos) return;
+
+    const photosBottom = () => photos.getBoundingClientRect().bottom + window.scrollY;
+
+    function updateNav() {
+        const scrollY = window.scrollY;
+        // Show nav after scrolling past photos
+        if (scrollY > photosBottom() - 100) {
+            nav.classList.add("visible");
+            nav.hidden = false;
+        } else {
+            nav.classList.remove("visible");
+        }
+        // Active link based on scroll position
+        const sections = [
+            { id: "ldPhotosWrap", link: nav.querySelector('[data-target="ldPhotosWrap"]') },
+            { id: "ldAmenSec", link: nav.querySelector('[data-target="ldAmenSec"]') },
+            { id: "ldRevSec", link: nav.querySelector('[data-target="ldRevSec"]') },
+            { id: "ldMapSec", link: nav.querySelector('[data-target="ldMapSec"]') },
+        ];
+        let active = sections[0];
+        for (const s of sections) {
+            const el = $(s.id);
+            if (!el) continue;
+            if (el.getBoundingClientRect().top < 120) active = s;
+        }
+        nav.querySelectorAll(".ld-snav-link").forEach(l => l.classList.remove("active"));
+        active?.link?.classList.add("active");
+    }
+
+    // Smooth scroll on click
+    nav.querySelectorAll(".ld-snav-link").forEach(link => {
+        link.addEventListener("click", e => {
+            e.preventDefault();
+            const target = $(link.dataset.target);
+            if (target) {
+                const top = target.getBoundingClientRect().top + window.scrollY - 130;
+                window.scrollTo({ top, behavior: "smooth" });
+            }
+        });
+    });
+
+    window.addEventListener("scroll", updateNav, { passive: true });
+    updateNav();
+}
+
+// ── Date sync (card → booking modal) ─────────────────────
+function setupDateSync() {
+    $("ldMoveIn")?.addEventListener("change", () => {
+        if ($("bmDate")) $("bmDate").value = $("ldMoveIn").value;
+    });
+}
+
+// ── Error state ───────────────────────────────────────────
+function showErr(msg) {
+    document.body.innerHTML = `<div style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui;gap:12px;padding:24px">
+    <div style="font-size:40px">🏠</div>
+    <h2 style="font-size:18px;font-weight:600;color:#1a1a1a">${esc(msg)}</h2>
+    <a href="/Resident/resident_home.html" style="color:#123458;font-weight:600;text-decoration:underline">← Back to listings</a>
+  </div>`;
+}

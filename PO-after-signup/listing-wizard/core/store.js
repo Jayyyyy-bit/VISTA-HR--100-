@@ -51,7 +51,7 @@ function ensureActiveDraft() {
     let active = getActiveDraftId();
     const ids = getIndex();
 
-    //  accept active draft if it already has local draft data OR a bound listing id
+    // Accept active draft if it has local draft data OR a bound listing id
     if (
         active &&
         (
@@ -63,15 +63,21 @@ function ensureActiveDraft() {
         return active;
     }
 
+    // Fall back to first known draft id
     if (ids.length > 0) {
         active = ids[0];
         setActiveDraftId(active);
         return active;
     }
 
-    // create one
-    const created = createNewDraft();
-    return created;
+    // No draft exists at all — return a placeholder key.
+    // DO NOT call createNewDraft() here — it's async and would return a
+    // Promise, corrupting all localStorage keys with "[object Promise]".
+    // Callers that need a real server-backed draft must call createNewDraft()
+    // explicitly and await it before calling any store read/write methods.
+    const placeholder = "draft-pending-" + Date.now().toString(16);
+    setActiveDraftId(placeholder);
+    return placeholder;
 }
 
 function isOwnerVerified() {
@@ -349,24 +355,30 @@ function computeProgress(draft, activeStep = 1) {
 function hydrateFromServer(listing) {
     if (!listing) return null;
 
-    // Store server status on draft so dashboard can show it
     const photos = listing.photos ?? [];
     const normPhotos = Array.isArray(photos) ? photos : [];
 
-    return saveDraft({
+    // Only include fields that are actually present on the server response.
+    // Passing undefined for a field causes saveDraft's spread merge to silently
+    // ignore it, leaving stale data from a prior draft session.
+    const patch = {
         status: listing.status || "DRAFT",
         placeType: listing.place_type ?? null,
         spaceType: listing.space_type ?? null,
-        location: listing.location ?? {},
-        capacity: listing.capacity ?? undefined,
-        amenities: listing.amenities ?? undefined,
-        highlights: listing.highlights ?? undefined,
+        location: listing.location || {},
         photos: normPhotos,
         details: {
             title: listing.title ?? "",
             description: listing.description ?? "",
         },
-    });
+    };
+
+    // Only override capacity/amenities/highlights if the server actually sent them
+    if (listing.capacity != null) patch.capacity = listing.capacity;
+    if (listing.amenities != null) patch.amenities = listing.amenities;
+    if (listing.highlights != null) patch.highlights = listing.highlights;
+
+    return saveDraft(patch);
 }
 
 // Map a server listingId -> a draftId for local storage
@@ -455,25 +467,35 @@ async function resumeDraft({ allowLatestFallback = true } = {}) {
     ensureActiveDraft();
 
     const listingId = getListingId();
-    if (listingId) {
+
+    // Only hydrate if we have a real server-bound listing id.
+    // A placeholder draft-pending-* key has no listingId yet.
+    if (listingId && !String(listingId).startsWith("draft-pending")) {
         try {
             const out = await apiFetch(`/listings/${listingId}`, { method: "GET" });
-            hydrateFromServer(out.listing);
-            return out.listing;
+            if (out?.listing) {
+                hydrateFromServer(out.listing);
+                return out.listing;
+            }
         } catch {
-            // ignore
+            // Server listing may have been deleted — clear the stale local entry
+            const active = getActiveDraftId();
+            if (active) clearDraft(active);
         }
     }
 
     if (!allowLatestFallback) return null;
 
-    // fallback (only when not starting fresh)
-    const out2 = await apiFetch("/listings/drafts/latest", { method: "GET" });
-    if (out2?.listing) {
-        // IMPORTANT: map it so dashboard can open it later
-        ensureDraftForListing(out2.listing.id);
-        hydrateFromServer(out2.listing);
-        return out2.listing;
+    // Fallback: fetch latest draft from server (only when not starting fresh)
+    try {
+        const out2 = await apiFetch("/listings/drafts/latest", { method: "GET" });
+        if (out2?.listing) {
+            ensureDraftForListing(out2.listing.id);
+            hydrateFromServer(out2.listing);
+            return out2.listing;
+        }
+    } catch {
+        // silent — no latest draft is fine
     }
 
     return null;
@@ -486,8 +508,36 @@ async function syncStep1() {
     const d = readDraft();
     if (!d.placeType) throw { error: "placeType is required" };
 
-    const existingId = getListingId();
+    // ── FIX: always try to reuse an existing bound listing first ─────────────
+    // getListingId() reads from the ACTIVE draft's localStorage entry. After
+    // createNewDraft() runs in the router boot we always have an id here, but
+    // as a defensive fallback we also check the server for a recent step-1
+    // draft before ever creating a new row — preventing ghost/duplicate listings
+    // when localStorage is stale or was wiped mid-session.
+    let existingId = getListingId();
 
+    if (!existingId) {
+        // No local binding — ask the server if we already have a step-1 draft.
+        // This covers: browser cleared localStorage after boot, tab restored
+        // from bfcache, hard reload mid-wizard, etc.
+        try {
+            const latest = await apiFetch("/listings/drafts/latest", { method: "GET" });
+            if (latest?.listing?.id && latest.listing.current_step === 1) {
+                // Recover it: bind to current active draft and skip creating new.
+                const recoveredId = latest.listing.id;
+                setListingId(recoveredId);
+                const map = getMap();
+                map[String(recoveredId)] = ensureActiveDraft();
+                saveMap(map);
+                existingId = recoveredId;
+                console.log("[store] syncStep1: recovered existing step-1 draft", recoveredId);
+            }
+        } catch {
+            // No latest draft or network error — safe to fall through and create new.
+        }
+    }
+
+    // ── PATCH path: listing already exists on the server ─────────────────────
     if (existingId) {
         const data = await apiFetch(`/listings/${existingId}/step-1`, {
             method: "PATCH",
@@ -502,6 +552,10 @@ async function syncStep1() {
         return data;
     }
 
+    // ── POST path: no listing exists yet — create one ─────────────────────────
+    // NOTE: the backend's POST /listings/step-1 has an idempotency guard that
+    // returns an existing step-1 draft (created within the last 10 min with no
+    // placeType) instead of creating a duplicate. Belt-and-suspenders.
     const data = await apiFetch("/listings/step-1", {
         method: "POST",
         body: JSON.stringify({ placeType: d.placeType }),
@@ -648,8 +702,15 @@ async function submitForVerification() {
         body: JSON.stringify({}),
     });
 
-    // update local
+    // Update local status to READY so dashboard reflects it immediately
     saveDraft({ status: out?.listing?.status || "READY" });
+
+    // Clean up the local draft entry — it's now a published/submitted listing.
+    // The server is the source of truth from here. Leaving it in localStorage
+    // causes stale index entries that break future resume flows.
+    const activeDraftId = getActiveDraftId();
+    if (activeDraftId) clearDraft(activeDraftId);
+
     return out;
 }
 
@@ -676,6 +737,7 @@ window.ListingStore = {
     openListing,
     listMyListings,
     resumeDraft,
+    deleteListing,
 
     // sync
     syncStep1,
