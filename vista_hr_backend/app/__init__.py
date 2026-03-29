@@ -16,7 +16,7 @@ def create_app():
     CORS(
         app,
         resources={r"/api/*": {
-            "origins": ["http://127.0.0.1:5500", "http://localhost:5500"],
+            "origins": ["http://127.0.0.1:5500", "http://localhost:5500" , "https://Vista-HR.netlify.app"],
             "supports_credentials": True,
             "allow_headers": ["Content-Type", "Authorization"],
             "methods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],

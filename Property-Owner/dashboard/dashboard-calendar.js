@@ -36,19 +36,23 @@
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
 
-            // Map to calendar shape, skip bookings with no dates or non-active statuses
+            // Map to calendar shape — show APPROVED/ACTIVE/COMPLETED bookings
+            // Bookings without move_in_date fall back to today so they still appear
             const SHOW_STATUSES = new Set(["APPROVED", "ACTIVE", "COMPLETED"]);
+            const todayStr = new Date().toISOString().slice(0, 10);
             state.bookings = (data.bookings || [])
-                .filter(b => SHOW_STATUSES.has(b.status) && b.start && b.end)
+                .filter(b => SHOW_STATUSES.has(b.status))
                 .map(b => ({
                     id: b.id,
                     guest: b.guest || "Unknown",
                     listing: b.unit || `Listing #${b.listing_id}`,
                     unit: b.unit || `Listing #${b.listing_id}`,
-                    start: b.start,
-                    end: b.end,
+                    start: b.start || todayStr,
+                    end: b.end || b.start || todayStr,
                     status: b.calendar_status || b.status,
                     image: b.image || null,
+                    approved_at: b.approved_at || null,
+                    no_dates: !b.start,
                 }));
         } catch (e) {
             console.error("[calendar] Failed to load bookings", e);
@@ -544,6 +548,18 @@
                         <span>Status</span>
                         <strong>${escapeHtml(statusLabel(booking.status))}</strong>
                     </div>
+                    ${booking.approved_at ? `
+                    <div class="calendarDetailInfoRow">
+                        <span>Approved on</span>
+                        <strong>${new Date(
+            booking.approved_at.endsWith('Z') || booking.approved_at.includes('+')
+                ? booking.approved_at
+                : booking.approved_at + 'Z'
+        ).toLocaleString('en-PH', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila'
+        })}</strong>
+                    </div>` : ''}
                 </div>
             </div>
         `;
@@ -895,10 +911,25 @@
         }
     }
 
+    let _calInitialized = false;
     window.DashboardCalendar = {
-        render: init,
+        render: async () => {
+            if (!_calInitialized) {
+                await loadBookings();
+                _calInitialized = true;
+                await render();
+                if (state.loadError) {
+                    const grid = document.getElementById("calendarGrid");
+                    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:20px 24px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;color:#b91c1c;font-size:13px;font-weight:700;">' + escapeHtml(state.loadError) + '</div>';
+                }
+            } else {
+                await render();
+            }
+        },
         reload: async () => {
+            _calInitialized = false;
             await loadBookings();
+            _calInitialized = true;
             await render();
         }
     };

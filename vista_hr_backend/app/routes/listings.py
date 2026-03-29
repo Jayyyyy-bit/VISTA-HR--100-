@@ -687,11 +687,22 @@ def resident_feed():
     limit = request.args.get("limit", 30, type=int)
     limit = max(1, min(limit, 60))
 
+    from ..models.booking import Booking as _Bk
+    from sqlalchemy import exists
+
+    # Exclude listings that already have an APPROVED or ACTIVE booking
+    booked_subq = (
+        db.session.query(_Bk.listing_id)
+        .filter(_Bk.status.in_(["APPROVED", "ACTIVE"]))
+        .subquery()
+    )
+
     listings = (
         Listing.query
         .filter(Listing.status == "PUBLISHED")
+        .filter(~Listing.id.in_(booked_subq))
         .order_by(Listing.updated_at.desc())
-        .limit(200)          # load more, filter in Python since location/price are JSON
+        .limit(200)
         .all()
     )
 
@@ -754,6 +765,100 @@ def resident_feed():
             break
 
     return jsonify({"listings": out, "total": len(out)}), 200
+
+# ══ ADMIN — All listings (paginated, filterable) ══════════════
+@listings_bp.get("/admin/listings")
+@require_role("ADMIN")
+def admin_list_listings():
+    from ..models.booking import Booking as _Bk2
+    page = request.args.get("page", 1, type=int)
+    per_page = min(request.args.get("per_page", 20, type=int), 100)
+    status_filter = (request.args.get("status") or "").strip().upper() or None
+    city_q = (request.args.get("city") or "").strip().lower()
+    owner_q = (request.args.get("owner") or "").strip().lower()
+
+    q = Listing.query
+    if status_filter:
+        q = q.filter(Listing.status == status_filter)
+
+    all_listings = q.order_by(Listing.updated_at.desc()).all()
+
+    out = []
+    for l in all_listings:
+        d = l.to_dict()
+        loc = d.get("location") or {}
+        city = (loc.get("city") or "").lower()
+        cap = d.get("capacity") or {}
+        price = cap.get("monthly_rent") or cap.get("price") or None
+
+        if city_q and city_q not in city:
+            continue
+
+        photos = d.get("photos") or []
+        cover = None
+        if isinstance(photos, list) and photos:
+            cover = photos[0].get("url") if isinstance(photos[0], dict) else photos[0]
+
+        # Get owner info
+        from ..models.user import User as _User
+        owner = db.session.get(_User, l.owner_id)
+        owner_name = ""
+        owner_email = ""
+        if owner:
+            owner_name = f"{owner.first_name or ''} {owner.last_name or ''}".strip() or owner.email
+            owner_email = owner.email or ""
+
+        if owner_q and owner_q not in owner_name.lower() and owner_q not in owner_email.lower():
+            continue
+
+        # Latest booking status
+        latest_bk = _Bk2.query.filter_by(listing_id=l.id).order_by(_Bk2.created_at.desc()).first()
+
+        out.append({
+            "id": d["id"],
+            "title": d.get("title") or "Untitled",
+            "status": d.get("status"),
+            "place_type": d.get("place_type") or "",
+            "city": loc.get("city") or "",
+            "barangay": loc.get("barangay") or "",
+            "price": price,
+            "cover": cover,
+            "owner_id": l.owner_id,
+            "owner_name": owner_name,
+            "owner_email": owner_email,
+            "booking_status": latest_bk.status if latest_bk else None,
+            "created_at": d.get("created_at"),
+            "updated_at": d.get("updated_at"),
+        })
+
+    total = len(out)
+    start = (page - 1) * per_page
+    paginated = out[start:start + per_page]
+
+    return jsonify({"listings": paginated, "total": total, "page": page, "per_page": per_page}), 200
+
+
+@listings_bp.post("/admin/listings/<int:listing_id>/status")
+@require_role("ADMIN")
+def admin_update_listing_status(listing_id: int):
+    data = request.get_json(silent=True) or {}
+    new_status = (data.get("status") or "").strip().upper()
+    VALID = {"DRAFT", "READY", "PUBLISHED", "ARCHIVED"}
+    if new_status not in VALID:
+        return json_error(f"Invalid status. Must be one of: {', '.join(VALID)}", 400)
+
+    listing = db.session.get(Listing, listing_id)
+    if not listing:
+        return json_error("Listing not found", 404)
+
+    listing.status = new_status
+    try:
+        db.session.commit()
+        return jsonify({"message": f"Listing status set to {new_status}", "status": new_status}), 200
+    except Exception:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
 # =========================
 # PUBLIC STATS — no auth required
 # Used by the roles page to show live platform numbers

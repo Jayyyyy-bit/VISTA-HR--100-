@@ -658,6 +658,8 @@ function toggleSave(id, btn) {
     if (btn) { btn.style.transform = "scale(1.35)"; setTimeout(() => btn.style.transform = "", 200); }
   }
   localStorage.setItem("vista_saved", JSON.stringify([...state.saved]));
+  // Re-render saved tab if currently visible
+  if (state.mode === "saved") renderSavedView();
 }
 
 /* ════════════════════════════════════════

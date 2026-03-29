@@ -87,29 +87,25 @@
         <!-- TODAY -->
         <section class="tabPanel active" id="tab-today" data-panel="today" role="tabpanel">
 
-            <!-- Alert banners -->
-            <div class="td-alerts">
-                <div class="td-alert td-alert--blue" id="emailVerifyBanner" hidden>
-                    <div class="td-alert-icon"><i data-lucide="mail"></i></div>
-                    <div class="td-alert-body">
-                        <div class="td-alert-title">Verify your email to publish listings</div>
-                        <div class="td-alert-sub">We sent a 6-digit code to your email. Verify to unlock publishing.
-                        </div>
+            <!-- Alert toasts (dismissible bubbles, only shown when needed) -->
+            <div class="td-toasts" id="tdAlertsWrap" hidden>
+                <div class="td-toast td-toast--blue" id="emailVerifyBanner" hidden>
+                    <i data-lucide="mail" class="td-toast-icon"></i>
+                    <div class="td-toast-body">
+                        <span class="td-toast-title">Verify your email</span>
+                        <span class="td-toast-sub">to unlock publishing</span>
                     </div>
-                    <a class="td-alert-cta td-alert-cta--blue" id="emailVerifyBtn" href="#">
-                        <i data-lucide="mail-check"></i> Verify email
-                    </a>
+                    <a class="td-toast-cta" id="emailVerifyBtn" href="#">Verify →</a>
+                    <button class="td-toast-close" data-dismiss="emailVerifyBanner" aria-label="Dismiss">✕</button>
                 </div>
-                <div class="td-alert td-alert--amber" id="verifyBanner" hidden>
-                    <div class="td-alert-icon"><i data-lucide="shield-alert"></i></div>
-                    <div class="td-alert-body">
-                        <div class="td-alert-title">Account pending verification</div>
-                        <div class="td-alert-sub">Your listings won\'t be visible to residents until an admin approves
-                            your account. Usually 1–2 business days.</div>
+                <div class="td-toast td-toast--amber" id="verifyBanner" hidden>
+                    <i data-lucide="shield-alert" class="td-toast-icon"></i>
+                    <div class="td-toast-body">
+                        <span class="td-toast-title">Identity pending</span>
+                        <span class="td-toast-sub">Listings hidden until approved</span>
                     </div>
-                    <a class="td-alert-cta td-alert-cta--amber" href="/Property-Owner/verification/verify.html">
-                        <i data-lucide="shield-check"></i> Verify now
-                    </a>
+                    <a class="td-toast-cta" href="/Property-Owner/verification/verify.html">Verify →</a>
+                    <button class="td-toast-close" data-dismiss="verifyBanner" aria-label="Dismiss">✕</button>
                 </div>
             </div>
 

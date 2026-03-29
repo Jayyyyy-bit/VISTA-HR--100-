@@ -25,7 +25,9 @@ window.DashToday = (() => {
 
     function relTime(iso) {
         if (!iso) return "";
-        const m = Math.floor((Date.now() - new Date(iso)) / 60000);
+        // Force UTC parse if no timezone info present
+        const normalized = iso && !iso.includes('+') && !iso.endsWith('Z') ? iso + 'Z' : iso;
+        const m = Math.floor((Date.now() - new Date(normalized)) / 60000);
         if (m < 1) return "just now";
         if (m < 60) return `${m}m ago`;
         const h = Math.floor(m / 60);
@@ -72,26 +74,50 @@ window.DashToday = (() => {
     }
 
     // ── Alerts ───────────────────────────────────────────────
+    // Track which toasts have been dismissed this session
+    const _dismissed = new Set(JSON.parse(sessionStorage.getItem("vista_dismissed_toasts") || "[]"));
+
+    function _saveDismissed() {
+        try { sessionStorage.setItem("vista_dismissed_toasts", JSON.stringify([..._dismissed])); } catch { }
+    }
+
     function _renderAlerts(ownerVerified) {
         const u = window.AuthGuard?.getSession?.()?.user || {};
-        // Check both session flag and ownerVerified from API
         const emailOk = u.email_verified === true;
         const kycOk = ownerVerified || u.kyc_status === "APPROVED" || u.is_verified === true;
 
+        const showEmail = !emailOk && !_dismissed.has("emailVerifyBanner");
+        const showKyc = emailOk && !kycOk && !_dismissed.has("verifyBanner");
+
         const emailBanner = el("emailVerifyBanner");
         if (emailBanner) {
-            emailBanner.hidden = emailOk;
-            if (!emailOk) {
+            emailBanner.hidden = !showEmail;
+            if (showEmail) {
                 const btn = el("emailVerifyBtn");
                 if (btn) btn.href = `/auth/verify-email.html?email=${encodeURIComponent(u.email || "")}&role=OWNER`;
             }
         }
-        const kycBanner = el("verifyBanner");
-        if (kycBanner) kycBanner.hidden = !emailOk || kycOk;
 
-        // Hide entire wrapper when both verified — clean, no empty space
+        const kycBanner = el("verifyBanner");
+        if (kycBanner) kycBanner.hidden = !showKyc;
+
         const wrap = el("tdAlertsWrap");
-        if (wrap) wrap.hidden = emailOk && kycOk;
+        if (wrap) wrap.hidden = !showEmail && !showKyc;
+
+        // Wire dismiss buttons (safe to call multiple times)
+        document.querySelectorAll(".td-toast-close[data-dismiss]").forEach(btn => {
+            btn.onclick = () => {
+                const id = btn.dataset.dismiss;
+                _dismissed.add(id);
+                _saveDismissed();
+                const toast = el(id);
+                if (toast) toast.hidden = true;
+                // Hide wrapper if no toasts visible
+                const anyVisible = [...document.querySelectorAll(".td-toast")].some(t => !t.hidden);
+                const wrap = el("tdAlertsWrap");
+                if (wrap) wrap.hidden = !anyVisible;
+            };
+        });
     }
 
     // ── Owner card ───────────────────────────────────────────
@@ -498,7 +524,11 @@ window.DashToday = (() => {
             const { icon, cls } = iMap[b.status] || { icon: "circle", cls: "cancelled" };
             const tenant = esc(b.resident_name || b.resident_email || "Resident");
             const listing = esc(b.listing?.title || "Untitled");
-            const time = relTime(b.updated_at || b.created_at);
+            // Use approved_at for real-time approval timestamp when available
+            const timeStamp = (b.status === 'APPROVED' || b.status === 'REJECTED')
+                ? (b.approved_at || b.updated_at || b.created_at)
+                : (b.updated_at || b.created_at);
+            const time = relTime(timeStamp);
             const label = {
                 APPROVED: "Approved", REJECTED: "Rejected", CANCELLED: "Cancelled",
                 ACTIVE: "Moved in", COMPLETED: "Completed"

@@ -45,6 +45,8 @@ class Booking(db.Model):
     updated_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
+    # Timestamp when the owner approved/rejected the booking
+    approved_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships (lazy=True is fine for this scale)
     listing = db.relationship("Listing", backref=db.backref("bookings", lazy=True))
@@ -78,6 +80,7 @@ class Booking(db.Model):
             "payment_verified": bool(self.payment_verified),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "approved_at": self.approved_at.isoformat() if self.approved_at else None,
             # Denormalized listing snapshot for easy display
             "listing": {
                 "title": listing.title if listing else None,

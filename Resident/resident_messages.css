@@ -721,3 +721,32 @@ body {
         display: flex !important;
     }
 }
+
+/* ── BUG FIX: rm-empty should not overflow rm-main ── */
+.rm-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.rm-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+    overflow: hidden;
+}
+
+.rm-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}

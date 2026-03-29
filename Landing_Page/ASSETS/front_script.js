@@ -185,19 +185,38 @@ function countUp(el, target, dur = 1100) {
 }
 
 async function initStats() {
-    let count = 0;
-    try {
-        const r = await fetch(`${API}/listings/feed?limit=60`, { credentials: "include" });
-        if (r.ok) { const d = await r.json(); count = (d.listings || []).length; }
-    } catch { count = 24; }
+    let totalListings = 0;
+    let totalOwners = 0;
+    let totalCities = 0;
 
-    // Trigger when hero becomes active (it's first, so on load)
+    try {
+        const r = await fetch(`${API}/public/stats`);
+        if (r.ok) {
+            const d = await r.json();
+            totalListings = d.total_listings || 0;
+            totalOwners = d.total_owners || 0;
+            // Count distinct cities from feed for the cities stat
+            try {
+                const fr = await fetch(`${API}/listings/feed?limit=60`);
+                if (fr.ok) {
+                    const fd = await fr.json();
+                    const cities = new Set((fd.listings || []).map(l => l.city).filter(Boolean));
+                    totalCities = cities.size;
+                }
+            } catch { }
+        }
+    } catch { }
+
     const fire = () => {
-        countUp(document.getElementById("statListings"), Math.max(count, 8));
-        countUp(document.getElementById("statOwners"), Math.max(Math.floor(count * 0.6), 5), 1300);
+        countUp(document.getElementById("statListings"), Math.max(totalListings, 1));
+        countUp(document.getElementById("statOwners"), Math.max(totalOwners, 1), 1300);
+        // Update the static "5+" cities if we have real data
+        const citiesEl = document.querySelector(".stat-n:not(#statListings):not(#statOwners)");
+        if (citiesEl && totalCities > 0) {
+            citiesEl.textContent = totalCities + "+";
+        }
     };
 
-    // Fire after a short delay so the user sees the animation
     setTimeout(fire, 1200);
 }
 
@@ -225,7 +244,14 @@ async function initListings() {
         if (r.ok) { const d = await r.json(); data = (d.listings || []).slice(0, 4); }
     } catch { }
 
-    // No MOCK fallback — show empty state if no published listings yet
+    if (!data.length) {
+        grid.innerHTML = `
+        <div style="grid-column:1/-1;padding:48px 24px;text-align:center;color:var(--ink-40)">
+            <div style="font-size:14px;font-weight:600">No listings published yet.</div>
+            <div style="font-size:13px;margin-top:6px">Be the first to list your space.</div>
+        </div>`;
+        return;
+    }
 
     grid.innerHTML = data.map(cardHTML).join("");
 
@@ -243,22 +269,27 @@ function cardHTML(l) {
     const price = l.price
         ? `<span class="price">₱${Number(l.price).toLocaleString()}<span>/mo</span></span>`
         : `<span class="price" style="font-size:12px;color:var(--ink-60)">On request</span>`;
-    const loc = [l.barangay, l.city].filter(Boolean).join(", ") || "Caloocan";
+    const loc = [l.barangay, l.city].filter(Boolean).join(", ") || "Metro Manila";
     const img = l.cover
         ? `<img src="${esc(l.cover)}" alt="${esc(l.title)}" loading="lazy">`
-        : `<div style="width:100%;height:100%;background:var(--beige-lt)"></div>`;
-    const status = l.available !== false
-        ? `<div class="status available"><span></span>${l.units ? `${l.units} units left` : "Available now"}</div>`
-        : `<div class="status booked">Fully booked</div>`;
+        : `<div style="width:100%;height:100%;background:var(--beige-lt);display:flex;align-items:center;justify-content:center;color:#bbb"><i data-lucide="home" style="width:32px;height:32px"></i></div>`;
+
+    // All listings from feed are available (reserved ones are now excluded server-side)
+    const status = `<div class="status available"><span></span>Available now</div>`;
+
+    const typeLabel = l.place_type
+        ? `<span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-40);margin-bottom:4px;display:block">${esc(l.place_type)}</span>`
+        : "";
 
     return `
     <article class="listing" data-id="${l.id}">
       <div class="listing-img">
         ${img}
-        ${l.isNew ? `<span class="tag">New</span>` : ""}
-        ${l.tour !== false ? `<button class="tour-btn" title="360° Tour"><i data-lucide="rotate-3d"></i></button>` : ""}
+        <span class="tag new-tag">Available</span>
+        ${l.has_tour ? `<button class="tour-btn" title="360° Tour"><i data-lucide="rotate-3d"></i></button>` : ""}
       </div>
       <div class="listing-body">
+        ${typeLabel}
         <div class="listing-top"><h3>${esc(l.title)}</h3>${price}</div>
         <p class="meta"><i data-lucide="map-pin"></i> ${esc(loc)}</p>
         ${status}

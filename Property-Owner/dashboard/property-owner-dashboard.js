@@ -323,6 +323,8 @@
     class="lCard premiumCard"
     data-id="${escapeHtml(l.id)}"
     data-step="${escapeHtml(step)}"
+    data-status="${escapeHtml(status)}"
+    data-booking-status="${escapeHtml(l.booking_status || '')}"
     data-images='${escapeHtml(JSON.stringify(images))}'
   >
     <div class="lMedia">
@@ -411,7 +413,7 @@
           closeAllMenus();
 
           if (act === "edit") {
-            const isPublished = (l.status || "").toUpperCase() === "PUBLISHED";
+            const isPublished = (card.dataset.status || "").toUpperCase() === "PUBLISHED";
             if (isPublished) {
               // Warn owner that editing will unpublish the listing
               openModal({
@@ -443,7 +445,8 @@
 
           if (act === "unpublish") {
             // Check if listing has active booking — if so, block unpublish
-            if (l.booking_status === "ACTIVE" || l.booking_status === "APPROVED") {
+            const bkStatus = (card.dataset.bookingStatus || "").toUpperCase();
+            if (bkStatus === "ACTIVE" || bkStatus === "APPROVED") {
               openModal({
                 title: "Cannot unpublish",
                 message: "This listing has an active reservation or move-in. It cannot be unpublished until the booking is completed or cancelled.",
@@ -544,7 +547,8 @@
           }
 
           if (act === "delete") {
-            if (l.booking_status === "ACTIVE" || l.booking_status === "APPROVED") {
+            const bkStatusDel = (card.dataset.bookingStatus || "").toUpperCase();
+            if (bkStatusDel === "ACTIVE" || bkStatusDel === "APPROVED") {
               openModal({
                 title: "Cannot delete",
                 message: "This listing has an active reservation. It cannot be deleted until the booking is completed or cancelled.",
@@ -804,6 +808,16 @@
   // ══════════════════════════════════════════════════════════
   const API_NOTIF = "http://127.0.0.1:5000/api";
 
+  // escapeHtml needs to be in outer scope so loadNotifications can access it
+  function escapeHtmlN(str) {
+    return String(str || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
   function elN(id) { return document.getElementById(id); }
 
   async function loadNotifications() {
@@ -839,8 +853,8 @@
           : "";
         return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}">
                     <div class="notif-item-body">
-                        <div class="notif-item-title">${escapeHtml(n.title || "")}</div>
-                        ${n.body ? `<div class="notif-item-body-txt">${escapeHtml(n.body)}</div>` : ""}
+                        <div class="notif-item-title">${escapeHtmlN(n.title || "")}</div>
+                        ${n.body ? `<div class="notif-item-body-txt">${escapeHtmlN(n.body)}</div>` : ""}
                         <div class="notif-item-time">${time}</div>
                     </div>
                 </div>`;

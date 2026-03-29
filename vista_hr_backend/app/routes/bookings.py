@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy.exc import SQLAlchemyError
@@ -181,6 +181,7 @@ def owner_bookings():
             "start": d.get("move_in_date"),
             "end": d.get("move_out_date"),
             "image": listing_snap.get("cover"),
+            "approved_at": d.get("approved_at"),
         })
 
     return jsonify({"bookings": out}), 200
@@ -267,6 +268,10 @@ def _owner_update_booking(booking_id: int, new_status: str, note: str = None):
     booking.status = new_status
     if note:
         booking.owner_note = note
+
+    # Record the exact timestamp when the booking was approved or rejected
+    if new_status in ("APPROVED", "REJECTED"):
+        booking.approved_at = datetime.now(timezone.utc)
 
     try:
         db.session.commit()
