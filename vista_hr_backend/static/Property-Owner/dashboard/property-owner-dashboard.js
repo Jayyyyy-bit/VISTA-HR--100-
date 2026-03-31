@@ -723,6 +723,7 @@
 
       if (key === "today") { window.DashToday?.render(); window.DashToday?.bindFilterBar?.(); }
       if (key === "listings") renderListings();
+      if (key === "messages") window.MessagesPanel?.init?.();
 
       if (key === "calendar" && window.DashboardCalendar?.render) {
         window.DashboardCalendar.render();
@@ -832,7 +833,7 @@
       // Update badge
       const badge = elN("notifBadge");
       if (badge) {
-        badge.textContent = unread > 9 ? "9+" : unread;
+        badge.textContent = unread > 10 ? "10+" : unread;
         badge.hidden = unread === 0;
       }
 
@@ -851,12 +852,36 @@
           ? new Date((n.created_at.includes("+") || n.created_at.endsWith("Z") ? n.created_at : n.created_at + "Z"))
             .toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" })
           : "";
-        return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}">
+        // Determine redirect URL based on notification type
+        const notifType = (n.notif_type || n.type || "").toUpperCase();
+        let redirectUrl = null;
+
+        if (notifType.includes("MESSAGE")) {
+          const params = new URLSearchParams();
+          const senderMatch = String(n.title || "").match(/^New message from\s+(.+)$/i);
+          const listingMatch = String(n.body || "").match(/^Re:\s*(.+?)(?:\s+[—-]\s+|$)/i);
+
+          if (senderMatch?.[1]) params.set("sender", senderMatch[1].trim());
+          if (listingMatch?.[1]) params.set("listing", listingMatch[1].trim());
+
+          const query = params.toString();
+          redirectUrl = `/Property-Owner/dashboard/property-owner-dashboard.html${query ? `?${query}` : ""}#/messages`;
+        } else if (notifType.includes("BOOKING")) {
+          redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
+        } else if (notifType.includes("KYC") || notifType.includes("VERIF")) {
+          redirectUrl = "/Property-Owner/verification/verify.html";
+        }
+
+        return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}"
+                    style="cursor:${redirectUrl ? 'pointer' : 'default'}"
+                    ${redirectUrl ? `onclick="window.location.href='${redirectUrl}'"` : ""}>
+                    <div class="notif-item-dot"></div>
                     <div class="notif-item-body">
                         <div class="notif-item-title">${escapeHtmlN(n.title || "")}</div>
                         ${n.body ? `<div class="notif-item-body-txt">${escapeHtmlN(n.body)}</div>` : ""}
                         <div class="notif-item-time">${time}</div>
                     </div>
+                    ${redirectUrl ? '<div class="notif-item-arrow">›</div>' : ""}
                 </div>`;
       }).join("");
 

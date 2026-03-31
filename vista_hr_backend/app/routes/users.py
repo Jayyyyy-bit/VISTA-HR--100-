@@ -178,7 +178,7 @@ def update_user(user_id):
             user.suspension_reason = reason
             current_strikes = int(getattr(user, "strike_count", 0) or 0)
             if bool(data.get("add_strike", True)):
-                current_strikes = min(current_strikes + 1, 3)
+                current_strikes = min(current_strikes + 1, 5)
                 user.strike_count = current_strikes
         else:
             user.suspended_until   = None
@@ -223,7 +223,7 @@ def patch_user(user_id: int):
             user.suspension_reason = reason
             current_strikes = int(getattr(user, "strike_count", 0) or 0)
             if bool(data.get("add_strike", True)):
-                current_strikes = min(current_strikes + 1, 3)
+                current_strikes = min(current_strikes + 1, 5)
                 user.strike_count = current_strikes
         else:
             user.suspended_until   = None

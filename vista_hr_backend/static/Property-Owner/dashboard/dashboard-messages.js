@@ -45,6 +45,41 @@
 
     function threadKey(t) { return `${t.listing_id}_${t.other_user_id}`; }
 
+    function findInitialThreadFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const listingId = Number(params.get("listing_id"));
+        const otherUserId = Number(params.get("other_user_id"));
+        const sender = (params.get("sender") || "").trim().toLowerCase();
+        const listing = (params.get("listing") || "").trim().toLowerCase();
+
+        if (listingId && otherUserId) {
+            return state.conversations.find(t => t.listing_id === listingId && t.other_user_id === otherUserId)
+                || { listing_id: listingId, other_user_id: otherUserId };
+        }
+
+        if (!sender && !listing) return null;
+
+        const exact = state.conversations.find(t =>
+            (!sender || String(t.other_name || "").trim().toLowerCase() === sender) &&
+            (!listing || String(t.listing_title || "").trim().toLowerCase() === listing)
+        );
+        if (exact) return exact;
+
+        return state.conversations.find(t =>
+            (!sender || String(t.other_name || "").toLowerCase().includes(sender)) &&
+            (!listing || String(t.listing_title || "").toLowerCase().includes(listing))
+        ) || null;
+    }
+
+    function clearMessageDeepLink() {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("listing_id");
+        url.searchParams.delete("other_user_id");
+        url.searchParams.delete("sender");
+        url.searchParams.delete("listing");
+        window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+
     const API_BASE = "http://127.0.0.1:5000/api";
 
     async function apiFetch(path, opts = {}) {
@@ -194,7 +229,7 @@
                 renderThreadList();
                 loadUnreadBadge();
             }
-        }, 8000);
+        }, 1500);
     }
 
     function renderChatHeader() {
@@ -440,6 +475,13 @@
         }
         await loadConversations();
         renderThreadList();
+
+        const initialThread = findInitialThreadFromUrl();
+        if (initialThread?.listing_id && initialThread?.other_user_id) {
+            await openThread(Number(initialThread.listing_id), Number(initialThread.other_user_id));
+            clearMessageDeepLink();
+        }
+
         loadUnreadBadge();
         if (window.lucide) lucide.createIcons();
     }
