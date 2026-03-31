@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupDropdownClose();
 
   await loadListings();
-  checkURLParams();
+
   // Escape key closes booking modal
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
@@ -828,10 +828,19 @@ function closeBookingModal() {
         const time = iso
           ? new Date(iso).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" })
           : "";
-        return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}">
-                    <div class="notif-item-title">${esc(n.title || "")}</div>
-                    ${n.body ? `<div class="notif-item-body-txt">${esc(n.body)}</div>` : ""}
-                    <div class="notif-item-time">${time}</div>
+        const nType = (n.notif_type || n.type || "").toUpperCase();
+        let rUrl = null;
+        if (nType.includes("MESSAGE")) rUrl = "/Resident/resident_messages.html";
+        else if (nType.includes("BOOKING")) rUrl = "/Resident/my-bookings.html";
+        return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}"
+                    style="cursor:${rUrl ? 'pointer' : 'default'}"
+                    ${rUrl ? `onclick="window.location.href='${rUrl}'"` : ""}>
+                    <div class="notif-item-body">
+                        <div class="notif-item-title">${esc(n.title || "")}</div>
+                        ${n.body ? `<div class="notif-item-body-txt">${esc(n.body)}</div>` : ""}
+                        <div class="notif-item-time">${time}</div>
+                    </div>
+                    ${rUrl ? '<span style="color:#9ca3af;font-size:16px;align-self:center">›</span>' : ""}
                 </div>`;
       }).join("");
 

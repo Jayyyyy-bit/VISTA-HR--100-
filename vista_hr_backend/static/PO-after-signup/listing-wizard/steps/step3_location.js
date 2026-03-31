@@ -464,10 +464,47 @@ window.Step3Init = function Step3Init() {
 
         marker = window.L.marker([14.5995, 120.9842], { draggable: true }).addTo(map);
 
-        marker.on("dragend", () => {
+        marker.on("dragend", async () => {
             const p = marker.getLatLng();
             const loc = readLocFromUI();
             ListingStore.saveDraft({ location: { ...loc, lat: p.lat, lng: p.lng, precise: true } });
+
+            // Auto-fill address using Nominatim reverse geocoding (OpenStreetMap - FREE)
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${p.lat}&lon=${p.lng}&format=json&addressdetails=1`,
+                    { headers: { "Accept-Language": "en-PH,en", "User-Agent": "VISTA-HR/1.0" } }
+                );
+                const data = await res.json();
+                if (data && data.address) {
+                    const addr = data.address;
+                    // Build street address from components
+                    const parts = [
+                        addr.house_number,
+                        addr.road || addr.pedestrian || addr.footway,
+                        addr.neighbourhood || addr.suburb
+                    ].filter(Boolean);
+                    const street = parts.join(", ");
+                    // Auto-fill street address field
+                    const streetInput = document.getElementById("streetAddress")
+                        || document.querySelector('input[placeholder*="street" i]')
+                        || document.querySelector('input[placeholder*="address" i]')
+                        || document.querySelector('input[name*="street" i]');
+                    if (streetInput && street) {
+                        streetInput.value = street;
+                        streetInput.dispatchEvent(new Event("input", { bubbles: true }));
+                    }
+                    // Show toast
+                    if (window.showToast) showToast("Address auto-filled from map pin 📍");
+                    else console.log("[Nominatim] Address:", street);
+                }
+            } catch (e) {
+                console.warn("[Nominatim] Reverse geocoding failed:", e);
+            }
+
+            // re-read to get current state
+            const loc2 = readLocFromUI();
+            ListingStore.saveDraft({ location: { ...loc2, lat: p.lat, lng: p.lng, precise: true } });
             if (els.mapHint) els.mapHint.textContent = "Pin moved. Saved precise map point.";
             SidePanel.refresh();
         });
@@ -642,7 +679,7 @@ window.Step3Init = function Step3Init() {
 
     if (els.country) els.country.addEventListener("change", () => syncUIAndDraft({ geocode: true }));
 
-    // 🔥 trigger geocode when CITY changes
+    // trigger geocode when CITY changes
     if (els.city) {
         els.city.addEventListener("change", () => {
             if (els.barangay) els.barangay.value = "";

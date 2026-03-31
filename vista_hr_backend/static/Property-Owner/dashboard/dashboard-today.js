@@ -39,6 +39,15 @@ window.DashToday = (() => {
 
     // ── Main render ──────────────────────────────────────────
     async function render() {
+        // Fetch fresh session so verification status is always up-to-date
+        try {
+            const me = await fetch("/api/auth/me", { credentials: "include" });
+            const md = await me.json().catch(() => ({}));
+            if (me.ok && md.user && window.AuthGuard?.saveSession) {
+                window.AuthGuard.saveSession(md);
+            }
+        } catch (e) { /* silent */ }
+
         let ownerVerified = true;
         try {
             // Run independently — don't let one 500 block the other

@@ -1,4 +1,6 @@
-from flask import Flask, jsonify
+from importlib.resources import path
+
+from flask import Flask, app, jsonify
 from flask_cors import CORS
 from sqlalchemy.exc import SQLAlchemyError
 from flask import redirect
@@ -7,7 +9,10 @@ from .extensions import db
 
 
 def create_app():
-    app = Flask(__name__)
+    import os as _os
+    _static = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), 'static')
+    app = Flask(__name__, static_folder=_static, static_url_path='')
+    
     app.config.from_object(Config)
 
     db.init_app(app)
@@ -16,10 +21,12 @@ def create_app():
     CORS(
         app,
         resources={r"/api/*": {
-            "origins": ["http://127.0.0.1:5500", "http://localhost:5500" , "https://Vista-HR.netlify.app"],
+            "origins": ["http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5000", "https://Vista-HR.netlify.app"],
             "supports_credentials": True,
             "allow_headers": ["Content-Type", "Authorization"],
             "methods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+
+            
         }},
     )
 
@@ -59,8 +66,19 @@ def create_app():
     def _routes():
         return jsonify(sorted([str(r) for r in app.url_map.iter_rules()])), 200
 
-    @app.get("/")
-    def root_redirect():
-        return redirect("http://127.0.0.1:5500/Landing_Page/ASSETS/front_index.html")
+    from flask import send_from_directory as _sfd, request as _req
+
+    @app.route("/")
+    def _index():
+        return _sfd(app.static_folder, "auth/login.html")
+
+    @app.errorhandler(404)
+    def _not_found(e):
+        path = _req.path.lstrip("/")
+        full = _os.path.join(app.static_folder, path)
+        if _os.path.isfile(full):
+            return _sfd(app.static_folder, path)
+        return _sfd(app.static_folder, "auth/login.html"), 200
 
     return app
+    

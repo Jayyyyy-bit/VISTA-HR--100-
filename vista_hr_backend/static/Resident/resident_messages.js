@@ -262,7 +262,7 @@
                 await loadConversations();
                 renderThreadList();
             }
-        }, 8000);
+        }, 1500);
 
         if (window.lucide?.createIcons) lucide.createIcons();
         el("rmInput")?.focus();

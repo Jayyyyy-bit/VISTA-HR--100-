@@ -4,10 +4,10 @@
 
 const API = "http://127.0.0.1:5000/api";
 const PATHS = {
-    login: "../../auth/login.html",
-    signup: "../../Login_Register_Page/Signup/roles.html",
-    residentHome: "../../Resident/resident_home.html",
-    ownerDash: "../../Property-Owner/dashboard/property-owner-dashboard.html",
+    login: "/vista_hr_backend/static/auth/login.html",
+    signup: "/vista_hr_backend/static/Login_Register_Page/Signup/roles.html",
+    residentHome: "/vista_hr_backend/static/Resident/resident_home.html",
+    ownerDash: "/vista_hr_backend/static/Property-Owner/dashboard/property-owner-dashboard.html",
 };
 
 
