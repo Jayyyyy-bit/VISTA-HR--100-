@@ -1,4 +1,4 @@
-// step7_photos.js — Photos + 360° Panorama Upload + Guide Modal
+// step7_photos.js — Photos + 360° Pannellum Viewer + Dark Image Detection
 
 window.Step7Init = function Step7Init({ nextBtn }) {
     const { ListingStore, SidePanel } = window;
@@ -26,6 +26,17 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     const panoPreviewImg = document.getElementById("panoPreviewImg");
     const panoRemoveBtn = document.getElementById("panoRemoveBtn");
 
+    // ── Pannellum viewer elements ──
+    const panoViewerWrap = document.getElementById("panoViewerWrap");
+    const panoViewerEl = document.getElementById("panoViewer");
+    const panoRemoveBtn2 = document.getElementById("panoRemoveBtn2");
+
+    // ── Dark image warning elements ──
+    const darkWarning = document.getElementById("darkWarning");
+    const darkWarningText = document.getElementById("darkWarningText");
+    const darkWarningList = document.getElementById("darkWarningList");
+    const darkWarningClose = document.getElementById("darkWarningClose");
+
     // ── Guide modal elements ──
     const guideOverlay = document.getElementById("guideOverlay");
     const guideModal = document.getElementById("guideModal");
@@ -39,6 +50,12 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     const API_BASE = "http://127.0.0.1:5000/api";
     let guideStep = 1;
     const GUIDE_TOTAL = 5;
+
+    // Track Pannellum instance so we can destroy/recreate
+    let pannellumViewer = null;
+
+    // Track dark image names for the warning banner
+    let darkImageNames = [];
 
     // ────────────────────────────────────────
     //  STORE HELPERS
@@ -70,8 +87,137 @@ window.Step7Init = function Step7Init({ nextBtn }) {
 
     function removePhoto(id) {
         const { photos } = read();
+        // Also remove from dark list if present
+        const removed = photos.find(p => p.id === id);
+        if (removed) {
+            darkImageNames = darkImageNames.filter(n => n !== (removed.name || "photo"));
+            updateDarkWarning();
+        }
         savePhotos(ensureCover(photos.filter(p => p.id !== id)));
         render();
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  DARK IMAGE DETECTION
+    // ════════════════════════════════════════════════════════════
+    //
+    //  How it works:
+    //  After a photo uploads, we draw it onto a hidden <canvas>,
+    //  sample pixel data, and calculate average brightness.
+    //  If brightness < threshold, we flag it as "dark".
+    //
+    //  This runs in the browser — no API, no server, no library.
+    //
+    //  The brightness formula is the standard luminance formula:
+    //    L = 0.299*R + 0.587*G + 0.114*B
+    //  Values range 0 (black) to 255 (white).
+    //  A threshold of 60 catches genuinely dark/underexposed photos
+    //  without false-flagging moody interior shots.
+    // ════════════════════════════════════════════════════════════
+    const DARK_THRESHOLD = 60; // 0-255 brightness scale
+
+    function analyzeBrightness(imageUrl, fileName) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement("canvas");
+                    // Downscale for speed — we don't need full resolution to detect brightness
+                    const maxDim = 100;
+                    const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data; // [R,G,B,A, R,G,B,A, ...]
+
+                    let totalLuminance = 0;
+                    const pixelCount = data.length / 4;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        // Standard luminance formula (perceived brightness)
+                        totalLuminance += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                    }
+
+                    const avgBrightness = totalLuminance / pixelCount;
+                    const isDark = avgBrightness < DARK_THRESHOLD;
+
+                    resolve({ isDark, brightness: Math.round(avgBrightness), fileName });
+                } catch (e) {
+                    // Canvas tainted or other error — skip detection silently
+                    console.warn("[Step7] brightness analysis failed for", fileName, e);
+                    resolve({ isDark: false, brightness: -1, fileName });
+                }
+            };
+
+            img.onerror = () => {
+                // CORS or load error — skip
+                resolve({ isDark: false, brightness: -1, fileName });
+            };
+
+            img.src = imageUrl;
+        });
+    }
+
+    async function checkDarkPhotos(newPhotos) {
+        // newPhotos = array of photo objects just uploaded
+        const checks = newPhotos.map(p =>
+            analyzeBrightness(p.url, p.name || "photo")
+        );
+
+        const results = await Promise.all(checks);
+        const darkOnes = results.filter(r => r.isDark);
+
+        if (darkOnes.length > 0) {
+            for (const d of darkOnes) {
+                if (!darkImageNames.includes(d.fileName)) {
+                    darkImageNames.push(d.fileName);
+                }
+            }
+            // Mark dark photos in the store so we can show badge on thumbnails
+            const { photos } = read();
+            const darkFileNames = new Set(darkOnes.map(d => d.fileName));
+            const updated = photos.map(p => {
+                if (darkFileNames.has(p.name || "photo")) {
+                    return { ...p, _isDark: true };
+                }
+                return p;
+            });
+            savePhotos(updated);
+            updateDarkWarning();
+        }
+    }
+
+    function updateDarkWarning() {
+        if (!darkWarning) return;
+
+        if (darkImageNames.length === 0) {
+            darkWarning.style.display = "none";
+            return;
+        }
+
+        darkWarning.style.display = "flex";
+
+        if (darkImageNames.length === 1) {
+            darkWarningText.textContent = `"${darkImageNames[0]}" appears too dark. Bright, well-lit photos get more inquiries.`;
+            darkWarningList.textContent = "";
+        } else {
+            darkWarningText.textContent =
+                `${darkImageNames.length} photos appear too dark. Consider retaking them with better lighting.`;
+            darkWarningList.textContent = darkImageNames.join(", ");
+        }
+    }
+
+    if (darkWarningClose) {
+        darkWarningClose.addEventListener("click", () => {
+            darkWarning.style.display = "none";
+            darkImageNames = [];
+        });
     }
 
     // ────────────────────────────────────────
@@ -127,7 +273,6 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     const MAX_PHOTOS = 20;
 
     function showUploadError(msg) {
-        // Show inline error below upload zone instead of alert()
         let errEl = document.getElementById("photoUploadErr");
         if (!errEl) {
             errEl = document.createElement("p");
@@ -169,14 +314,17 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     async function addFiles(fileList) {
         const { photos } = read();
         const files = validateFiles(fileList);
-        if (!files.length) return; // all rejected — error already shown
+        if (!files.length) return;
 
         setUploading(true);
         try {
-            // Parallel upload — all files upload simultaneously instead of one by one
             const added = await Promise.all(files.map(f => uploadOneToCloudinary(f)));
             savePhotos(ensureCover([...photos, ...added]));
             render();
+
+            // ── Run dark image detection AFTER upload completes ──
+            // This is async and non-blocking — doesn't delay the UI
+            checkDarkPhotos(added);
         } catch (e) {
             console.error("[Step7] upload failed", e);
             showUploadError(e?.message || e?.error?.message || "Upload failed. Please try again.");
@@ -197,15 +345,15 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         panoUploadZone?.classList.toggle("isUploading", !!on);
     }
 
-    const MAX_PANO_SIZE = 50 * 1024 * 1024; // 50 MB for panoramas (equirectangular images are large)
+    const MAX_PANO_SIZE = 50 * 1024 * 1024;
 
     async function uploadPanorama(file) {
         if (!ALLOWED_TYPES.has(file.type)) {
-            alert("Please choose a JPG, PNG, or WEBP image file for the panorama.");
+            showUploadError("Please choose a JPG, PNG, or WEBP image file for the panorama.");
             return;
         }
         if (file.size > MAX_PANO_SIZE) {
-            alert("Panorama file is too large. Maximum size is 50 MB.");
+            showUploadError("Panorama file is too large. Maximum size is 50 MB.");
             return;
         }
 
@@ -229,15 +377,15 @@ window.Step7Init = function Step7Init({ nextBtn }) {
             const { vt } = read();
             saveVT({ ...vt, panoUrl: out.secure_url, panoPublicId: out.public_id });
 
-            // Show preview
+            // Show flat preview briefly, then init Pannellum viewer
             renderPanoPreview(out.secure_url);
+            initPannellumViewer(out.secure_url);
 
-            // Clear URL input if set
             if (vtUrl) vtUrl.value = "";
 
         } catch (e) {
             console.error("[Step7] panorama upload failed", e);
-            alert("Panorama upload failed. Please try again.");
+            showUploadError("Panorama upload failed. Please try again.");
         } finally {
             setPanoUploading(false);
         }
@@ -259,7 +407,71 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         saveVT({ ...vt, panoUrl: "", panoPublicId: "" });
         if (vtUrl) vtUrl.value = "";
         renderPanoPreview("");
+        destroyPannellumViewer();
     }
+
+    // ════════════════════════════════════════════════════════════
+    //  PANNELLUM — Interactive 360° Viewer
+    // ════════════════════════════════════════════════════════════
+    //
+    //  Pannellum is a free, open-source, lightweight JS library
+    //  that renders equirectangular panorama images as interactive
+    //  360° viewers. The user can drag to look around, zoom, and
+    //  explore — exactly what panelists expect.
+    //
+    //  CDN loaded in HTML: pannellum@2.5.6
+    //  Docs: https://pannellum.org/documentation/overview/
+    //
+    //  We init the viewer AFTER a panorama is uploaded or when
+    //  resuming a draft that already has a panoUrl.
+    // ════════════════════════════════════════════════════════════
+
+    function initPannellumViewer(imageUrl) {
+        if (!imageUrl || !panoViewerEl) return;
+
+        // If Pannellum library not loaded yet, skip gracefully
+        if (typeof pannellum === "undefined") {
+            console.warn("[Step7] Pannellum not loaded — showing flat preview only");
+            return;
+        }
+
+        // Destroy existing instance if any
+        destroyPannellumViewer();
+
+        // Hide flat preview, show viewer
+        if (panoPreview) panoPreview.hidden = true;
+        if (panoUploadInner) panoUploadInner.hidden = true;
+        if (panoViewerWrap) panoViewerWrap.style.display = "block";
+
+        // Create Pannellum viewer
+        pannellumViewer = pannellum.viewer(panoViewerEl, {
+            type: "equirectangular",
+            panorama: imageUrl,
+            autoLoad: true,         // Load immediately, no click-to-load
+            autoRotate: -2,         // Slow auto-rotate to show it's interactive
+            compass: false,
+            showZoomCtrl: true,
+            showFullscreenCtrl: true,
+            mouseZoom: true,
+            hfov: 100,              // Default horizontal field of view
+            minHfov: 50,
+            maxHfov: 120,
+            friction: 0.15,         // Smooth drag
+        });
+    }
+
+    function destroyPannellumViewer() {
+        if (pannellumViewer) {
+            try { pannellumViewer.destroy(); } catch (e) { /* ignore */ }
+            pannellumViewer = null;
+        }
+        if (panoViewerWrap) panoViewerWrap.style.display = "none";
+        // Clear the viewer container's inner HTML (Pannellum adds children)
+        if (panoViewerEl) panoViewerEl.innerHTML = "";
+    }
+
+    // Remove button inside viewer header
+    panoRemoveBtn2?.addEventListener("click", removePanorama);
 
     // ────────────────────────────────────────
     //  RENDER
@@ -280,7 +492,6 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         if (photoCountLabel) photoCountLabel.textContent = `${count} / ${MIN_PHOTOS} minimum`;
         if (nextBtn) nextBtn.disabled = count < MIN_PHOTOS;
 
-        // Only show the bottom tips strip if user hasn't dismissed it before
         if (!isTipsDismissed()) {
             SidePanel.setTips({
                 selectedLabel: "Photos & Virtual Tour",
@@ -292,7 +503,6 @@ window.Step7Init = function Step7Init({ nextBtn }) {
                 ],
             });
         } else {
-            // Still update the side panel progress, just skip the bottom strip
             SidePanel.refresh();
         }
     }
@@ -300,17 +510,21 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     function render() {
         const { photos, vt } = read();
 
-        // ── Thumb grid ──
+        // ── Thumb grid with dark badge ──
         thumbGrid.innerHTML = photos.map(p => {
             const src = typeof p === "string" ? p : p?.url;
             const name = typeof p === "string" ? "photo" : (p?.name || "photo");
             const cover = (typeof p !== "string" && p?.isCover)
                 ? `<div class="coverTag">Cover</div>` : "";
             const pid = typeof p === "string" ? null : p?.id;
+            const isDark = (typeof p !== "string" && p?._isDark);
+            const darkBadge = isDark
+                ? `<div class="darkBadge">⚠ Dark</div>` : "";
 
             return `
               <div class="thumb">
                 ${cover}
+                ${darkBadge}
                 <img src="${src || ""}" alt="${name}" />
                 <div class="thumbBar">
                   ${pid ? `<button class="tBtn" type="button" data-act="cover" data-id="${pid}">Set cover</button>` : ""}
@@ -332,9 +546,17 @@ window.Step7Init = function Step7Init({ nextBtn }) {
         vtToggle?.classList.toggle("on", on);
         if (vtBody) vtBody.hidden = !on;
 
-        // ── Panorama preview ──
-        renderPanoPreview(vt.panoUrl || "");
-        if (vtUrl) vtUrl.value = (!vt.panoUrl && vt.panoUrl !== undefined) ? "" : "";
+        // ── Panorama: show viewer if URL exists, else show upload zone ──
+        const panoUrl = vt.panoUrl || "";
+        if (panoUrl && on) {
+            renderPanoPreview(""); // hide flat preview
+            initPannellumViewer(panoUrl);
+        } else if (!panoUrl) {
+            destroyPannellumViewer();
+            renderPanoPreview("");
+        }
+
+        if (vtUrl) vtUrl.value = "";
 
         window.lucide?.createIcons?.();
         updateNextAndSide();
@@ -359,25 +581,16 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     }
 
     function renderGuideStep() {
-        // Show/hide steps
         document.querySelectorAll(".gm-step").forEach(s => {
             s.classList.toggle("active", parseInt(s.dataset.step) === guideStep);
         });
-
-        // Update dots
         document.querySelectorAll(".gm-dot").forEach(d => {
             d.classList.toggle("active", parseInt(d.dataset.step) === guideStep);
         });
-
-        // Update counter
         if (gmStepCounter) gmStepCounter.textContent = `Step ${guideStep} of ${GUIDE_TOTAL}`;
-
-        // Update progress bar
         if (gmProgressBar) {
             gmProgressBar.style.width = `${(guideStep / GUIDE_TOTAL) * 100}%`;
         }
-
-        // Prev/Next buttons
         if (gmPrev) gmPrev.disabled = guideStep === 1;
         if (gmNext) {
             if (guideStep === GUIDE_TOTAL) {
@@ -388,7 +601,6 @@ window.Step7Init = function Step7Init({ nextBtn }) {
                 gmNext.classList.remove("done");
             }
         }
-
         window.lucide?.createIcons?.();
     }
 
@@ -414,19 +626,27 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     // VT toggle
     vtToggle?.addEventListener("click", () => {
         const { vt } = read();
-        saveVT({ ...vt, enabled: !vt.enabled });
+        const newEnabled = !vt.enabled;
+        saveVT({ ...vt, enabled: newEnabled });
+
+        if (!newEnabled) {
+            // Turning off — destroy viewer
+            destroyPannellumViewer();
+        }
         render();
     });
 
-    // VT URL input
+    // VT URL input — when user pastes a URL, init viewer with it
     vtUrl?.addEventListener("input", () => {
         const { vt } = read();
-        // If URL is typed, clear uploaded panorama to avoid conflict
-        if (vtUrl.value.trim() && vt.panoUrl && vt.panoUrl !== vtUrl.value.trim()) {
-            saveVT({ ...vt, panoUrl: vtUrl.value.trim(), panoPublicId: "" });
-            renderPanoPreview(vtUrl.value.trim());
+        const url = vtUrl.value.trim();
+        saveVT({ ...vt, panoUrl: url, panoPublicId: "" });
+
+        if (url) {
+            renderPanoPreview(""); // hide flat preview
+            initPannellumViewer(url);
         } else {
-            saveVT({ ...vt, panoUrl: vtUrl.value.trim() });
+            destroyPannellumViewer();
         }
     });
 
@@ -469,7 +689,6 @@ window.Step7Init = function Step7Init({ nextBtn }) {
             renderGuideStep();
         } else {
             closeGuide();
-            // After guide, focus the upload button
             setTimeout(() => panoChooseBtn?.focus(), 300);
         }
     });

@@ -216,7 +216,7 @@
             fpShow("fpStep3");
             startCountdown(60);
             document.querySelector(".fp-otp-box")?.focus();
-        } catch (err) { alert(err.message); }
+        } catch (err) { showError(err.message); }
         finally { setLoading("fpSendOtp", "fpSpin2", "fpSendOtpLabel", false); }
     });
 

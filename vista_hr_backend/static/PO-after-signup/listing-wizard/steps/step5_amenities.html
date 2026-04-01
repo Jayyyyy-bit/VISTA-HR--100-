@@ -1,7 +1,7 @@
 <div class="step-header">
     <div class="step-kicker">Create listing • Step 5 of 8</div>
     <h1 class="step-title">What amenities do you offer?</h1>
-    <p class="step-sub">Choose what guests can use. You can edit this later.</p>
+    <p class="step-sub">Choose what guests can use. Can't find one? Add a custom amenity.</p>
 </div>
 
 <section class="amenShell">
@@ -10,7 +10,7 @@
             Essentials
         </button>
         <button class="amenTab" type="button" data-tab="activities" role="tab" aria-selected="false">
-            Activities
+            Comfort
         </button>
         <button class="amenTab" type="button" data-tab="safety" role="tab" aria-selected="false">
             Safety
@@ -27,13 +27,15 @@
 
             <div class="amenToolbar">
                 <div class="amenSearch">
-                    <i class="bx bx-search amenSearchIc" aria-hidden="true"></i>
-                    <input id="amenSearchInput" class="amenSearchInput" type="text" placeholder="Search amenities"
+                    <i data-lucide="search" class="amenSearchIc" aria-hidden="true"></i>
+                    <input id="amenSearchInput" class="amenSearchInput" type="text" placeholder="Search amenities…"
                         autocomplete="off" />
                     <button id="amenSearchClear" class="amenSearchClear" type="button"
                         aria-label="Clear search">×</button>
                 </div>
-
+                <div class="amenCountPill">
+                    <span id="amenCount">0</span> selected
+                </div>
             </div>
         </div>
 

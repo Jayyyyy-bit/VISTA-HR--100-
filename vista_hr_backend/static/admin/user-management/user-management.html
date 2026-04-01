@@ -10,47 +10,60 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
         rel="stylesheet">
+    <script src="/auth/toast.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/admin/user-management/user-management.css" />
 </head>
 
 <body>
 
-    <aside class="sidebar">
+    <aside class="sidebar" id="adminSidebar">
+
+        <!-- Toggle button -->
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
+            <i data-lucide="panel-left-close" id="toggleIconClose"></i>
+            <i data-lucide="panel-left-open" id="toggleIconOpen" hidden></i>
+        </button>
+
+        <!-- Brand -->
         <div class="sidebar-top">
             <div class="brand">
                 <div class="brand-dot"></div>
-                <span>VISTA<b>-HR</b></span>
+                <span class="sidebar-label">VISTA<b>-HR</b></span>
             </div>
-            <div class="admin-pill">Admin</div>
+            <div class="admin-pill sidebar-label">Admin</div>
         </div>
+
+        <!-- Nav -->
         <nav class="sidenav">
-            <a class="sidenav-item active" data-view="overview" href="#">
-                <i data-lucide="layout-dashboard"></i><span>Overview</span>
+            <a class="sidenav-item active" data-view="overview" href="#" title="Overview">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-label">Overview</span>
             </a>
-            <a class="sidenav-item" data-view="users" href="#">
-                <i data-lucide="users"></i><span>Users</span>
+            <a class="sidenav-item" data-view="users" href="#" title="Users">
+                <i data-lucide="users"></i>
+                <span class="sidebar-label">Users</span>
+                <span class="nav-badge sidebar-badge" id="verifBadge" hidden></span>
             </a>
-            <a class="sidenav-item" data-view="kyc" href="#">
-                <i data-lucide="shield-check"></i><span>Owner KYC</span>
-                <span class="nav-badge" id="kycBadge" hidden></span>
+            <a class="sidenav-item" data-view="content" href="#" title="Content">
+                <i data-lucide="layout-grid"></i>
+                <span class="sidebar-label">Content</span>
+                <span class="nav-badge sidebar-badge" id="amenitiesBadge" hidden></span>
             </a>
-            <a class="sidenav-item" data-view="student" href="#">
-                <i data-lucide="graduation-cap"></i><span>Student Verif.</span>
-                <span class="nav-badge" id="studentBadge" hidden></span>
-            </a>
-            <a class="sidenav-item" data-view="listings" href="#">
-                <i data-lucide="home"></i><span>Listings</span>
-            </a>
-            <a class="sidenav-item" data-view="analytics" href="#">
-                <i data-lucide="bar-chart-3"></i><span>Analytics</span>
+            <a class="sidenav-item" data-view="analytics" href="#" title="Analytics">
+                <i data-lucide="bar-chart-3"></i>
+                <span class="sidebar-label">Analytics</span>
             </a>
         </nav>
+
+        <!-- Bottom -->
         <div class="sidebar-bottom">
-            <button class="logout-btn" id="adminLogoutBtn" type="button">
-                <i data-lucide="log-out"></i><span>Logout</span>
+            <button class="logout-btn" id="adminLogoutBtn" type="button" title="Logout">
+                <i data-lucide="log-out"></i>
+                <span class="sidebar-label">Logout</span>
             </button>
         </div>
+
     </aside>
 
     <div class="main-wrap">
@@ -163,174 +176,290 @@
 
         <!-- USERS -->
         <section id="viewUsers" class="view" hidden>
-            <div class="view-toolbar">
-                <div class="search-wrap">
-                    <i data-lucide="search"></i>
-                    <input type="text" id="searchInput" placeholder="Search name, email, or role…" />
-                </div>
-                <select id="roleFilter">
-                    <option value="all">All roles</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Property Owner">Property Owner</option>
-                    <option value="Resident">Resident</option>
-                </select>
-                <select id="statusFilter">
-                    <option value="all">All statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Suspended">Suspended</option>
-                </select>
-                <button class="btn solid" id="addUserBtn" type="button">
-                    <i data-lucide="user-plus"></i><span>Add user</span>
+
+            <!-- Sub-tabs -->
+            <div class="um-subtabs" id="userSubTabs">
+                <button class="um-subtab active" data-utab="list" type="button">
+                    <i data-lucide="users"></i> All Users
+                </button>
+                <button class="um-subtab" data-utab="kyc" type="button">
+                    <i data-lucide="shield-check"></i> Owner KYC
+                    <span class="um-badge" id="kycBadge" hidden>0</span>
+                </button>
+                <button class="um-subtab" data-utab="student" type="button">
+                    <i data-lucide="graduation-cap"></i> Student Verif.
+                    <span class="um-badge" id="studentBadge" hidden>0</span>
+                </button>
+                <button class="um-subtab" data-utab="resident" type="button">
+                    <i data-lucide="home"></i> Resident Verif.
+                    <span class="um-badge" id="residentBadge" hidden>0</span>
+                </button>
+                <button class="um-subtab" data-utab="history" type="button">
+                    <i data-lucide="clock"></i> Activity Log
                 </button>
             </div>
-            <div class="panel">
-                <div class="panel-head">
-                    <div>
-                        <h2 class="panel-title">User directory</h2>
-                        <p class="panel-sub">Manage accounts, roles, and access</p>
+
+            <!-- All Users tab -->
+            <div id="uTabList">
+                <!-- Toolbar -->
+                <div class="um-toolbar">
+                    <div class="um-search">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="searchInput" placeholder="Search name, email, or role…"
+                            autocomplete="off" />
                     </div>
-                    <div class="mini-stats">
-                        <span><b id="totalUsers">0</b> total</span>
-                        <span><b id="totalOwners">0</b> owners</span>
-                        <span><b id="totalResidents">0</b> residents</span>
+                    <select id="roleFilter" class="um-select">
+                        <option value="all">All roles</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Property Owner">Property Owner</option>
+                        <option value="Resident">Resident</option>
+                    </select>
+                    <select id="statusFilter" class="um-select">
+                        <option value="all">All statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Suspended">Suspended</option>
+                    </select>
+                    <button class="um-add-btn" id="addUserBtn" type="button">
+                        <i data-lucide="user-plus"></i> Add user
+                    </button>
+                </div>
+
+                <!-- Stats row -->
+                <div class="um-stats-row">
+                    <div class="um-stat-chip">
+                        <span class="um-stat-num" id="totalUsers">0</span>
+                        <span class="um-stat-label">Total</span>
+                    </div>
+                    <div class="um-stat-chip">
+                        <span class="um-stat-num" id="totalOwners">0</span>
+                        <span class="um-stat-label">Owners</span>
+                    </div>
+                    <div class="um-stat-chip">
+                        <span class="um-stat-num" id="totalResidents">0</span>
+                        <span class="um-stat-label">Residents</span>
+                    </div>
+                    <div class="um-stat-chip um-stat-chip--warn" id="suspendedChip">
+                        <span class="um-stat-num" id="ovSuspended">0</span>
+                        <span class="um-stat-label">Suspended</span>
                     </div>
                 </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Strikes</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="userTableBody"></tbody>
-                    </table>
+
+                <!-- User cards grid -->
+                <div id="userCardGrid" class="um-card-grid"></div>
+            </div>
+
+            <!-- KYC tab -->
+            <div id="uTabKyc" hidden>
+                <div class="filter-bar" id="kycFilterBar">
+                    <button class="filter-pill active" data-status="PENDING">Pending</button>
+                    <button class="filter-pill" data-status="APPROVED">Approved</button>
+                    <button class="filter-pill" data-status="REJECTED">Rejected</button>
+                </div>
+                <div class="panel">
+                    <div id="kycList"></div>
                 </div>
             </div>
+
+            <!-- Student tab -->
+            <div id="uTabStudent" hidden>
+                <div class="filter-bar" id="studentFilterBar">
+                    <button class="filter-pill active" data-status="PENDING">Pending</button>
+                    <button class="filter-pill" data-status="APPROVED">Approved</button>
+                    <button class="filter-pill" data-status="REJECTED">Rejected</button>
+                </div>
+                <div class="panel">
+                    <div id="studentList"></div>
+                </div>
+            </div>
+
+            <!-- Resident Verif tab -->
+            <div id="uTabResident" hidden>
+                <div class="filter-bar" id="residentFilterBar">
+                    <button class="filter-pill active" data-status="PENDING">Pending</button>
+                    <button class="filter-pill" data-status="APPROVED">Approved</button>
+                    <button class="filter-pill" data-status="REJECTED">Rejected</button>
+                </div>
+                <div class="panel">
+                    <div id="residentList">
+                        <div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px">
+                            No resident verification submissions yet.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log tab -->
+            <div id="uTabHistory" hidden>
+                <div class="um-history-head">
+                    <select id="historyRoleFilter" class="um-select">
+                        <option value="all">All roles</option>
+                        <option value="OWNER">Property Owner</option>
+                        <option value="RESIDENT">Resident</option>
+                        <option value="ADMIN">Admin</option>
+                    </select>
+                    <select id="historyActionFilter" class="um-select">
+                        <option value="all">All actions</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="uplifted">Uplifted</option>
+                        <option value="created">Created</option>
+                        <option value="deleted">Deleted</option>
+                    </select>
+                </div>
+                <div id="activityLogList" class="um-history-list"></div>
+            </div>
+
         </section>
 
         <!-- KYC -->
-        <section id="viewKyc" class="view" hidden>
-            <div class="filter-bar" id="kycFilterBar">
-                <button class="filter-pill active" data-status="PENDING">Pending</button>
-                <button class="filter-pill" data-status="APPROVED">Approved</button>
-                <button class="filter-pill" data-status="REJECTED">Rejected</button>
-            </div>
-            <div class="panel">
-                <div id="kycList"></div>
-            </div>
-        </section>
+        <!-- USERS (merged: list + KYC + Student + Resident verif) -->
 
-        <!-- STUDENT -->
-        <section id="viewStudent" class="view" hidden>
-            <div class="filter-bar" id="studentFilterBar">
-                <button class="filter-pill active" data-status="PENDING">Pending</button>
-                <button class="filter-pill" data-status="APPROVED">Approved</button>
-                <button class="filter-pill" data-status="REJECTED">Rejected</button>
-            </div>
-            <div class="panel">
-                <div id="studentList"></div>
-            </div>
-        </section>
 
-        <!-- LISTINGS MANAGEMENT -->
-        <section id="viewListings" class="view" hidden>
-            <div class="filter-bar" id="listingsFilterBar">
-                <button class="filter-pill active" data-status="">All</button>
-                <button class="filter-pill" data-status="PUBLISHED">Published</button>
-                <button class="filter-pill" data-status="DRAFT">Draft</button>
-                <button class="filter-pill" data-status="READY">Ready</button>
-                <button class="filter-pill" data-status="ARCHIVED">Archived</button>
+        <!-- CONTENT (merged: Listings + Amenities) -->
+        <section id="viewContent" class="view" hidden>
+            <!-- Sub-tabs -->
+            <div class="user-subtabs" id="contentSubTabs">
+                <button class="user-subtab active" data-ctab="listings" type="button">
+                    <i data-lucide="home"></i> Listings
+                </button>
+                <button class="user-subtab" data-ctab="amenities" type="button">
+                    <i data-lucide="sparkles"></i> Amenities CMS
+                    <span class="nav-badge" id="amenPendingNavBadge" style="position:static;margin-left:4px"
+                        hidden></span>
+                </button>
             </div>
-            <div class="listings-search-bar">
-                <div class="lsb-input-wrap">
-                    <i data-lucide="search"></i>
-                    <input type="text" id="listingsSearch" placeholder="Search by title, owner, or city…"
-                        autocomplete="off">
+
+            <!-- Listings tab -->
+            <div id="cTabListings">
+                <div class="filter-bar" id="listingsFilterBar">
+                    <button class="filter-pill active" data-status="">All</button>
+                    <button class="filter-pill" data-status="PUBLISHED">Published</button>
+                    <button class="filter-pill" data-status="DRAFT">Draft</button>
+                    <button class="filter-pill" data-status="READY">Ready</button>
+                    <button class="filter-pill" data-status="ARCHIVED">Archived</button>
                 </div>
-                <span class="listings-count" id="listingsCount"></span>
+                <div class="listings-search-bar">
+                    <div class="lsb-input-wrap">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="listingsSearch" placeholder="Search by title, owner, or city…"
+                            autocomplete="off">
+                    </div>
+                    <span class="listings-count" id="listingsCount"></span>
+                </div>
+                <div class="panel">
+                    <div id="listingsList"></div>
+                    <div class="listings-pagination" id="listingsPagination" hidden>
+                        <button class="btn ghost" id="listingsPrevPage"><i data-lucide="chevron-left"></i> Prev</button>
+                        <span id="listingsPageLabel"></span>
+                        <button class="btn ghost" id="listingsNextPage">Next <i
+                                data-lucide="chevron-right"></i></button>
+                    </div>
+                </div>
             </div>
-            <div class="panel">
-                <div id="listingsList"></div>
-                <div class="listings-pagination" id="listingsPagination" hidden>
-                    <button class="btn ghost" id="listingsPrevPage"><i data-lucide="chevron-left"></i> Prev</button>
-                    <span id="listingsPageLabel"></span>
-                    <button class="btn ghost" id="listingsNextPage">Next <i data-lucide="chevron-right"></i></button>
+
+            <!-- Amenities tab -->
+            <div id="cTabAmenities" hidden>
+                <div class="amenities-tabs" id="amenitiesTabBar">
+                    <button class="amenities-tab active" data-tab="pending" type="button">
+                        Pending Review
+                        <span class="nav-badge" id="amenPendingBadge" style="position:static;margin-left:6px"
+                            hidden></span>
+                    </button>
+                    <button class="amenities-tab" data-tab="system" type="button">System Amenities</button>
+                    <button class="amenities-tab" data-tab="highlights" type="button">System Highlights</button>
+                </div>
+                <div id="amenTabPending">
+                    <p style="font-size:13px;color:#6b7280;margin-bottom:16px">
+                        Custom amenities/highlights submitted by Property Owners.
+                        Click <strong>Apply to All</strong> to make them available system-wide.
+                    </p>
+                    <div id="amenPendingList" class="amenities-list"></div>
+                </div>
+                <div id="amenTabSystem" hidden>
+                    <div
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+                        <p style="font-size:13px;color:#6b7280;margin:0">All system-wide amenities visible to Property
+                            Owners.</p>
+                    </div>
+                    <div id="amenSystemList" class="amenities-list"></div>
+                </div>
+                <div id="amenTabHighlights" hidden>
+                    <div
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+                        <p style="font-size:13px;color:#6b7280;margin:0">All system-wide highlights visible to Property
+                            Owners.</p>
+                    </div>
+                    <div id="amenHighlightsList" class="amenities-list"></div>
                 </div>
             </div>
         </section>
 
         <!-- ANALYTICS -->
         <section id="viewAnalytics" class="view" hidden>
+            <div class="an-toggle-bar">
+                <span class="an-section-label" id="anSectionLabel">Recent bookings</span>
+                <button id="anToggleBtn" class="an-toggle-btn" type="button">
+                    <i data-lucide="bar-chart-3"></i> Show more charts
+                </button>
+            </div>
 
-            <div class="stats-row an-stats-row">
+            <div class="an-stats-row">
                 <div class="stat-card">
                     <div class="stat-icon an-blue"><i data-lucide="users"></i></div>
                     <div class="stat-body">
                         <span class="stat-label">Total users</span>
                         <strong class="stat-value" id="anTotalUsers">—</strong>
-                        <span class="stat-sub" id="anUserSub">— residents · — owners</span>
+                        <span class="stat-sub" id="anUserSub">—</span>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon an-green"><i data-lucide="home"></i></div>
+                    <div class="stat-icon an-teal"><i data-lucide="home"></i></div>
                     <div class="stat-body">
                         <span class="stat-label">Published listings</span>
                         <strong class="stat-value" id="anPublished">—</strong>
-                        <span class="stat-sub" id="anListingSub">of — total</span>
+                        <span class="stat-sub" id="anListingSub">—</span>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon an-teal"><i data-lucide="calendar-check-2"></i></div>
+                    <div class="stat-icon an-amber"><i data-lucide="calendar-check"></i></div>
                     <div class="stat-body">
                         <span class="stat-label">Total bookings</span>
                         <strong class="stat-value" id="anTotalBookings">—</strong>
-                        <span class="stat-sub" id="anBookingSub">— pending</span>
+                        <span class="stat-sub" id="anBookingSub">—</span>
                     </div>
                 </div>
-
-            </div>
-
-            <!-- Core charts -->
-            <div class="an-two-col">
-                <div class="panel">
-                    <div class="panel-head">
-                        <div>
-                            <h2 class="panel-title">Booking funnel</h2>
-                            <p class="panel-sub">All booking statuses across the platform</p>
-                        </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-green"><i data-lucide="bar-chart-3"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Data freshness</span>
+                        <strong class="stat-value" id="anFreshness">Real-time</strong>
+                        <span class="stat-sub">Updates each load</span>
                     </div>
-                    <div class="an-chart-wrap"><canvas id="cBookings"></canvas></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head">
-                        <div>
-                            <h2 class="panel-title">Verification pipeline</h2>
-                            <p class="panel-sub">Owner KYC and student status breakdown</p>
-                        </div>
-                    </div>
-                    <div class="an-chart-wrap"><canvas id="cVerify"></canvas></div>
                 </div>
             </div>
 
-            <!-- Toggle bar -->
-            <div class="an-toggle-bar">
-                <span class="an-section-label" id="anSectionLabel">Recent bookings</span>
-                <button class="an-toggle-btn" id="anToggleBtn">
-                    <i data-lucide="bar-chart-3"></i>
-                    Show more charts
-                </button>
-            </div>
-
-            <!-- Recent bookings (default view) -->
             <div id="anRecentSection" class="an-panel-swap">
+                <div class="an-two-col">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2 class="panel-title">Booking funnel</h2>
+                        </div>
+                        <div class="an-chart-wrap"><canvas id="cBookings"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2 class="panel-title">Verification pipeline</h2>
+                        </div>
+                        <div class="an-chart-wrap"><canvas id="cVerify"></canvas></div>
+                    </div>
+                </div>
+
                 <div class="panel">
-                    <div class="table-wrap">
-                        <table>
+                    <div class="panel-head">
+                        <h2 class="panel-title">Recent bookings</h2>
+                    </div>
+                    <div class="table-wrap" style="overflow:auto;">
+                        <table class="an-table" style="width:100%;border-collapse:collapse;">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -338,7 +467,7 @@
                                     <th>Resident</th>
                                     <th>Move-in</th>
                                     <th>Status</th>
-                                    <th>Date</th>
+                                    <th>Created</th>
                                 </tr>
                             </thead>
                             <tbody id="anRecentBody"></tbody>
@@ -347,49 +476,37 @@
                 </div>
             </div>
 
-            <!-- Extra charts (hidden by default) -->
-            <div id="anExtraSection" class="an-panel-swap" hidden>
-                <div class="panel" style="margin-bottom:16px">
-                    <div class="panel-head">
-                        <div>
-                            <h2 class="panel-title">User registrations</h2>
-                            <p class="panel-sub">New signups over the last 30 days</p>
-                        </div>
-                    </div>
-                    <div class="an-chart-wrap"><canvas id="cGrowth"></canvas></div>
-                </div>
+            <div id="anExtraSection" hidden>
                 <div class="an-three-col">
                     <div class="panel">
                         <div class="panel-head">
-                            <div>
-                                <h2 class="panel-title">Listing statuses</h2>
-                                <p class="panel-sub">Draft → Published</p>
-                            </div>
+                            <h2 class="panel-title">User growth</h2>
+                        </div>
+                        <div class="an-chart-wrap"><canvas id="cGrowth"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2 class="panel-title">Listing status</h2>
                         </div>
                         <div class="an-chart-wrap an-chart-sm"><canvas id="cListings"></canvas></div>
                     </div>
                     <div class="panel">
                         <div class="panel-head">
-                            <div>
-                                <h2 class="panel-title">Top cities</h2>
-                                <p class="panel-sub">Listings by location</p>
-                            </div>
+                            <h2 class="panel-title">Top cities</h2>
                         </div>
-                        <div class="an-chart-wrap an-chart-sm"><canvas id="cCities"></canvas></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-head">
-                            <div>
-                                <h2 class="panel-title">Listing types</h2>
-                                <p class="panel-sub">Property category split</p>
-                            </div>
-                        </div>
-                        <div class="an-chart-wrap an-chart-sm"><canvas id="cTypes"></canvas></div>
+                        <div class="an-chart-wrap"><canvas id="cCities"></canvas></div>
                     </div>
                 </div>
-            </div>
 
+                <div class="panel" style="margin-top:16px;">
+                    <div class="panel-head">
+                        <h2 class="panel-title">Listing types</h2>
+                    </div>
+                    <div class="an-chart-wrap"><canvas id="cTypes"></canvas></div>
+                </div>
+            </div>
         </section>
+
 
     </div><!-- /main-wrap -->
 

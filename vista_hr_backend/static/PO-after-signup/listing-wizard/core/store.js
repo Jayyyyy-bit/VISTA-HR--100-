@@ -677,21 +677,40 @@ async function syncStep8() {
     if (title.length < 3) throw { error: "Title must be at least 3 characters." };
     if (description.length < 10) throw { error: "Description must be at least 10 characters." };
 
-    // Include student discount if owner set it
-    const d8 = readDraft();
-    const cap8 = d8.capacity || {};
-    const studentDiscount = cap8.student_discount_pct ?? null;
-
+    // Note: student_discount_pct is now handled by syncStep9 (Step 9 - Pricing).
+    // Step 8 only saves title + description.
     return apiFetch(`/listings/${listingId}/step-8`, {
         method: "PATCH",
-        body: JSON.stringify({ title, description, student_discount_pct: studentDiscount }),
+        body: JSON.stringify({ title, description }),
+    });
+}
+
+async function syncStep9() {
+    const d = readDraft();
+    const listingId = getListingId();
+    if (!listingId) throw { error: "No listing_id found. Finish Step 1 first." };
+
+    const cap = d.capacity || {};
+    const monthlyRent = cap.monthly_rent;
+    const studentDiscountPct = cap.student_discount_pct ?? null;
+
+    if (!monthlyRent || Number(monthlyRent) < 500) {
+        throw { error: "Monthly rent is required (minimum ₱500)." };
+    }
+
+    return apiFetch(`/listings/${listingId}/step-9`, {
+        method: "PATCH",
+        body: JSON.stringify({
+            monthly_rent: Number(monthlyRent),
+            student_discount_pct: studentDiscountPct,
+        }),
     });
 }
 
 // Submit
 async function submitForVerification() {
     const d = readDraft();
-    const p = computeProgress(d, 9);
+    const p = computeProgress(d, 10);
     if (!p.allComplete) throw { error: "Complete all steps before submitting." };
 
     const listingId = getListingId();

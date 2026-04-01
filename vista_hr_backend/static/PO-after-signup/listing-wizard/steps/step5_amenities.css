@@ -720,3 +720,25 @@
         grid-template-columns: 1fr !important;
     }
 }
+
+/* ── Custom amenity add button ─────────────────────────── */
+#stepHost .amenCard--add {
+    border: 2px dashed rgba(18, 52, 88, .25);
+    background: rgba(18, 52, 88, .03);
+    color: #6b7280;
+    transition: all 160ms;
+}
+
+#stepHost .amenCard--add:hover {
+    border-color: #123458;
+    background: rgba(18, 52, 88, .07);
+    color: #123458;
+    opacity: 1 !important;
+}
+
+/* ── Loading spinner ──────────────────────────────────── */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

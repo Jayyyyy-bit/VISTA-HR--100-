@@ -1,0 +1,79 @@
+<div class="step-header">
+    <div class="step-kicker">Create listing • Step 9</div>
+    <h1 class="step-title">Set your pricing</h1>
+    <p class="step-sub">Set the monthly rent and optionally offer a discount for verified students.</p>
+</div>
+
+<section class="formCard pricingCard">
+
+    <!-- ─── Monthly Rent ─── -->
+    <div class="pr-section">
+        <div class="pr-label">
+            <div class="pr-title">Monthly Rent</div>
+            <div class="pr-sub">How much do you charge per month?</div>
+        </div>
+        <div class="pr-rent-wrap">
+            <span class="pr-peso">₱</span>
+            <input type="number" id="prRent" class="pr-rent-input" min="500" max="500000" step="100"
+                placeholder="e.g. 4500" autocomplete="off" />
+            <span class="pr-period">/ month</span>
+        </div>
+        <div class="pr-error" id="prRentError"></div>
+        <div class="pr-hint">
+            Minimum ₱500. Residents can filter by price, so set a competitive rate for your area.
+        </div>
+    </div>
+
+    <hr class="pr-divider" />
+
+    <!-- ─── Student Discount ─── -->
+    <div class="pr-section">
+        <div class="pr-discount-head">
+            <div>
+                <div class="pr-title">🎓 Student Discount</div>
+                <div class="pr-sub">Offer a discount to verified student residents</div>
+            </div>
+            <button class="pr-toggle" id="prDiscountToggle" type="button" aria-pressed="false">
+                <span class="pr-toggle-knob"></span>
+            </button>
+        </div>
+
+        <div class="pr-discount-body" id="prDiscountBody" hidden>
+            <div class="pr-slider-row">
+                <label class="pr-slider-label" for="prDiscountSlider">Discount percentage</label>
+                <div class="pr-slider-wrap">
+                    <input type="range" id="prDiscountSlider" min="1" max="50" step="1" value="10" />
+                    <div class="pr-slider-val"><span id="prDiscountVal">10</span>%</div>
+                </div>
+                <div class="pr-slider-range">
+                    <span>1%</span>
+                    <span>50% max</span>
+                </div>
+            </div>
+
+            <!-- Live price preview -->
+            <div class="pr-preview" id="prPreview" style="display:none;">
+                <div class="pr-preview-title">Price preview for students</div>
+                <div class="pr-preview-row">
+                    <div class="pr-preview-item">
+                        <div class="pr-preview-label">Regular price</div>
+                        <div class="pr-preview-amount" id="prRegularPrice">₱0</div>
+                    </div>
+                    <div class="pr-preview-arrow">→</div>
+                    <div class="pr-preview-item pr-preview-item--discount">
+                        <div class="pr-preview-label">Student price</div>
+                        <div class="pr-preview-amount pr-preview-amount--green" id="prStudentPrice">₱0</div>
+                    </div>
+                    <div class="pr-preview-item">
+                        <div class="pr-preview-label">Savings</div>
+                        <div class="pr-preview-amount pr-preview-amount--save" id="prSavings">₱0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pr-discount-hint">
+                <span>💡</span>
+                <span>Only residents with a verified student status will see this discount on your listing.</span>
+            </div>
+        </div>
+    </div>

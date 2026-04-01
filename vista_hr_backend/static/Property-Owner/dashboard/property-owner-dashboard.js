@@ -2,12 +2,12 @@
   document.addEventListener("DOMContentLoaded", async () => {
     if (!window.AuthGuard) {
       console.error("AuthGuard missing. Check /auth/sessionGuard.js path.");
-      alert("AuthGuard missing. Fix sessionGuard.js include/path.");
+      showInfo("AuthGuard missing. Fix sessionGuard.js include/path.");
       return;
     }
     if (!window.ListingStore) {
       console.error("ListingStore missing. Check /core/store.js path.");
-      alert("ListingStore missing. Fix store.js include/path.");
+      showInfo("ListingStore missing. Fix store.js include/path.");
       return;
     }
 
@@ -427,7 +427,7 @@
                     location.href = `${WIZARD_URL}#/step-${step}`;
                   } catch (err) {
                     console.error(err);
-                    alert(err?.message || err?.error || "Unable to continue editing.");
+                    showError(err?.message || err?.error || "Unable to continue editing.");
                   }
                 }
               });
@@ -437,7 +437,7 @@
                 location.href = `${WIZARD_URL}#/step-${step}`;
               } catch (err) {
                 console.error(err);
-                alert(err?.message || err?.error || "Unable to continue editing.");
+                showError(err?.message || err?.error || "Unable to continue editing.");
               }
             }
             return;
@@ -476,7 +476,7 @@
                   }
                   await renderListings();
                 } catch (err) {
-                  alert(err.message || "Failed to unpublish.");
+                  showError(err.message || "Failed to unpublish.");
                 }
               }
             });
@@ -539,7 +539,7 @@
                   await renderListings();
                 } catch (err) {
                   console.error(err);
-                  alert(err?.message || err?.error || "Publish failed.");
+                  showError(err?.message || err?.error || "Publish failed.");
                 }
               }
             });
@@ -574,7 +574,7 @@
                   await renderListings();
                 } catch (err) {
                   console.error(err);
-                  alert(err?.message || err?.error || "Delete failed.");
+                  showError(err?.message || err?.error || "Delete failed.");
                 }
               }
             });
@@ -723,7 +723,6 @@
 
       if (key === "today") { window.DashToday?.render(); window.DashToday?.bindFilterBar?.(); }
       if (key === "listings") renderListings();
-      if (key === "messages") window.MessagesPanel?.init?.();
 
       if (key === "calendar" && window.DashboardCalendar?.render) {
         window.DashboardCalendar.render();
@@ -752,7 +751,7 @@
     profileMenu?.addEventListener("click", (e) => e.stopPropagation());
 
     menuAccount?.addEventListener("click", () => { openMenu(false); location.href = "/auth/account-settings.html"; });
-    menuHelp?.addEventListener("click", () => { openMenu(false); alert("Help center (later)."); });
+    menuHelp?.addEventListener("click", () => { openMenu(false); showInfo("Help center (later)."); });
     menuLogout?.addEventListener("click", async () => { openMenu(false); await AuthGuard.logout(); });
 
     document.addEventListener("click", (evt) => {
@@ -833,7 +832,7 @@
       // Update badge
       const badge = elN("notifBadge");
       if (badge) {
-        badge.textContent = unread > 10 ? "10+" : unread;
+        badge.textContent = unread > 9 ? "9+" : unread;
         badge.hidden = unread === 0;
       }
 
@@ -855,22 +854,9 @@
         // Determine redirect URL based on notification type
         const notifType = (n.notif_type || n.type || "").toUpperCase();
         let redirectUrl = null;
-
-        if (notifType.includes("MESSAGE")) {
-          const params = new URLSearchParams();
-          const senderMatch = String(n.title || "").match(/^New message from\s+(.+)$/i);
-          const listingMatch = String(n.body || "").match(/^Re:\s*(.+?)(?:\s+[—-]\s+|$)/i);
-
-          if (senderMatch?.[1]) params.set("sender", senderMatch[1].trim());
-          if (listingMatch?.[1]) params.set("listing", listingMatch[1].trim());
-
-          const query = params.toString();
-          redirectUrl = `/Property-Owner/dashboard/property-owner-dashboard.html${query ? `?${query}` : ""}#/messages`;
-        } else if (notifType.includes("BOOKING")) {
-          redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
-        } else if (notifType.includes("KYC") || notifType.includes("VERIF")) {
-          redirectUrl = "/Property-Owner/verification/verify.html";
-        }
+        if (notifType.includes("MESSAGE")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
+        else if (notifType.includes("BOOKING")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
+        else if (notifType.includes("KYC") || notifType.includes("VERIF")) redirectUrl = "/Property-Owner/verification/verify.html";
 
         return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}"
                     style="cursor:${redirectUrl ? 'pointer' : 'default'}"
