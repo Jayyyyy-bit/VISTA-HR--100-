@@ -5,7 +5,7 @@ const API_BASE = "";
 
 // Register resident via backend API
 async function apiRegisterResident(payload) {
-    const res = await fetch(`${API_BASE}/auth/register`, {
+    const res = await fetch(`${API_BASE}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -55,33 +55,43 @@ document.getElementById("backBtn").addEventListener("click", () => {
     window.location.href = "../roles.html";
 });
 
-function titleCaseWords(str) {
-    return str
-        .toLowerCase()
-        .split(" ")
-        .filter(Boolean)
-        .map((word) =>
-            word
-                .split("-")
-                .map((part) =>
-                    part
-                        .split("'")
-                        .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : ""))
-                        .join("'")
-                )
-                .join("-")
-        )
-        .join(" ");
+// =======================
+// Name Helpers
+// =======================
+const NAME_MAX = 50;
+
+// Capitalizes first letter after space, hyphen, or apostrophe.
+// Preserves trailing space so the user can keep typing.
+function autoCapName(str) {
+    let result = "";
+    let capNext = true;
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (/[a-zA-Z]/.test(ch)) {
+            result += capNext ? ch.toUpperCase() : ch.toLowerCase();
+            capNext = false;
+        } else {
+            result += ch;
+            // Cap next letter after space, hyphen, or apostrophe
+            if (ch === " " || ch === "-" || ch === "'") capNext = true;
+        }
+    }
+    return result;
 }
+
 function sanitizeNameInput(value) {
+    // Allow letters, spaces, hyphens, apostrophes only
     return value.replace(/[^a-zA-Z\s'-]/g, "");
 }
+
 function isValidNamePart(value) {
     const v = value.trim();
     if (!v) return false;
     if (v.length < 2) return false;
+    if (v.length > NAME_MAX) return false;
     return /^[A-Za-z\s'-]+$/.test(v);
 }
+
 function isEmailValid(val) {
     return /^\S+@\S+\.\S+$/.test(val);
 }
@@ -123,22 +133,41 @@ function scrollToField(el) {
     if (el?.focus) el.focus();
 }
 
-// Live name sanitize
+// =======================
+// Name input listeners
+// =======================
 [firstName, lastName].forEach((el) => {
-    el.addEventListener("input", () => {
-        el.value = titleCaseWords(sanitizeNameInput(el.value));
-        if (!el.value.trim()) return;
+    const errEl = el === firstName ? firstNameError : lastNameError;
+    const label = el === firstName ? "First name" : "Last name";
 
-        if (el === firstName) {
-            if (!isValidNamePart(el.value)) setInvalid(firstName, firstNameError, "First name must contain letters only.");
-            else setValid(firstName, firstNameError);
+    el.setAttribute("maxlength", NAME_MAX);
+
+    el.addEventListener("input", () => {
+        // Sanitize then auto-cap, preserving trailing space so user can type next word
+        const cursor = el.selectionStart;
+        const sanitized = sanitizeNameInput(el.value);
+        const capped = autoCapName(sanitized);
+        el.value = capped;
+        // Restore cursor position (in case browser resets it)
+        try { el.setSelectionRange(cursor, cursor); } catch (_) { }
+
+        const trimmed = el.value.trim();
+        if (!trimmed) {
+            setValid(el, errEl);
+            return;
+        }
+        if (trimmed.length > NAME_MAX) {
+            setInvalid(el, errEl, `${label} must be ${NAME_MAX} characters or less.`);
+        } else if (!isValidNamePart(trimmed)) {
+            setInvalid(el, errEl, `${label} must contain letters only.`);
         } else {
-            if (!isValidNamePart(el.value)) setInvalid(lastName, lastNameError, "Last name must contain letters only.");
-            else setValid(lastName, lastNameError);
+            setValid(el, errEl);
         }
     });
+
     el.addEventListener("blur", () => {
-        el.value = titleCaseWords(sanitizeNameInput(el.value.trim()));
+        // On blur: collapse multiple spaces and trim
+        el.value = autoCapName(sanitizeNameInput(el.value.trim().replace(/\s+/g, " ")));
     });
 });
 
@@ -234,7 +263,9 @@ confirmPassword.addEventListener("input", () => {
     }
 });
 
-// Submit (DB register)
+// =======================
+// Submit
+// =======================
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -248,32 +279,40 @@ form.addEventListener("submit", async (e) => {
     const pw = password.value;
     const cpw = confirmPassword.value;
 
-    // validations
+    // First name
     if (!fn) { setInvalid(firstName, firstNameError, "First name is required.", true); ok = false; firstInvalid ??= firstName; }
+    else if (fn.length > NAME_MAX) { setInvalid(firstName, firstNameError, `First name must be ${NAME_MAX} characters or less.`, true); ok = false; firstInvalid ??= firstName; }
     else if (!isValidNamePart(fn)) { setInvalid(firstName, firstNameError, "First name must contain letters only.", true); ok = false; firstInvalid ??= firstName; }
     else setValid(firstName, firstNameError);
 
+    // Last name
     if (!ln) { setInvalid(lastName, lastNameError, "Last name is required.", true); ok = false; firstInvalid ??= lastName; }
+    else if (ln.length > NAME_MAX) { setInvalid(lastName, lastNameError, `Last name must be ${NAME_MAX} characters or less.`, true); ok = false; firstInvalid ??= lastName; }
     else if (!isValidNamePart(ln)) { setInvalid(lastName, lastNameError, "Last name must contain letters only.", true); ok = false; firstInvalid ??= lastName; }
     else setValid(lastName, lastNameError);
 
+    // Email
     if (!em) { setInvalid(email, emailError, "Email is required.", true); ok = false; firstInvalid ??= email; }
     else if (!isEmailValid(em)) { setInvalid(email, emailError, "Please enter a valid email address.", true); ok = false; firstInvalid ??= email; }
     else setValid(email, emailError);
 
+    // Phone
     if (!ph) { setInvalid(phoneWrap, phoneError, "Phone number is required.", true); ok = false; firstInvalid ??= phone; }
     else if (ph.length !== 10 || !ph.startsWith("9")) { setInvalid(phoneWrap, phoneError, "Enter valid number: +63 9XXXXXXXXX", true); ok = false; firstInvalid ??= phone; }
     else setValid(phoneWrap, phoneError);
 
+    // Password
     const pwErrors = validatePassword(pw);
     if (!pw) { setInvalid(password, passwordError, "Password is required.", true); ok = false; firstInvalid ??= password; }
     else if (pwErrors.length) { setInvalid(password, passwordError, pwErrors[0], true); ok = false; firstInvalid ??= password; }
     else setValid(password, passwordError);
 
+    // Confirm
     if (!cpw) { setInvalid(confirmPassword, confirmPasswordError, "Please confirm your password.", true); ok = false; firstInvalid ??= confirmPassword; }
     else if (cpw !== pw) { setInvalid(confirmPassword, confirmPasswordError, "Passwords do not match.", true); ok = false; firstInvalid ??= confirmPassword; }
     else setValid(confirmPassword, confirmPasswordError);
 
+    // Agree
     if (!agree.checked) { agreeError.textContent = "You must agree to continue."; ok = false; if (!firstInvalid) firstInvalid = agree; }
     else agreeError.textContent = "";
 
@@ -292,12 +331,8 @@ form.addEventListener("submit", async (e) => {
             phone: "+63" + ph,
         });
 
-        // ✅ cookie auth: no token stored
         AuthGuard.saveSession({ user: data.user });
-
-        // redirect
         window.location.href = '../../../Resident/resident_home.html';
-
 
     } catch (err) {
         setInvalid(email, emailError, err.message || "Registration failed.", true);

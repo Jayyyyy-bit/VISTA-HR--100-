@@ -2,7 +2,6 @@ lucide.createIcons();
 
 const API_BASE = "";
 
-
 // =======================
 // Elements
 // =======================
@@ -35,7 +34,6 @@ const passwordError = document.getElementById("passwordError");
 const confirmPasswordError = document.getElementById("confirmPasswordError");
 const agreeError = document.getElementById("agreeError");
 
-// Back button
 document.getElementById("backBtn").addEventListener("click", () => {
     window.location.href = "../roles.html";
 });
@@ -44,7 +42,7 @@ document.getElementById("backBtn").addEventListener("click", () => {
 // API: Register Owner
 // =======================
 async function apiRegisterOwner(payload) {
-    const res = await fetch(`${API_BASE}/auth/register`, {
+    const res = await fetch(`${API_BASE}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -58,29 +56,30 @@ async function apiRegisterOwner(payload) {
         throw new Error(msg);
     }
 
-    return data; // { message, user }
+    return data;
 }
 
 // =======================
-// Helpers (same as your resident)
+// Name Helpers
 // =======================
-function titleCaseWords(str) {
-    return str
-        .toLowerCase()
-        .split(" ")
-        .filter(Boolean)
-        .map((word) =>
-            word
-                .split("-")
-                .map((part) =>
-                    part
-                        .split("'")
-                        .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : ""))
-                        .join("'")
-                )
-                .join("-")
-        )
-        .join(" ");
+const NAME_MAX = 50;
+
+// Capitalizes first letter after space, hyphen, or apostrophe.
+// Preserves trailing space so the user can keep typing.
+function autoCapName(str) {
+    let result = "";
+    let capNext = true;
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (/[a-zA-Z]/.test(ch)) {
+            result += capNext ? ch.toUpperCase() : ch.toLowerCase();
+            capNext = false;
+        } else {
+            result += ch;
+            if (ch === " " || ch === "-" || ch === "'") capNext = true;
+        }
+    }
+    return result;
 }
 
 function sanitizeNameInput(value) {
@@ -91,6 +90,7 @@ function isValidNamePart(value) {
     const v = value.trim();
     if (!v) return false;
     if (v.length < 2) return false;
+    if (v.length > NAME_MAX) return false;
     return /^[A-Za-z\s'-]+$/.test(v);
 }
 
@@ -141,24 +141,37 @@ function scrollToField(el) {
 }
 
 // =======================
-// Live sanitize (first/last)
+// Name input listeners
 // =======================
 [firstName, lastName].forEach((el) => {
-    el.addEventListener("input", () => {
-        el.value = titleCaseWords(sanitizeNameInput(el.value));
-        if (!el.value.trim()) return;
+    const errEl = el === firstName ? firstNameError : lastNameError;
+    const label = el === firstName ? "First name" : "Last name";
 
-        if (el === firstName) {
-            if (!isValidNamePart(el.value)) setInvalid(firstName, firstNameError, "First name must contain letters only.");
-            else setValid(firstName, firstNameError);
+    el.setAttribute("maxlength", NAME_MAX);
+
+    el.addEventListener("input", () => {
+        const cursor = el.selectionStart;
+        const sanitized = sanitizeNameInput(el.value);
+        const capped = autoCapName(sanitized);
+        el.value = capped;
+        try { el.setSelectionRange(cursor, cursor); } catch (_) { }
+
+        const trimmed = el.value.trim();
+        if (!trimmed) {
+            setValid(el, errEl);
+            return;
+        }
+        if (trimmed.length > NAME_MAX) {
+            setInvalid(el, errEl, `${label} must be ${NAME_MAX} characters or less.`);
+        } else if (!isValidNamePart(trimmed)) {
+            setInvalid(el, errEl, `${label} must contain letters only.`);
         } else {
-            if (!isValidNamePart(el.value)) setInvalid(lastName, lastNameError, "Last name must contain letters only.");
-            else setValid(lastName, lastNameError);
+            setValid(el, errEl);
         }
     });
 
     el.addEventListener("blur", () => {
-        el.value = titleCaseWords(sanitizeNameInput(el.value.trim()));
+        el.value = autoCapName(sanitizeNameInput(el.value.trim().replace(/\s+/g, " ")));
     });
 });
 
@@ -256,7 +269,7 @@ confirmPassword.addEventListener("input", () => {
 });
 
 // =======================
-// Submit (DB register)
+// Submit
 // =======================
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -273,11 +286,13 @@ form.addEventListener("submit", async (e) => {
 
     // First name
     if (!fn) { setInvalid(firstName, firstNameError, "First name is required.", true); ok = false; firstInvalid ??= firstName; }
+    else if (fn.length > NAME_MAX) { setInvalid(firstName, firstNameError, `First name must be ${NAME_MAX} characters or less.`, true); ok = false; firstInvalid ??= firstName; }
     else if (!isValidNamePart(fn)) { setInvalid(firstName, firstNameError, "First name must contain letters only.", true); ok = false; firstInvalid ??= firstName; }
     else setValid(firstName, firstNameError);
 
     // Last name
     if (!ln) { setInvalid(lastName, lastNameError, "Last name is required.", true); ok = false; firstInvalid ??= lastName; }
+    else if (ln.length > NAME_MAX) { setInvalid(lastName, lastNameError, `Last name must be ${NAME_MAX} characters or less.`, true); ok = false; firstInvalid ??= lastName; }
     else if (!isValidNamePart(ln)) { setInvalid(lastName, lastNameError, "Last name must contain letters only.", true); ok = false; firstInvalid ??= lastName; }
     else setValid(lastName, lastNameError);
 
@@ -316,7 +331,6 @@ form.addEventListener("submit", async (e) => {
         return;
     }
 
-    // ✅ Register OWNER via backend
     try {
         const data = await apiRegisterOwner({
             email: em,
@@ -327,11 +341,7 @@ form.addEventListener("submit", async (e) => {
             phone: "+63" + ph,
         });
 
-        // Cookie auth already set; keep a local session cache for UI
         AuthGuard.saveSession({ user: data.user });
-
-        // NOTE: your backend marks owners as unverified by default.
-        // They may be blocked from login until verified (403).
         window.location.href = '../../../PO-after-signup/PO_welcome-page.html';
     } catch (err) {
         setInvalid(email, emailError, err.message || "Registration failed.", true);
