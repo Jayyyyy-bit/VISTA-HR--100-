@@ -78,16 +78,29 @@ window.DashToday = (() => {
         _renderMoveIns();
         _renderBookings();
         _renderActivity();
+        _renderSmartNotifs();
 
         if (window.lucide?.createIcons) lucide.createIcons();
     }
 
-    // ── Alerts ───────────────────────────────────────────────
-    // Track which toasts have been dismissed this session
-    const _dismissed = new Set(JSON.parse(sessionStorage.getItem("vista_dismissed_toasts") || "[]"));
+    // ── Alerts — uses showToast() from toast.js ─────────────
+    // sessionStorage tracks which alerts were already shown this session
+    // so they don't spam on every render() call
+    function _getAlertKey() {
+        const u = window.AuthGuard?.getSession?.()?.user || {};
+        // Include iat (issued-at) from token so key changes every login
+        const iat = window.AuthGuard?.getSession?.()?.iat
+            || u.iat
+            || u.login_time
+            || "";
+        return `vista_shown_alerts_${u.id || "guest"}_${iat}`;
+    }
 
-    function _saveDismissed() {
-        try { sessionStorage.setItem("vista_dismissed_toasts", JSON.stringify([..._dismissed])); } catch { }
+    const _shownAlerts = new Set();
+
+    function _markShown(id) {
+        _shownAlerts.add(id);
+        try { sessionStorage.setItem(_getAlertKey(), JSON.stringify([..._shownAlerts])); } catch { }
     }
 
     function _renderAlerts(ownerVerified) {
@@ -95,37 +108,48 @@ window.DashToday = (() => {
         const emailOk = u.email_verified === true;
         const kycOk = ownerVerified || u.kyc_status === "APPROVED" || u.is_verified === true;
 
-        const showEmail = !emailOk && !_dismissed.has("emailVerifyBanner");
-        const showKyc = emailOk && !kycOk && !_dismissed.has("verifyBanner");
-
-        const emailBanner = el("emailVerifyBanner");
-        if (emailBanner) {
-            emailBanner.hidden = !showEmail;
-            if (showEmail) {
-                const btn = el("emailVerifyBtn");
-                if (btn) btn.href = `/auth/verify-email.html?email=${encodeURIComponent(u.email || "")}&role=OWNER`;
+        // Email not verified — show once per login session
+        if (!emailOk && !_shownAlerts.has("emailVerify")) {
+            _markShown("emailVerify");
+            if (window.showToast) {
+                showToast(
+                    "Verify your email to unlock publishing",
+                    "info",
+                    0,
+                    "Verify →",
+                    "/auth/account-settings.html#email"
+                );
             }
         }
 
-        const kycBanner = el("verifyBanner");
-        if (kycBanner) kycBanner.hidden = !showKyc;
+        // KYC not verified — show once per login session (only after email is verified)
+        if (emailOk && !kycOk && !_shownAlerts.has("kycVerify")) {
+            _markShown("kycVerify");
+            if (window.showToast) {
+                showToast(
+                    "Identity pending — listings hidden until approved",
+                    "warning",
+                    0,
+                    "Verify →",
+                    "/auth/account-settings.html#verification"
+                );
+            }
+        }
+    }
 
-        const wrap = el("tdAlertsWrap");
-        if (wrap) wrap.hidden = !showEmail && !showKyc;
+    // ── Smart notifications — called after bookings load ─────
+    // Shows a toast for recent pending bookings (once per session per booking)
+    function _renderSmartNotifs() {
+        if (!window.showToast) return;
 
-        // Wire dismiss buttons (safe to call multiple times)
-        document.querySelectorAll(".td-toast-close[data-dismiss]").forEach(btn => {
-            btn.onclick = () => {
-                const id = btn.dataset.dismiss;
-                _dismissed.add(id);
-                _saveDismissed();
-                const toast = el(id);
-                if (toast) toast.hidden = true;
-                // Hide wrapper if no toasts visible
-                const anyVisible = [...document.querySelectorAll(".td-toast")].some(t => !t.hidden);
-                const wrap = el("tdAlertsWrap");
-                if (wrap) wrap.hidden = !anyVisible;
-            };
+        const pending = _bookings.filter(b => b.status === "PENDING");
+        pending.forEach(b => {
+            const key = `booking_pending_${b.id}`;
+            if (_shownAlerts.has(key)) return;
+            _markShown(key);
+            const tenant = b.resident_name || b.resident_email || "Someone";
+            const title = b.listing?.title || "your listing";
+            showToast(`<span style="font-weight:700">${tenant}</span> requested to move in to <em>${title}</em>`, "info", 8000);
         });
     }
 

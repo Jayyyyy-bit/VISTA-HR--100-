@@ -14,7 +14,7 @@
     const ok = await window.AuthGuard.requireOwner();
     if (!ok) return;
 
-    const API_BASE = "http://127.0.0.1:5000/api";
+    const API_BASE = "/api";
     const WIZARD_URL = "/PO-after-signup/listing-wizard/index.html";
 
     // ===== Tabs (.dashTab + #tab-*) =====
@@ -466,7 +466,7 @@
                   // Set status back to DRAFT via step-8 or a direct patch
                   // Use submit-for-verification in reverse - set back to DRAFT
                   // by patching step-8 with a special unpublish flag
-                  const res = await fetch(`http://127.0.0.1:5000/api/listings/${id}/pull`, {
+                  const res = await fetch(`/api/listings/${id}/pull`, {
                     method: "POST", credentials: "include",
                     headers: { "Content-Type": "application/json" },
                   });
@@ -498,7 +498,7 @@
                 confirmText: "Verify email →",
                 cancelText: "Not now",
                 onConfirm: () => {
-                  location.href = `/auth/verify-email.html?email=${email}&role=OWNER`;
+                  location.href = `/auth/account-settings.html#email?email=${email}`;
                 }
               });
               return;
@@ -806,7 +806,7 @@
   // ══════════════════════════════════════════════════════════
   // NOTIFICATIONS — Bell dropdown (Property Owner)
   // ══════════════════════════════════════════════════════════
-  const API_NOTIF = "http://127.0.0.1:5000/api";
+  const API_NOTIF = "/api";
 
   // escapeHtml needs to be in outer scope so loadNotifications can access it
   function escapeHtmlN(str) {

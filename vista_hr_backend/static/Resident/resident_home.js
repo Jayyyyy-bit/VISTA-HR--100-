@@ -6,12 +6,12 @@
    - Auth-aware header
 ============================================================ */
 
-const API = "http://127.0.0.1:5000/api";
+const API = "/api";
 
 // ── State ──
 const state = {
   all: [],
-  saved: new Set(JSON.parse(localStorage.getItem("vista_saved") || "[]")),
+  saved: new Set(),
   filters: { type: "", city: "", minPrice: 0, maxPrice: 0, availOnly: false, tourOnly: false },
   mode: "default", // "default" | "filtered"
   filteredPage: 0,
@@ -96,6 +96,12 @@ function setupHeader() {
     try { window.AuthGuard?.clearSession?.(); } catch { }
     window.location.href = "../auth/login.html";
   });
+
+  $("udSaved")?.addEventListener("click", () => {
+    menu?.classList.remove("open");
+    location.href = "/Resident/saved_listings.html";
+  });
+
 }
 
 function $(id) { return document.getElementById(id); }
@@ -128,7 +134,6 @@ function setupEmailVerifyBanner() {
    LOAD LISTINGS
 ════════════════════════════════════════ */
 async function loadListings() {
-  // Show skeletons in all rows
   showRowSkeletons();
 
   try {
@@ -139,6 +144,14 @@ async function loadListings() {
     }
   } catch { }
 
+  // Load saved listing IDs from API (for heart button state)
+  try {
+    const savedRes = await fetch(`${API}/listings/saved/ids`, { credentials: "include" });
+    if (savedRes.ok) {
+      const savedData = await savedRes.json();
+      state.saved = new Set(savedData.ids || []);
+    }
+  } catch { /* silent */ }
 
   renderDefaultRows();
 }
@@ -648,18 +661,22 @@ function clearAll() {
 /* ════════════════════════════════════════
    SAVE / HEART
 ════════════════════════════════════════ */
-function toggleSave(id, btn) {
-  if (state.saved.has(id)) {
-    state.saved.delete(id);
-    btn?.classList.remove("saved");
-  } else {
-    state.saved.add(id);
-    btn?.classList.add("saved");
-    if (btn) { btn.style.transform = "scale(1.35)"; setTimeout(() => btn.style.transform = "", 200); }
-  }
-  localStorage.setItem("vista_saved", JSON.stringify([...state.saved]));
-  // Re-render saved tab if currently visible
-  if (state.mode === "saved") renderSavedView();
+async function toggleSave(id, btn) {
+  try {
+    const res = await fetch(`${API}/listings/${id}/save`, {
+      method: "POST", credentials: "include",
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.saved) {
+      state.saved.add(id);
+      btn?.classList.add("saved");
+      if (btn) { btn.style.transform = "scale(1.35)"; setTimeout(() => btn.style.transform = "", 200); }
+    } else {
+      state.saved.delete(id);
+      btn?.classList.remove("saved");
+    }
+  } catch { /* silent fail */ }
 }
 
 /* ════════════════════════════════════════
@@ -796,7 +813,7 @@ function closeBookingModal() {
 
 // ══ NOTIFICATIONS — Resident ══════════════════════════════
 (function () {
-  const API = "http://127.0.0.1:5000/api";
+  const API = "/api";
   const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const el = id => document.getElementById(id);
 

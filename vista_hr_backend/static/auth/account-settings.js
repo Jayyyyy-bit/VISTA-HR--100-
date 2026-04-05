@@ -1,10 +1,10 @@
 /* auth/account-settings.js */
 (() => {
-    const API = "http://127.0.0.1:5000/api";
+    const API = "/api";
     const MAX_FILE = 5 * 1024 * 1024;
 
     let currentUser = null;
-    const uploads = { studentId: null, cor: null };
+    const uploads = { studentId: null, cor: null, kycFront: null, kycBack: null, kycSelfie: null };
 
     function el(id) { return document.getElementById(id); }
 
@@ -15,17 +15,36 @@
     };
 
     // ── Sidebar navigation ──────────────────────────────────────
+    function navigateTo(section) {
+        if (!section) return;
+        document.querySelectorAll(".sidebarNavItem").forEach(b => b.classList.remove("active"));
+        const btn = document.querySelector(`.sidebarNavItem[data-section="${section}"]`);
+        if (btn) btn.classList.add("active");
+        document.querySelectorAll(".settingsPanel").forEach(p => p.classList.remove("active"));
+        const panel = el(`panel-${section}`);
+        if (panel) panel.classList.add("active");
+        if (window.lucide?.createIcons) lucide.createIcons();
+        // Update hash so URL reflects current section
+        history.replaceState(null, "", `#${section}`);
+    }
+
     document.querySelectorAll(".sidebarNavItem").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const section = btn.dataset.section;
-            document.querySelectorAll(".sidebarNavItem").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            document.querySelectorAll(".settingsPanel").forEach(p => p.classList.remove("active"));
-            const panel = el(`panel-${section}`);
-            if (panel) panel.classList.add("active");
-            if (window.lucide?.createIcons) lucide.createIcons();
-        });
+        btn.addEventListener("click", () => navigateTo(btn.dataset.section));
     });
+
+    // ── Hash-based deep link on load ─────────────────────────────
+    // Allows toast CTAs from the dashboard to land on the right section.
+    // e.g. /auth/account-settings.html#verification → opens KYC panel
+    //      /auth/account-settings.html#email        → opens email panel
+    (function checkHash() {
+        const hash = location.hash.replace(/^#/, "").trim();
+        const valid = ["profile", "security", "verification"];
+        // "email" deep-link still works — redirects into the verification panel
+        const resolved = hash === "email" ? "verification" : hash;
+        if (resolved && valid.includes(resolved)) {
+            setTimeout(() => navigateTo(resolved), 80);
+        }
+    })();
 
     // ── Back button ─────────────────────────────────────────────
     el("backBtn")?.addEventListener("click", () => {
@@ -40,6 +59,8 @@
             location.href = "/auth/login.html";
         }
     });
+
+
 
     // ── Boot — runs after DOM is ready ──────────────────────────
     async function init() {
@@ -87,14 +108,30 @@
         init();
     }
 
+    (async function loadCitySuggestions() {
+        try {
+            const res = await fetch(`${API}/locations/cities`, { credentials: "include" });
+            if (!res.ok) return;
+            const data = await res.json().catch(() => ({}));
+            const cities = data.cities || [];
+            const datalist = document.getElementById("citySuggestions");
+            if (!datalist || !cities.length) return;
+            datalist.innerHTML = cities
+                .map(c => `<option value="${c}">`)
+                .join("");
+        } catch {
+            // Non-fatal — field still works as plain text input
+        }
+    })();
+
     // ── Fill profile ────────────────────────────────────────────
     function fillProfile(user) {
         const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email;
         const init = (user.first_name?.[0] || user.email?.[0] || "U").toUpperCase();
         const roleLabel = { OWNER: "Property Owner", RESIDENT: "Resident", ADMIN: "Admin" };
 
+        if (el("emailChangeSection")) el("emailChangeSection").hidden = true;
         // Topbar + sidebar
-        if (el("topbarAvatar")) el("topbarAvatar").textContent = init;
         if (el("sidebarAvatar")) el("sidebarAvatar").textContent = init;
         if (el("sidebarUserName")) el("sidebarUserName").textContent = name;
         if (el("sidebarUserRole")) el("sidebarUserRole").textContent = roleLabel[user.role] || user.role;
@@ -103,6 +140,23 @@
         if (el("avatarCircle")) el("avatarCircle").textContent = init;
         if (el("avatarName")) el("avatarName").textContent = name;
         if (el("avatarRole")) el("avatarRole").textContent = roleLabel[user.role] || user.role;
+
+        // Avatar image — show photo if set, otherwise show initials circle
+        const avatarImg = el("avatarImg");
+        const avatarCircle = el("avatarCircle");
+        const avatarRemoveBtn = el("avatarRemoveBtn");
+        if (avatarImg && avatarCircle) {
+            if (user.avatar_url) {
+                avatarImg.src = user.avatar_url;
+                avatarImg.hidden = false;
+                avatarCircle.hidden = true;
+                if (avatarRemoveBtn) avatarRemoveBtn.hidden = false;
+            } else {
+                avatarImg.hidden = true;
+                avatarCircle.hidden = false;
+                if (avatarRemoveBtn) avatarRemoveBtn.hidden = true;
+            }
+        }
 
         // Status badges in avatar row
         const badgesEl = el("avatarBadges");
@@ -129,7 +183,278 @@
         if (el("inputLastName")) el("inputLastName").value = user.last_name || "";
         if (el("inputEmail")) el("inputEmail").value = user.email || "";
         if (el("inputPhone")) el("inputPhone").value = user.phone || "";
+        if (el("inputBasedIn")) el("inputBasedIn").value = user.based_in || "";
+
+        // Phone lock: OWNER with KYC PENDING or APPROVED
+        const phoneInput = el("inputPhone");
+        const phoneLockNote = el("phoneLockNote");
+        if (phoneInput && user.role === "OWNER" && ["PENDING", "APPROVED"].includes(user.kyc_status)) {
+            phoneInput.disabled = true;
+            phoneInput.classList.add("fieldInput--locked");
+            if (phoneLockNote) phoneLockNote.hidden = false;
+        } else if (phoneInput) {
+            phoneInput.disabled = false;
+            phoneInput.classList.remove("fieldInput--locked");
+            if (phoneLockNote) phoneLockNote.hidden = true;
+        }
+
+        // Last login display (Security panel)
+        if (el("lastLoginAt") && user.last_login_at) {
+            const d = new Date(user.last_login_at);
+            el("lastLoginAt").textContent = d.toLocaleString("en-PH", {
+                dateStyle: "medium", timeStyle: "short"
+            });
+        }
+
+        // ── Right panel population ──────────────────────────────
+
+
+        // Account status pill
+        const rpStatusPill = el("rpStatusPill");
+        if (rpStatusPill) {
+            if (user.is_suspended) {
+                rpStatusPill.className = "statusPill statusPill--unverified";
+                rpStatusPill.innerHTML = `<i data-lucide="ban"></i>Suspended`;
+            } else {
+                rpStatusPill.className = "statusPill statusPill--verified";
+                rpStatusPill.innerHTML = `<i data-lucide="circle-check"></i>Active`;
+            }
+        }
+
+        if (el("rpRole")) el("rpRole").textContent = roleLabel[user.role] || user.role;
+
+        if (el("rpMemberSince") && user.created_at) {
+            const d = new Date(user.created_at);
+            el("rpMemberSince").textContent = d.toLocaleDateString("en-PH", { month: "short", year: "numeric" });
+        }
+
+        if (el("rpLastLogin")) {
+            if (user.last_login_at) {
+                const d = new Date(user.last_login_at);
+                el("rpLastLogin").textContent = d.toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" });
+            } else {
+                el("rpLastLogin").textContent = "—";
+            }
+        }
+
+        // Strikes — show only if > 0
+        const strikes = parseInt(user.strike_count || 0);
+        const rpStrikeRow = el("rpStrikeRow");
+        if (rpStrikeRow) {
+            rpStrikeRow.hidden = strikes === 0;
+            if (el("rpStrikes")) el("rpStrikes").textContent = `${strikes} / 5`;
+        }
+
+        // Verification rows
+        const rpVerifRows = el("rpVerifRows");
+        if (rpVerifRows) {
+            const emailPill = user.email_verified
+                ? `<span class="statusPill statusPill--verified"><i data-lucide="mail-check"></i>Verified</span>`
+                : `<span class="statusPill statusPill--unverified"><i data-lucide="mail-warning"></i>Unverified</span>`;
+
+            let verifRow2 = "";
+            if (user.role === "OWNER") {
+                const kyc = user.kyc_status || "NONE";
+                const kycPill = kyc === "APPROVED"
+                    ? `<span class="statusPill statusPill--verified"><i data-lucide="shield-check"></i>Approved</span>`
+                    : kyc === "PENDING"
+                        ? `<span class="statusPill statusPill--pending"><i data-lucide="clock"></i>Pending</span>`
+                        : kyc === "REJECTED"
+                            ? `<span class="statusPill statusPill--unverified"><i data-lucide="x-circle"></i>Rejected</span>`
+                            : `<span class="statusPill" style="background:rgba(3,3,3,0.05);color:var(--muted);">Not started</span>`;
+                verifRow2 = `<div class="rpRow"><span class="rpKey">Identity (KYC)</span>${kycPill}</div>`;
+            } else if (user.role === "RESIDENT") {
+                const stu = user.student_status || "NONE";
+                const stuPill = stu === "APPROVED"
+                    ? `<span class="statusPill statusPill--student"><i data-lucide="graduation-cap"></i>Approved</span>`
+                    : stu === "PENDING"
+                        ? `<span class="statusPill statusPill--pending"><i data-lucide="clock"></i>Pending</span>`
+                        : stu === "REJECTED"
+                            ? `<span class="statusPill statusPill--unverified"><i data-lucide="x-circle"></i>Rejected</span>`
+                            : `<span class="statusPill" style="background:rgba(3,3,3,0.05);color:var(--muted);">Not started</span>`;
+                verifRow2 = `<div class="rpRow"><span class="rpKey">Student status</span>${stuPill}</div>`;
+            }
+
+            rpVerifRows.innerHTML = `<div class="rpRow"><span class="rpKey">Email</span>${emailPill}</div>${verifRow2}`;
+        }
+
+        // Verif link label
+        if (el("rpVerifLinkLabel")) {
+            el("rpVerifLinkLabel").textContent = user.role === "OWNER" ? "Check KYC status" : "Verify student status";
+        }
+
+        // Tip text
+        if (el("rpTipText")) {
+            el("rpTipText").innerHTML = user.role === "OWNER"
+                ? "<strong>Tip:</strong> Complete your KYC to publish listings to all residents."
+                : "<strong>Tip:</strong> Verified students get exclusive discounts on eligible listings.";
+        }
+
+        if (window.lucide?.createIcons) lucide.createIcons();
     }
+
+    // ── Brand link — navigates to dashboard based on role ───────
+    el("brandLink")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (currentUser?.role === "OWNER") {
+            location.href = "/Property-Owner/dashboard/property-owner-dashboard.html";
+        } else if (currentUser?.role === "RESIDENT") {
+            location.href = "/Resident/resident_home.html";
+        } else {
+            location.href = "/auth/login.html";
+        }
+    });
+
+    // ── Right panel quick action buttons ────────────────────────
+    el("rpGoSecurity")?.addEventListener("click", () => {
+        document.querySelector('.sidebarNavItem[data-section="security"]')?.click();
+    });
+    el("rpGoVerification")?.addEventListener("click", () => {
+        document.querySelector('.sidebarNavItem[data-section="verification"]')?.click();
+    });
+    el("rpGoLogoutAll")?.addEventListener("click", () => {
+        el("logoutAllBtn")?.click();
+    });
+
+    // ── Email change toggle ─────────────────────────────────────
+    // Only show the OTP + new-email fields when "Change email" is clicked
+    el("changeEmailBtn")?.addEventListener("click", async () => {
+        const section = el("emailChangeSection");
+        if (!section) return;
+        const isHidden = section.hidden;
+        section.hidden = !isHidden;
+        if (isHidden) {
+            // Send OTP automatically when opening
+            try {
+                await fetch(`${API}/auth/send-otp`, {
+                    method: "POST", credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: currentUser.email }),
+                });
+            } catch { /* non-fatal */ }
+            el("inputNewEmail")?.focus();
+        }
+    });
+
+    // ── Phone number validation (numbers only, PH format) ───────
+    el("inputPhone")?.addEventListener("input", () => {
+        const input = el("inputPhone");
+        // Strip non-numeric except leading +
+        let val = input.value;
+        const hasPlus = val.startsWith("+");
+        val = val.replace(/[^0-9]/g, "");
+        if (hasPlus) val = "+" + val;
+        input.value = val;
+
+        const errEl = el("errPhone");
+        if (!errEl) return;
+        const digits = val.replace(/\D/g, "");
+        if (digits.length > 0 && (digits.length < 10 || digits.length > 12)) {
+            errEl.textContent = "Phone number must be 10–12 digits (e.g. +639XXXXXXXXX)";
+        } else {
+            errEl.textContent = "";
+        }
+    });
+
+    // ── Avatar upload ───────────────────────────────────────────
+    el("avatarUploadBtn")?.addEventListener("click", () => el("avatarFileInput")?.click());
+
+    el("avatarFileInput")?.addEventListener("change", async () => {
+        const file = el("avatarFileInput").files?.[0];
+        if (!file) return;
+        el("avatarFileInput").value = "";
+
+        if (!file.type.startsWith("image/")) {
+            showToast?.("Only image files accepted.", "error");
+            return;
+        }
+        if (file.size > MAX_FILE) {
+            showToast?.("Image too large. Max 5 MB.", "error");
+            return;
+        }
+
+        const btn = el("avatarUploadBtn");
+        const origLabel = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader"></i> Uploading…`;
+        if (window.lucide?.createIcons) lucide.createIcons();
+
+        try {
+            // 1) Get Cloudinary signature for avatars folder
+            const sigRes = await fetch(`${API}/uploads/sign`, {
+                method: "POST", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ folder: "vista_hr/avatars" }),
+            });
+            const sig = await sigRes.json().catch(() => ({}));
+            if (!sigRes.ok) throw new Error(sig.error || "Signature failed.");
+
+            // 2) Upload directly to Cloudinary
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("api_key", sig.apiKey);
+            fd.append("timestamp", sig.timestamp);
+            fd.append("signature", sig.signature);
+            fd.append("folder", sig.folder);
+
+            const upRes = await fetch(
+                `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+                { method: "POST", body: fd }
+            );
+            const upData = await upRes.json().catch(() => ({}));
+            if (!upRes.ok) throw new Error(upData.error?.message || "Upload failed.");
+
+            const avatarUrl = upData.secure_url;
+
+            // 3) Save URL to backend
+            const saveRes = await fetch(`${API}/users/me/avatar`, {
+                method: "PATCH", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ avatar_url: avatarUrl }),
+            });
+            const saveData = await saveRes.json().catch(() => ({}));
+            if (!saveRes.ok) throw new Error(saveData.error || "Failed to save avatar.");
+
+            // 4) Update local state + UI
+            currentUser = saveData.user || currentUser;
+            if (window.AuthGuard?.saveSession) window.AuthGuard.saveSession({ user: currentUser });
+            fillProfile(currentUser);
+            if (window.lucide?.createIcons) lucide.createIcons();
+
+        } catch (err) {
+            showMsg("saveMsg", err.message, true);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origLabel;
+            if (window.lucide?.createIcons) lucide.createIcons();
+        }
+    });
+
+    // ── Avatar remove ───────────────────────────────────────────
+    el("avatarRemoveBtn")?.addEventListener("click", async () => {
+        const btn = el("avatarRemoveBtn");
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API}/users/me/avatar`, {
+                method: "PATCH", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ avatar_url: null }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to remove avatar.");
+
+            currentUser = data.user || currentUser;
+            if (window.AuthGuard?.saveSession) window.AuthGuard.saveSession({ user: currentUser });
+            fillProfile(currentUser);
+            if (window.lucide?.createIcons) lucide.createIcons();
+
+        } catch (err) {
+            showMsg("saveMsg", err.message, true);
+        } finally {
+            btn.disabled = false;
+        }
+    });
 
     // ── Save profile ────────────────────────────────────────────
     el("saveProfileBtn")?.addEventListener("click", async () => {
@@ -140,19 +465,30 @@
         const first = el("inputFirstName").value.trim();
         const last = el("inputLastName").value.trim();
         const phone = el("inputPhone").value.trim() || null;
+        const basedIn = el("inputBasedIn") ? (el("inputBasedIn").value.trim() || null) : null;
 
         if (!first && !last) {
             showMsg("saveMsg", "Please enter at least your first or last name.", true);
             return;
         }
 
+        // Phone validation: numbers only (with optional leading +), 10-12 digits
+        if (phone) {
+            const digits = phone.replace(/\D/g, "");
+            if (digits.length < 10 || digits.length > 12) {
+                const errEl = el("errPhone");
+                if (errEl) errEl.textContent = "Phone number must be 10–12 digits (e.g. +639XXXXXXXXX)";
+                return;
+            }
+        }
+
         btn.disabled = true; label.hidden = true; spinner.hidden = false;
 
         try {
-            const res = await fetch(`${API}/auth/me/profile`, {
+            const res = await fetch(`${API}/users/me/profile`, {
                 method: "PATCH", credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ first_name: first, last_name: last, phone }),
+                body: JSON.stringify({ first_name: first, last_name: last, phone, based_in: basedIn }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || "Failed to save.");
@@ -279,7 +615,25 @@
         el("kycStatePending").hidden = status !== "PENDING";
         el("kycStateApproved").hidden = status !== "APPROVED";
         el("kycStateRejected").hidden = status !== "REJECTED";
+        el("kycStateForm").hidden = true;
         if (status === "REJECTED" && reason) el("kycRejectReason").textContent = `Reason: ${reason}`;
+
+        // "Verify my identity" button in NONE state
+        el("kycStartBtn")?.addEventListener("click", () => {
+            el("kycStateNone").hidden = true;
+            el("kycStateForm").hidden = false;
+            setupKycDropzones();
+            if (window.lucide?.createIcons) lucide.createIcons();
+        }, { once: true });
+
+        // "Re-submit documents" button in REJECTED state
+        el("kycResubmitBtn")?.addEventListener("click", () => {
+            el("kycStateRejected").hidden = true;
+            el("kycStateForm").hidden = false;
+            setupKycDropzones();
+            if (window.lucide?.createIcons) lucide.createIcons();
+        }, { once: true });
+
         if (window.lucide?.createIcons) lucide.createIcons();
     }
 
@@ -310,7 +664,8 @@
         if (verified && el("emailVerifiedAddress")) {
             el("emailVerifiedAddress").textContent = user.email;
         } else if (!verified) {
-            el("emailBadge").hidden = false;
+            // email tab removed — surface warning on the Verification nav badge instead
+            if (el("verifBadge")) el("verifBadge").hidden = false;
         }
         if (window.lucide?.createIcons) lucide.createIcons();
     }
@@ -410,8 +765,7 @@
                 currentUser = data.user;
             }
             // Hide badge + switch to verified state
-            if (el("emailBadge")) el("emailBadge").hidden = true;
-            showEmailVerificationState(currentUser);
+            if (el("verifBadge") && currentUser.email_verified) el("verifBadge").hidden = true;
             showMsg("resendMsg", "Email verified successfully!", false);
             if (window.lucide?.createIcons) lucide.createIcons();
         } catch (err) {
@@ -436,6 +790,64 @@
             errEl.textContent = err.message; errEl.hidden = false;
         }
     });
+
+    // ── KYC dropzones ────────────────────────────────────────────
+    function setupKycDropzones() {
+        setupDropzone("dropKycFront", "inputKycFront", "dropContentKycFront", "previewKycFront", "previewImgKycFront", "removeKycFront", "errKycFront", "kycFront");
+        setupDropzone("dropKycBack", "inputKycBack", "dropContentKycBack", "previewKycBack", "previewImgKycBack", "removeKycBack", "errKycBack", "kycBack");
+        setupDropzone("dropKycSelfie", "inputKycSelfie", "dropContentKycSelfie", "previewKycSelfie", "previewImgKycSelfie", "removeKycSelfie", "errKycSelfie", "kycSelfie");
+        el("submitKycBtn")?.addEventListener("click", handleKycSubmit, { once: true });
+    }
+
+    function updateKycBtn() {
+        const btn = el("submitKycBtn");
+        if (btn) btn.disabled = !uploads.kycFront || !uploads.kycBack;
+    }
+
+    async function handleKycSubmit() {
+        const btn = el("submitKycBtn");
+        const label = btn.querySelector(".btnLabel");
+        const spinner = btn.querySelector(".btnSpinner");
+        const errEl = el("kycGlobalErr");
+
+        if (!uploads.kycFront || !uploads.kycBack) return;
+        errEl.hidden = true; btn.disabled = true; label.hidden = true; spinner.hidden = false;
+
+        try {
+            let frontUrl, backUrl, selfieUrl = null;
+
+            try { frontUrl = await uploadToCloudinary(uploads.kycFront, "vista_hr/kyc"); }
+            catch { el("errKycFront").textContent = "ID front upload failed."; throw new Error("upload_failed"); }
+
+            try { backUrl = await uploadToCloudinary(uploads.kycBack, "vista_hr/kyc"); }
+            catch { el("errKycBack").textContent = "ID back upload failed."; throw new Error("upload_failed"); }
+
+            if (uploads.kycSelfie) {
+                try { selfieUrl = await uploadToCloudinary(uploads.kycSelfie, "vista_hr/kyc"); }
+                catch { el("errKycSelfie").textContent = "Selfie upload failed."; throw new Error("upload_failed"); }
+            }
+
+            const res = await fetch(`${API}/kyc/submit`, {
+                method: "POST", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id_front_url: frontUrl, id_back_url: backUrl, selfie_url: selfieUrl }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Submission failed.");
+
+            currentUser = data.user || currentUser;
+            if (window.AuthGuard?.saveSession) window.AuthGuard.saveSession({ user: currentUser });
+            // Reset KYC upload state
+            uploads.kycFront = null; uploads.kycBack = null; uploads.kycSelfie = null;
+            el("kycStateForm").hidden = true;
+            showKycState("PENDING");
+            fillProfile(currentUser);
+        } catch (err) {
+            if (err.message !== "upload_failed") { errEl.textContent = err.message; errEl.hidden = false; }
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
+            btn.addEventListener("click", handleKycSubmit, { once: true });
+        }
+    }
 
     // ── Student dropzones ───────────────────────────────────────
     function setupStudentDropzones() {
@@ -472,7 +884,8 @@
             drop.classList.remove("hasFile");
             if (img) img.src = "";
             if (errEl) errEl.textContent = "";
-            updateStudentBtn();
+            if (slot.startsWith("kyc")) updateKycBtn();
+            else updateStudentBtn();
         });
     }
 
@@ -489,7 +902,8 @@
         };
         reader.readAsDataURL(file);
         uploads[slot] = file;
-        updateStudentBtn();
+        if (slot.startsWith("kyc")) updateKycBtn();
+        else updateStudentBtn();
     }
 
     function updateStudentBtn() {
@@ -558,14 +972,117 @@
         }
     }
 
-    // ── Delete account (stub — confirms intent only) ────────────
-    el("deleteAccountBtn")?.addEventListener("click", () => {
-        const confirmed = confirm(
-            "Are you sure you want to delete your account?\n\n" +
-            "This will permanently remove all your data and cannot be undone."
-        );
-        if (!confirmed) return;
-        alert("Account deletion is currently being processed by our team. You will receive a confirmation email.");
+    // ── Logout from all devices (modal) ────────────────────────
+    el("logoutAllBtn")?.addEventListener("click", () => {
+        el("logoutAllOverlay").hidden = false;
+        if (window.lucide?.createIcons) lucide.createIcons();
+    });
+    el("logoutAllCancelBtn")?.addEventListener("click", () => {
+        el("logoutAllOverlay").hidden = true;
+    });
+    el("logoutAllOverlay")?.addEventListener("click", (e) => {
+        if (e.target === el("logoutAllOverlay")) el("logoutAllOverlay").hidden = true;
+    });
+    el("logoutAllConfirmBtn")?.addEventListener("click", async () => {
+        const btn = el("logoutAllConfirmBtn");
+        const label = btn.querySelector(".btnLabel");
+        const spinner = btn.querySelector(".btnSpinner");
+        btn.disabled = true; if (label) label.hidden = true; if (spinner) spinner.hidden = false;
+        try {
+            const res = await fetch(`${API}/users/me/logout-all`, {
+                method: "POST", credentials: "include",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed.");
+            location.href = "/auth/login.html";
+        } catch (err) {
+            el("logoutAllOverlay").hidden = true;
+            showMsg("pwSaveMsg", err.message, true);
+            btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true;
+        }
+    });
+
+    // ── Deactivate account ─────────────────────────────────────
+    el("deactivateBtn")?.addEventListener("click", async () => {
+        const blockedMsg = el("deactivateBlockedMsg");
+        const confirmBtn = el("deactivateConfirmBtn");
+        if (blockedMsg) { blockedMsg.hidden = true; blockedMsg.textContent = ""; }
+        if (el("deactivateErr")) el("deactivateErr").textContent = "";
+        if (el("deactivatePw")) el("deactivatePw").value = "";
+        if (confirmBtn) confirmBtn.disabled = false;
+
+        // Check for active bookings that would block deactivation
+        try {
+            const res = await fetch(`${API}/bookings`, { credentials: "include" });
+            if (res.ok) {
+                const data = await res.json().catch(() => ({}));
+                const bookings = data.bookings || [];
+                const active = bookings.filter(b =>
+                    ["PENDING", "APPROVED", "ACTIVE"].includes(b.status)
+                );
+                if (active.length > 0) {
+                    const counts = {};
+                    active.forEach(b => { counts[b.status] = (counts[b.status] || 0) + 1; });
+                    const parts = [];
+                    if (counts.PENDING) parts.push(`${counts.PENDING} pending`);
+                    if (counts.APPROVED) parts.push(`${counts.APPROVED} approved`);
+                    if (counts.ACTIVE) parts.push(`${counts.ACTIVE} active`);
+                    if (blockedMsg) {
+                        blockedMsg.innerHTML = `<strong>Cannot deactivate:</strong> You have ${parts.join(", ")} booking(s) that must be resolved first. Please cancel or complete them before deactivating.`;
+                        blockedMsg.hidden = false;
+                    }
+                    if (confirmBtn) confirmBtn.disabled = true;
+                }
+            }
+        } catch { /* non-fatal — allow modal to open, backend will also guard */ }
+
+        el("deactivateOverlay").hidden = false;
+        if (window.lucide?.createIcons) lucide.createIcons();
+    });
+
+    el("deactivateCancelBtn")?.addEventListener("click", () => {
+        el("deactivateOverlay").hidden = true;
+    });
+    el("deactivateOverlay")?.addEventListener("click", (e) => {
+        if (e.target === el("deactivateOverlay")) el("deactivateOverlay").hidden = true;
+    });
+
+    el("deactivateConfirmBtn")?.addEventListener("click", async () => {
+        const pw = el("deactivatePw")?.value || "";
+        const errEl = el("deactivateErr");
+        if (!pw) { errEl.textContent = "Password is required."; return; }
+
+        const btn = el("deactivateConfirmBtn");
+        const label = btn.querySelector(".btnLabel");
+        const spinner = btn.querySelector(".btnSpinner");
+        btn.disabled = true; if (label) label.hidden = true; if (spinner) spinner.hidden = false;
+        errEl.textContent = "";
+
+        try {
+            // Verify password first
+            const verifyRes = await fetch(`${API}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: currentUser.email, password: pw }),
+                credentials: "include",
+            });
+            if (!verifyRes.ok) {
+                errEl.textContent = "Incorrect password.";
+                btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true;
+                return;
+            }
+
+            // Self-service deactivation (checks for active bookings on backend)
+            const res = await fetch(`${API}/users/me/deactivate`, {
+                method: "POST", credentials: "include",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to deactivate.");
+            location.href = "/auth/login.html";
+        } catch (err) {
+            errEl.textContent = err.message;
+            btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true;
+        }
     });
 
     // ── Util ────────────────────────────────────────────────────

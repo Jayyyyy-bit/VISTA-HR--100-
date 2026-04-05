@@ -14,6 +14,7 @@ class User(db.Model):
     first_name = db.Column(db.String(80), nullable=True)
     last_name = db.Column(db.String(80), nullable=True)
     phone = db.Column(db.String(30), nullable=True)
+    avatar_url = db.Column(db.String(500), nullable=True)
 
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -38,6 +39,11 @@ class User(db.Model):
     suspension_reason= db.Column(db.Text,     nullable=True)   # reason shown to user on login attempt
     strike_count     = db.Column(db.Integer,  nullable=False, default=0, server_default="0")
     # 3 strikes = permanent ban (is_suspended=True, suspended_until=NULL)
+
+    # ── Soft delete ───────────────────────────────────────────
+    # False = deactivated (soft-deleted). Admin "delete" sets this to False.
+    # require_auth blocks deactivated users; login returns 403.
+    is_active = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
 
     has_completed_onboarding = db.Column(
         db.Boolean,
@@ -74,6 +80,15 @@ class User(db.Model):
         server_default="NONE",
     )
 
+    # ── Profile extras ────────────────────────────────────────────
+    based_in = db.Column(db.String(100), nullable=True)
+
+    # ── Session tracking ──────────────────────────────────────────
+    # last_login_at: updated on every successful login
+    # token_version: increment to invalidate all existing JWTs ("logout all devices")
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    token_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -93,11 +108,13 @@ class User(db.Model):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "phone": self.phone,
+            "avatar_url": self.avatar_url,
             "email": self.email,
             "role": role_val,
             "email_verified": bool(self.email_verified),
             "is_verified": bool(self.is_verified),
             "is_suspended": bool(getattr(self, "is_suspended", False)),
+            "is_active": bool(getattr(self, "is_active", True)),
             "suspended_until": self.suspended_until.isoformat() if self.suspended_until else None,
             "suspension_reason": self.suspension_reason,
             "strike_count": int(getattr(self, "strike_count", 0) or 0),
@@ -109,4 +126,9 @@ class User(db.Model):
             "student_verified": bool(self.student_verified),
             "student_status": stu_val,
             "student_reject_reason": self.student_reject_reason,
+            # Profile extras
+            "based_in": self.based_in,
+            # Session
+            "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
+            "token_version": int(self.token_version or 0),
         }

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | Saved Listings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/auth/toast.js"></script>
+    <link rel="stylesheet" href="/Resident/saved_listings.css" />
+</head>
+
+<body>
+    <!-- ── Topbar ──────────────────────────────────────── -->
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="/Resident/resident_home.html">
+                <span class="brand-dot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </a>
+            <nav class="topbar-nav">
+                <a href="/Resident/resident_home.html" class="nav-link">
+                    <i data-lucide="search"></i> Explore
+                </a>
+                <a href="/Resident/saved_listings.html" class="nav-link active">
+                    <i data-lucide="heart"></i> Wishlists
+                </a>
+                <a href="/Resident/my-bookings.html" class="nav-link">
+                    <i data-lucide="calendar"></i> Bookings
+                </a>
+            </nav>
+            <div class="topbar-right">
+                <a href="/auth/account-settings.html" class="avatar-btn" id="userAvatar" title="Account">
+                    <span id="avatarInit">U</span>
+                    <img id="avatarImg" alt="Profile" hidden />
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="page-header">
+            <h1 class="page-title">Wishlists</h1>
+            <p class="page-sub" id="pageSub"></p>
+        </div>
+
+        <!-- Album grid — each album is a 2x2 photo mosaic -->
+        <div class="album-grid" id="albumGrid">
+            <!-- Skeleton loaders -->
+            <div class="album-skeleton">
+                <div class="album-mosaic-skel">
+                    <div class="skel-img"></div>
+                    <div class="skel-img"></div>
+                    <div class="skel-img"></div>
+                    <div class="skel-img"></div>
+                </div>
+                <div class="skel-text"></div>
+                <div class="skel-text short"></div>
+            </div>
+            <div class="album-skeleton">
+                <div class="album-mosaic-skel">
+                    <div class="skel-img"></div>
+                    <div class="skel-img"></div>
+                    <div class="skel-img"></div>
+                    <div class="skel-img"></div>
+                </div>
+                <div class="skel-text"></div>
+                <div class="skel-text short"></div>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" id="emptyState" hidden>
+            <div class="empty-icon"><i data-lucide="heart"></i></div>
+            <h2 class="empty-title">No saved listings yet</h2>
+            <p class="empty-sub">Tap the heart on any listing to save it here.</p>
+            <a href="/Resident/resident_home.html" class="empty-cta">
+                <i data-lucide="search"></i> Start exploring
+            </a>
+        </div>
+
+        <!-- Expanded view (shows when album is clicked) -->
+        <div class="listings-view" id="listingsView" hidden>
+            <button class="back-to-albums" id="backToAlbums" type="button">
+                <i data-lucide="arrow-left"></i> All wishlists
+            </button>
+            <h2 class="listings-title" id="listingsTitle">Saved listings</h2>
+            <div class="listings-grid" id="listingsGrid"></div>
+        </div>
+    </main>
+
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/Resident/saved_listings.js" defer></script>
+</body>
+
+</html>

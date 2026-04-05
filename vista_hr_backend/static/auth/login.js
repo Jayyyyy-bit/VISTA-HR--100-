@@ -1,7 +1,7 @@
 (() => {
     const LS_SESSION_KEY = "vista_session_user";
     const LS_LAST_USER_ID_KEY = "vista_last_user_id";
-    const API_BASE = "http://127.0.0.1:5000/api";
+    const API_BASE = "/api";
 
     const ROUTE_ROLES = "/Login_Register_Page/Signup/roles.html";
     const ROUTE_ADMIN_USERS = "/admin/user-management/user-management.html";
@@ -91,7 +91,7 @@
     goRolesBtn?.addEventListener("click", () => (window.location.href = ROUTE_ROLES));
     goSignupBtn?.addEventListener("click", () => (window.location.href = ROUTE_ROLES));
     // ── FORGOT PASSWORD FLOW (Meta-style) ────────────────
-    const API_FP = "http://127.0.0.1:5000/api";
+    const API_FP = "/api";
     let _fpEmail = "";
     let _fpResetToken = "";
     let _fpCountdownTimer = null;
