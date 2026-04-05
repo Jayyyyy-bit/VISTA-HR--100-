@@ -47,7 +47,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     const gmProgressBar = document.getElementById("gmProgressBar");
 
     const MIN_PHOTOS = 5;
-    const API_BASE = "http://127.0.0.1:5000/api";
+    const API_BASE = "";
     let guideStep = 1;
     const GUIDE_TOTAL = 5;
 

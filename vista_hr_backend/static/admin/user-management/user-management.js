@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     })();
 
     const LOGIN_URL = "/auth/login.html";
-    const API_BASE = "http://127.0.0.1:5000/api";
+    const API_BASE = "";
 
     // ── Auth guard ──────────────────────────────────────────
     let me = null;

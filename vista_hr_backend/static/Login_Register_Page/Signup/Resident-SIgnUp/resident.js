@@ -1,7 +1,7 @@
 lucide.createIcons();
 
 const LS_SESSION_KEY = "vista_session_user";
-const API_BASE = "http://127.0.0.1:5000/api";
+const API_BASE = "";
 
 // Register resident via backend API
 async function apiRegisterResident(payload) {

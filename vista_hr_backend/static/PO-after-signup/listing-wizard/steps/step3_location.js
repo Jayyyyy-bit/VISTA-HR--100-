@@ -47,7 +47,7 @@ window.Step3Init = function Step3Init() {
         return;
     }
 
-    const API_BASE = "http://127.0.0.1:5000/api";
+    const API_BASE = "";
     const norm = (s) => (s || "").toLowerCase().trim();
 
     // PSGC city code map — populated by loadCities()
