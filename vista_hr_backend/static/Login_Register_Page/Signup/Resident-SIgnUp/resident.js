@@ -5,7 +5,7 @@ const API_BASE = "";
 
 // Register resident via backend API
 async function apiRegisterResident(payload) {
-    const res = await fetch(`${API_BASE}/api/register`, {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -42,7 +42,7 @@ document.getElementById("backBtn").addEventListener("click", () => {
 // API: Register Owner
 // =======================
 async function apiRegisterOwner(payload) {
-    const res = await fetch(`${API_BASE}/api/register`, {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
