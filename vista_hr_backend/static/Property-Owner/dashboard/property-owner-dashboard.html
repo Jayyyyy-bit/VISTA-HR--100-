@@ -13,12 +13,12 @@
         href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap"
         rel="stylesheet">
 
+    <script src="/auth/toast.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-calendar.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-messages.css">
-    <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-today.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-today.css">
 </head>
 
@@ -86,28 +86,6 @@
 
         <!-- TODAY -->
         <section class="tabPanel active" id="tab-today" data-panel="today" role="tabpanel">
-
-            <!-- Alert toasts (dismissible bubbles, only shown when needed) -->
-            <div class="td-toasts" id="tdAlertsWrap" hidden>
-                <div class="td-toast td-toast--blue" id="emailVerifyBanner" hidden>
-                    <i data-lucide="mail" class="td-toast-icon"></i>
-                    <div class="td-toast-body">
-                        <span class="td-toast-title">Verify your email</span>
-                        <span class="td-toast-sub">to unlock publishing</span>
-                    </div>
-                    <a class="td-toast-cta" id="emailVerifyBtn" href="#">Verify →</a>
-                    <button class="td-toast-close" data-dismiss="emailVerifyBanner" aria-label="Dismiss">✕</button>
-                </div>
-                <div class="td-toast td-toast--amber" id="verifyBanner" hidden>
-                    <i data-lucide="shield-alert" class="td-toast-icon"></i>
-                    <div class="td-toast-body">
-                        <span class="td-toast-title">Identity pending</span>
-                        <span class="td-toast-sub">Listings hidden until approved</span>
-                    </div>
-                    <a class="td-toast-cta" href="/Property-Owner/verification/verify.html">Verify →</a>
-                    <button class="td-toast-close" data-dismiss="verifyBanner" aria-label="Dismiss">✕</button>
-                </div>
-            </div>
 
             <!-- Two-column layout -->
             <div class="td-shell">
@@ -438,7 +416,6 @@
     <script src="/Property-Owner/dashboard/property-owner-dashboard.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-calendar.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-messages.js" defer></script>
-    <script src="/Property-Owner/dashboard/dashboard-today.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-today.js" defer></script>
 
 

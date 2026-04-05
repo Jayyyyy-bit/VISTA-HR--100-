@@ -10,24 +10,24 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap"
         rel="stylesheet">
+    <script src="/auth/toast.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="account-settings.css" />
+    <link rel="stylesheet" href="/auth/account-settings.css" />
 </head>
 
 <body>
 
     <header class="topbar">
         <div class="topbar-inner">
-            <button class="backBtn" id="backBtn" type="button">
-                <i data-lucide="arrow-left"></i>
-                <span>Back</span>
-            </button>
-            <div class="brand">
+            <a class="brand" id="brandLink" href="#">
                 <span class="brandDot"></span>
                 <span>VISTA<b>-HR</b></span>
-            </div>
+            </a>
             <div class="topbarRight">
-                <div class="topbarAvatar" id="topbarAvatar">U</div>
+                <button class="backBtn" id="backBtn" type="button">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Back</span>
+                </button>
             </div>
         </div>
     </header>
@@ -58,10 +58,7 @@
                     <i data-lucide="shield-check"></i><span>Verification</span>
                     <span class="sidebarNavBadge" id="verifBadge" hidden></span>
                 </button>
-                <button class="sidebarNavItem" data-section="email" type="button">
-                    <i data-lucide="mail"></i><span>Email</span>
-                    <span class="sidebarNavBadge sidebarNavBadge--warn" id="emailBadge" hidden>!</span>
-                </button>
+
             </nav>
 
             <div class="sidebarFooter">
@@ -85,11 +82,26 @@
                 </div>
 
                 <div class="settingsCard">
+                    <!-- ══ UPDATED: Avatar with profile picture upload ══ -->
                     <div class="avatarRow">
-                        <div class="avatarCircle" id="avatarCircle">U</div>
+                        <div class="avatarCircleWrap">
+                            <div class="avatarCircle" id="avatarCircle">U</div>
+                            <img class="avatarImg" id="avatarImg" alt="Profile" hidden />
+                        </div>
                         <div class="avatarMeta">
                             <div class="avatarName" id="avatarName"><span class="skeleton skeleton--line"></span></div>
                             <div class="avatarRole" id="avatarRole"><span class="skeleton skeleton--short"></span></div>
+                            <div class="avatarActions">
+                                <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp"
+                                    hidden />
+                                <button class="btnSecondary btnSecondary--sm" id="avatarUploadBtn" type="button">
+                                    <i data-lucide="camera"></i> Upload photo
+                                </button>
+                                <button class="btnGhost btnGhost--sm btnGhost--danger" id="avatarRemoveBtn"
+                                    type="button" hidden>
+                                    <i data-lucide="trash-2"></i> Remove
+                                </button>
+                            </div>
                         </div>
                         <div class="avatarBadges" id="avatarBadges"></div>
                     </div>
@@ -107,17 +119,63 @@
                                     autocomplete="family-name" />
                             </div>
                         </div>
+
+                        <!-- ══ UPDATED: Email — OTP-protected change ══ -->
                         <div class="field">
                             <label class="fieldLabel" for="inputEmail">
                                 Email
-                                <span class="fieldLock"><i data-lucide="lock"></i> Cannot be changed</span>
+                                <span class="fieldLock" id="emailLockLabel"><i data-lucide="lock"></i> Requires
+                                    verification to change</span>
                             </label>
                             <input class="fieldInput fieldInput--locked" id="inputEmail" type="email" readonly />
+                            <button class="btnGhost btnGhost--sm" id="changeEmailBtn" type="button"
+                                style="margin-top:6px;">
+                                <i data-lucide="edit-3"></i> Change email
+                            </button>
                         </div>
+
+                        <!-- Email change OTP section (hidden until "Change email" clicked) -->
+                        <div class="field" id="emailChangeSection" hidden>
+                            <div class="infoCallout infoCallout--blue" style="margin-bottom:12px;">
+                                <i data-lucide="mail"></i>
+                                <div>A verification code has been sent to your current email. Enter it below with your
+                                    new email address.</div>
+                            </div>
+                            <label class="fieldLabel" for="inputNewEmail">New email address</label>
+                            <input class="fieldInput" id="inputNewEmail" type="email" placeholder="new@email.com" />
+                            <label class="fieldLabel" for="inputEmailOtp" style="margin-top:12px;">Verification
+                                code</label>
+                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <input class="fieldInput" id="inputEmailOtp" type="text" inputmode="numeric"
+                                    maxlength="6" placeholder="000000"
+                                    style="max-width:160px;letter-spacing:3px;text-align:center;font-weight:700;" />
+                                <button class="btnPrimary" id="submitEmailChangeBtn" type="button">
+                                    <span class="btnLabel">Update email</span>
+                                    <span class="btnSpinner" hidden></span>
+                                </button>
+                            </div>
+                            <small class="fieldErr" id="errEmailChange"></small>
+                        </div>
+
                         <div class="field">
                             <label class="fieldLabel" for="inputPhone">Phone number</label>
                             <input class="fieldInput" id="inputPhone" type="tel" placeholder="+63 9XX XXX XXXX"
-                                autocomplete="tel" />
+                                autocomplete="tel" maxlength="13" pattern="^\+?[0-9]{10,13}$" inputmode="tel" />
+                            <small class="fieldErr" id="errPhone"></small>
+                            <small id="phoneLockNote" hidden
+                                style="font-size:11.5px;color:#6b7280;display:flex;align-items:center;gap:4px;margin-top:2px;">
+                                <i data-lucide="lock" style="width:11px;height:11px;"></i>
+                                Locked while KYC is pending or approved
+                            </small>
+                        </div>
+
+                        <div class="field">
+                            <label class="fieldLabel" for="inputBasedIn">Based in</label>
+                            <input class="fieldInput" id="inputBasedIn" type="text" placeholder="e.g. Quezon City"
+                                autocomplete="off" list="citySuggestions" />
+                            <datalist id="citySuggestions"></datalist>
+                            <small style="font-size:11.5px;color:#6b7280;margin-top:2px;">Optional · shown on your
+                                public profile</small>
                         </div>
                     </div>
 
@@ -130,18 +188,21 @@
                     </div>
                 </div>
 
+                <!-- ══ UPDATED: Deactivate instead of Delete ══ -->
                 <div class="dangerZone">
                     <div class="dangerZoneHead">
-                        <h3 class="dangerZoneTitle">Danger zone</h3>
-                        <p class="dangerZoneSub">Irreversible and destructive actions</p>
+                        <h3 class="dangerZoneTitle">Account</h3>
+                        <p class="dangerZoneSub">Manage your account status</p>
                     </div>
                     <div class="dangerZoneRow">
                         <div>
-                            <div class="dangerZoneLabel">Delete account</div>
-                            <div class="dangerZoneDesc">Permanently remove your account and all associated data. This
-                                cannot be undone.</div>
+                            <div class="dangerZoneLabel">Deactivate account</div>
+                            <div class="dangerZoneDesc">
+                                Your profile and listings will be hidden. Your data is preserved — contact support to
+                                reactivate later.
+                            </div>
                         </div>
-                        <button class="btnDanger" type="button" id="deleteAccountBtn">Delete account</button>
+                        <button class="btnDanger" type="button" id="deactivateBtn">Deactivate account</button>
                     </div>
                 </div>
             </section>
@@ -217,15 +278,102 @@
                         </button>
                     </div>
                 </div>
+                <div class="settingsCard" style="max-width:580px;margin-top:0;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <div class="cardSectionLabel" style="margin-bottom:0;">Sessions</div>
+                            <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Last login: <span
+                                    id="lastLoginAt">—</span></div>
+                        </div>
+                        <button class="btnDanger" id="logoutAllBtn" type="button">
+                            <i data-lucide="log-out"></i> Logout from all devices
+                        </button>
+                    </div>
+                    <p class="disclaimer" style="margin-top:10px;">
+                        <i data-lucide="info"></i>
+                        This will immediately invalidate all active sessions including this one.
+                    </p>
+                </div>
             </section>
 
-            <!-- ── VERIFICATION ───────────────────────── -->
             <section class="settingsPanel" id="panel-verification">
                 <div class="panelHeader">
                     <div class="panelHeaderIcon"><i data-lucide="shield-check"></i></div>
                     <div>
                         <h2 class="panelTitle">Verification</h2>
                         <p class="panelSub">Identity and student status verification</p>
+                    </div>
+                </div>
+
+                <!-- ── Email verification card ─────────────── -->
+                <div class="settingsCard" id="emailVerifCard" style="max-width:580px">
+                    <div class="cardSectionLabel">Email verification</div>
+                    <div class="cardSectionSub">Some features are restricted until your email is verified</div>
+
+                    <div id="emailVerifiedState" hidden>
+                        <div class="statusBanner statusBanner--approved">
+                            <div class="statusBannerIcon"><i data-lucide="mail-check"></i></div>
+                            <div>
+                                <div class="statusBannerTitle">Email verified</div>
+                                <div class="statusBannerSub" id="emailVerifiedAddress"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="emailUnverifiedState" hidden>
+                        <div class="statusBanner statusBanner--pending">
+                            <div class="statusBannerIcon"><i data-lucide="mail-warning"></i></div>
+                            <div>
+                                <div class="statusBannerTitle">Email not verified</div>
+                                <div class="statusBannerSub">Verify your email to unlock booking, publishing, and
+                                    other
+                                    key features.</div>
+                            </div>
+                        </div>
+
+                        <p class="globalErr" id="resendErr" hidden></p>
+                        <p class="saveMsg" id="resendMsg" hidden></p>
+
+                        <!-- Step 1: send code -->
+                        <div id="otpSendStep" style="margin-top:18px;">
+                            <button class="btnPrimary" id="resendOtpBtn" type="button">
+                                <span class="btnLabel">Send verification code</span>
+                                <span class="btnSpinner" hidden></span>
+                            </button>
+                            <p class="disclaimer" style="margin-top:14px">
+                                <i data-lucide="info"></i>
+                                A 6-digit code will be sent to your registered email address.
+                            </p>
+                        </div>
+
+                        <!-- Step 2: enter code (shown after send) -->
+                        <div id="otpEnterStep" hidden style="margin-top:18px;">
+                            <label class="fieldLabel" for="otpCodeInput"
+                                style="display:block;margin-bottom:8px;font-size:13px;font-weight:500;">
+                                Enter the 6-digit code sent to your email
+                            </label>
+                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <input id="otpCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code"
+                                    maxlength="6" placeholder="000000"
+                                    style="width:140px;letter-spacing:0.2em;font-size:18px;font-weight:600;text-align:center;padding:10px 14px;border:1.5px solid rgba(3,3,3,0.15);border-radius:10px;outline:none;font-family:inherit;" />
+                                <button class="btnPrimary" id="verifyOtpBtn" type="button" disabled>
+                                    <span class="btnLabel">Verify email</span>
+                                    <span class="btnSpinner" hidden></span>
+                                </button>
+                            </div>
+                            <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+                                <button class="btnGhost" id="resendOtpAgainBtn" type="button"
+                                    style="font-size:12px;padding:6px 10px;background:none;border:none;cursor:pointer;color:inherit;text-decoration:underline;opacity:0.6;">
+                                    Resend code
+                                </button>
+                                <span id="resendCooldown" hidden style="font-size:12px;opacity:0.5;">Wait <span
+                                        id="cooldownSecs">60</span>s</span>
+                            </div>
+                            <p class="disclaimer" style="margin-top:10px">
+                                <i data-lucide="info"></i>
+                                Check your spam folder if you don't see the email after a few minutes.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -246,9 +394,9 @@
                                 <li><i data-lucide="check"></i> Get verified to publish to all residents</li>
                                 <li><i data-lucide="check"></i> One-time process — approved within 1–2 days</li>
                             </ul>
-                            <a class="btnPrimary" href="/Property-Owner/verification/verify.html">
+                            <button class="btnPrimary" id="kycStartBtn" type="button">
                                 <i data-lucide="shield-check"></i> Verify my identity
-                            </a>
+                            </button>
                         </div>
 
                         <div id="kycStatePending" hidden>
@@ -256,7 +404,8 @@
                                 <div class="statusBannerIcon"><i data-lucide="clock"></i></div>
                                 <div>
                                     <div class="statusBannerTitle">Documents under review</div>
-                                    <div class="statusBannerSub">Your ID was submitted and is being reviewed. Usually
+                                    <div class="statusBannerSub">Your ID was submitted and is being reviewed.
+                                        Usually
                                         takes 1–2 business days.</div>
                                 </div>
                             </div>
@@ -267,7 +416,8 @@
                                 <div class="statusBannerIcon"><i data-lucide="shield-check"></i></div>
                                 <div>
                                     <div class="statusBannerTitle">Identity verified</div>
-                                    <div class="statusBannerSub">Your account is fully verified. Published listings are
+                                    <div class="statusBannerSub">Your account is fully verified. Published listings
+                                        are
                                         visible to all residents.</div>
                                 </div>
                             </div>
@@ -282,10 +432,97 @@
                                         photos.</div>
                                 </div>
                             </div>
-                            <a class="btnSecondary" href="/Property-Owner/verification/verify.html"
+                            <button class="btnSecondary" id="kycResubmitBtn" type="button"
                                 style="margin-top:16px;display:inline-flex;">
                                 <i data-lucide="refresh-cw"></i> Re-submit documents
-                            </a>
+                            </button>
+                        </div>
+
+                        <!-- Inline KYC upload form (shown for None→Start and Rejected→Re-submit) -->
+                        <div id="kycStateForm" hidden>
+                            <div class="infoCallout infoCallout--blue" style="margin-bottom:20px">
+                                <i data-lucide="camera"></i>
+                                <div>Upload clear photos of your government-issued ID. Make sure all text is
+                                    legible and the photo is well-lit.</div>
+                            </div>
+
+                            <div class="uploadGroup">
+                                <label class="uploadLabel">
+                                    <span class="uploadNum">1</span>
+                                    ID Front <span class="required">*</span>
+                                </label>
+                                <div class="dropzone" id="dropKycFront">
+                                    <input type="file" id="inputKycFront" accept="image/jpeg,image/png,image/webp"
+                                        hidden />
+                                    <div class="dropContent" id="dropContentKycFront">
+                                        <i data-lucide="id-card"></i>
+                                        <span class="dropText">Click or drag to upload front of ID</span>
+                                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                    </div>
+                                    <div class="dropPreview" id="previewKycFront" hidden>
+                                        <img id="previewImgKycFront" alt="ID Front" />
+                                        <button class="removeBtn" id="removeKycFront" type="button">
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="fieldErr" id="errKycFront"></small>
+                            </div>
+
+                            <div class="uploadGroup">
+                                <label class="uploadLabel">
+                                    <span class="uploadNum">2</span>
+                                    ID Back <span class="required">*</span>
+                                </label>
+                                <div class="dropzone" id="dropKycBack">
+                                    <input type="file" id="inputKycBack" accept="image/jpeg,image/png,image/webp"
+                                        hidden />
+                                    <div class="dropContent" id="dropContentKycBack">
+                                        <i data-lucide="id-card"></i>
+                                        <span class="dropText">Click or drag to upload back of ID</span>
+                                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                    </div>
+                                    <div class="dropPreview" id="previewKycBack" hidden>
+                                        <img id="previewImgKycBack" alt="ID Back" />
+                                        <button class="removeBtn" id="removeKycBack" type="button">
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="fieldErr" id="errKycBack"></small>
+                            </div>
+
+                            <div class="uploadGroup">
+                                <label class="uploadLabel">
+                                    <span class="uploadNum">3</span>
+                                    Selfie holding ID <span
+                                        style="font-weight:500;text-transform:none;letter-spacing:0;font-size:11px;color:#6b7280;">(optional)</span>
+                                </label>
+                                <div class="dropzone" id="dropKycSelfie">
+                                    <input type="file" id="inputKycSelfie" accept="image/jpeg,image/png,image/webp"
+                                        hidden />
+                                    <div class="dropContent" id="dropContentKycSelfie">
+                                        <i data-lucide="user-check"></i>
+                                        <span class="dropText">Click or drag to upload your selfie</span>
+                                        <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                    </div>
+                                    <div class="dropPreview" id="previewKycSelfie" hidden>
+                                        <img id="previewImgKycSelfie" alt="Selfie" />
+                                        <button class="removeBtn" id="removeKycSelfie" type="button">
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="fieldErr" id="errKycSelfie"></small>
+                            </div>
+
+                            <p class="globalErr" id="kycGlobalErr" hidden></p>
+                            <button class="btnPrimary" id="submitKycBtn" type="button" disabled>
+                                <span class="btnLabel">Submit for verification</span>
+                                <span class="btnSpinner" hidden></span>
+                            </button>
+                            <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by
+                                VISTA-HR admins.</p>
                         </div>
                     </div>
                 </div>
@@ -299,7 +536,8 @@
                         <div id="studentStateForm">
                             <div class="infoCallout infoCallout--green" style="margin-bottom:20px">
                                 <i data-lucide="tag"></i>
-                                <div>Verified students get <strong>exclusive discounts</strong> on listings where the
+                                <div>Verified students get <strong>exclusive discounts</strong> on listings where
+                                    the
                                     owner has enabled student pricing.</div>
                             </div>
 
@@ -353,7 +591,8 @@
                                 <span class="btnLabel">Submit for verification</span>
                                 <span class="btnSpinner" hidden></span>
                             </button>
-                            <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by VISTA-HR
+                            <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by
+                                VISTA-HR
                                 admins.</p>
                         </div>
 
@@ -372,7 +611,8 @@
                                 <div class="statusBannerIcon"><i data-lucide="graduation-cap"></i></div>
                                 <div>
                                     <div class="statusBannerTitle">Student status verified!</div>
-                                    <div class="statusBannerSub">You're eligible for student discounts on participating
+                                    <div class="statusBannerSub">You're eligible for student discounts on
+                                        participating
                                         listings.</div>
                                 </div>
                             </div>
@@ -383,7 +623,8 @@
                                 <div class="statusBannerIcon"><i data-lucide="x-circle"></i></div>
                                 <div>
                                     <div class="statusBannerTitle">Verification not approved</div>
-                                    <div class="statusBannerSub" id="studentRejectReason">Please re-submit with clearer
+                                    <div class="statusBannerSub" id="studentRejectReason">Please re-submit with
+                                        clearer
                                         photos.</div>
                                 </div>
                             </div>
@@ -404,88 +645,128 @@
                 </div>
             </section>
 
-            <!-- ── EMAIL ──────────────────────────────── -->
-            <section class="settingsPanel" id="panel-email">
-                <div class="panelHeader">
-                    <div class="panelHeaderIcon"><i data-lucide="mail"></i></div>
-                    <div>
-                        <h2 class="panelTitle">Email</h2>
-                        <p class="panelSub">Verification status for your email address</p>
-                    </div>
-                </div>
 
-                <div class="settingsCard" style="max-width:580px">
-                    <div class="cardSectionLabel">Email verification</div>
-                    <div class="cardSectionSub">Some features are restricted until your email is verified</div>
-
-                    <div id="emailVerifiedState" hidden>
-                        <div class="statusBanner statusBanner--approved">
-                            <div class="statusBannerIcon"><i data-lucide="mail-check"></i></div>
-                            <div>
-                                <div class="statusBannerTitle">Email verified</div>
-                                <div class="statusBannerSub" id="emailVerifiedAddress"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="emailUnverifiedState" hidden>
-                        <div class="statusBanner statusBanner--pending">
-                            <div class="statusBannerIcon"><i data-lucide="mail-warning"></i></div>
-                            <div>
-                                <div class="statusBannerTitle">Email not verified</div>
-                                <div class="statusBannerSub">Verify your email to unlock booking, publishing, and other
-                                    key features.</div>
-                            </div>
-                        </div>
-
-                        <p class="globalErr" id="resendErr" hidden></p>
-                        <p class="saveMsg" id="resendMsg" hidden></p>
-
-                        <!-- Step 1: send code -->
-                        <div id="otpSendStep" style="margin-top:18px;">
-                            <button class="btnPrimary" id="resendOtpBtn" type="button">
-                                <span class="btnLabel">Send verification code</span>
-                                <span class="btnSpinner" hidden></span>
-                            </button>
-                            <p class="disclaimer" style="margin-top:14px">
-                                <i data-lucide="info"></i>
-                                A 6-digit code will be sent to your registered email address.
-                            </p>
-                        </div>
-
-                        <!-- Step 2: enter code (shown after send) -->
-                        <div id="otpEnterStep" hidden style="margin-top:18px;">
-                            <label class="fieldLabel" for="otpCodeInput"
-                                style="display:block;margin-bottom:8px;font-size:13px;font-weight:500;">
-                                Enter the 6-digit code sent to your email
-                            </label>
-                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                                <input id="otpCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code"
-                                    maxlength="6" placeholder="000000"
-                                    style="width:140px;letter-spacing:0.2em;font-size:18px;font-weight:600;text-align:center;padding:10px 14px;border:1.5px solid rgba(3,3,3,0.15);border-radius:10px;outline:none;font-family:inherit;" />
-                                <button class="btnPrimary" id="verifyOtpBtn" type="button" disabled>
-                                    <span class="btnLabel">Verify email</span>
-                                    <span class="btnSpinner" hidden></span>
-                                </button>
-                            </div>
-                            <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
-                                <button class="btnGhost" id="resendOtpAgainBtn" type="button"
-                                    style="font-size:12px;padding:6px 10px;background:none;border:none;cursor:pointer;color:inherit;text-decoration:underline;opacity:0.6;">
-                                    Resend code
-                                </button>
-                                <span id="resendCooldown" hidden style="font-size:12px;opacity:0.5;">Wait <span
-                                        id="cooldownSecs">60</span>s</span>
-                            </div>
-                            <p class="disclaimer" style="margin-top:10px">
-                                <i data-lucide="info"></i>
-                                Check your spam folder if you don't see the email after a few minutes.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
         </main>
+
+        <!-- ── RIGHT PANEL ────────────────────────────── -->
+        <aside class="settingsRightPanel">
+            <div class="rpSection">
+                <div class="rpSectionLabel">Account overview</div>
+                <div class="rpCard">
+                    <div class="rpCardHeader">
+                        <span class="rpCardTitle">Account status</span>
+                        <span id="rpStatusPill" class="statusPill statusPill--verified">
+                            <i data-lucide="circle-check"></i>Active
+                        </span>
+                    </div>
+                    <div class="rpRow">
+                        <span class="rpKey">Role</span>
+                        <span class="rpVal" id="rpRole">—</span>
+                    </div>
+                    <div class="rpRow">
+                        <span class="rpKey">Member since</span>
+                        <span class="rpVal" id="rpMemberSince">—</span>
+                    </div>
+                    <div class="rpRow">
+                        <span class="rpKey">Last login</span>
+                        <span class="rpVal" id="rpLastLogin">—</span>
+                    </div>
+                    <div class="rpRow" id="rpStrikeRow" hidden>
+                        <span class="rpKey">Strikes</span>
+                        <span class="rpVal rpVal--danger" id="rpStrikes">0 / 5</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rpSection">
+                <div class="rpSectionLabel">Verification</div>
+                <div class="rpCard">
+                    <div id="rpVerifRows"></div>
+                </div>
+            </div>
+
+            <div class="rpSection">
+                <div class="rpSectionLabel">Quick actions</div>
+                <div class="rpQuickLinks">
+                    <button class="rpQuickLink" id="rpGoSecurity" type="button">
+                        <span class="rpQuickLinkLeft">
+                            <i data-lucide="lock"></i>Change password
+                        </span>
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                    <button class="rpQuickLink" id="rpGoVerification" type="button">
+                        <span class="rpQuickLinkLeft">
+                            <i data-lucide="shield-check"></i>
+                            <span id="rpVerifLinkLabel">Verification</span>
+                        </span>
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                    <button class="rpQuickLink" id="rpGoLogoutAll" type="button">
+                        <span class="rpQuickLinkLeft">
+                            <i data-lucide="log-out"></i>Logout all devices
+                        </span>
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="rpTip" id="rpTip">
+                <i data-lucide="info"></i>
+                <p id="rpTipText"></p>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- ══ DEACTIVATE CONFIRMATION MODAL ══ -->
+    <div class="modalOverlay" id="deactivateOverlay" hidden>
+        <div class="modalCard">
+            <div class="modalHeader">
+                <i data-lucide="alert-triangle" style="color:#dc2626;width:22px;height:22px;"></i>
+                <h3 class="modalTitle">Deactivate your account?</h3>
+            </div>
+            <p class="modalDesc">
+                This will hide your profile and archive all your listings. You'll be logged out immediately.
+                Your data will be preserved — contact support to reactivate later.
+            </p>
+            <div class="field" style="margin-top:14px;">
+                <label class="fieldLabel" for="deactivatePw">Enter your password to confirm</label>
+                <input class="fieldInput" id="deactivatePw" type="password" placeholder="Password" />
+            </div>
+            <small class="fieldErr" id="deactivateErr"></small>
+            <div id="deactivateBlockedMsg" hidden
+                style="margin-top:10px;padding:12px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;font-size:13px;color:var(--text);">
+            </div>
+            <div class="modalActions">
+                <button class="btnSecondary" id="deactivateCancelBtn" type="button">Cancel</button>
+                <button class="btnDanger" id="deactivateConfirmBtn" type="button">
+                    <span class="btnLabel">Deactivate</span>
+                    <span class="btnSpinner" hidden></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ LOGOUT ALL CONFIRMATION MODAL ══ -->
+    <div class="modalOverlay" id="logoutAllOverlay" hidden>
+        <div class="modalCard">
+            <div class="modalHeader">
+                <i data-lucide="log-out" style="color:#dc2626;width:22px;height:22px;"></i>
+                <h3 class="modalTitle">Logout from all devices?</h3>
+            </div>
+            <p class="modalDesc">
+                This will immediately invalidate all active sessions including this one.
+                You'll need to log in again on every device.
+            </p>
+            <div class="modalActions">
+                <button class="btnSecondary" id="logoutAllCancelBtn" type="button">Cancel</button>
+                <button class="btnDanger" id="logoutAllConfirmBtn" type="button">
+                    <span class="btnLabel">Logout all</span>
+                    <span class="btnSpinner" hidden></span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="/auth/sessionGuard.js" defer></script>

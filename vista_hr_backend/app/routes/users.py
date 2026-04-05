@@ -16,7 +16,9 @@ def serialize_user(user: User):
     last = (user.last_name or "").strip()
     full_name = f"{first} {last}".strip() or user.email
 
-    if getattr(user, "is_suspended", False):
+    if not getattr(user, "is_active", True):
+        status = "DEACTIVATED"
+    elif getattr(user, "is_suspended", False):
         status = "SUSPENDED"
     elif not bool(user.is_verified):
         status = "PENDING"
@@ -37,12 +39,25 @@ def serialize_user(user: User):
         "role": user.role.value if hasattr(user.role, "value") else str(user.role),
         "is_verified": bool(user.is_verified),
         "is_suspended": bool(getattr(user, "is_suspended", False)),
+        "is_active": bool(getattr(user, "is_active", True)),
         "status": status,
         "kyc_status": kyc_val,
         "student_status": stu_val,
-        "student_verified": bool(getattr(user, "student_verified", False)),
-        "created_at": user.created_at.isoformat() if user.created_at else None,
-        "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+        "student_verified":  bool(getattr(user, "student_verified", False)),
+        "strike_count":      int(getattr(user, "strike_count", 0) or 0),
+        "suspended_until":   user.suspended_until.isoformat() if getattr(user, "suspended_until", None) else None,
+        "suspension_reason": getattr(user, "suspension_reason", None),
+        "email_verified":    bool(getattr(user, "email_verified", False)),
+        "kyc_id_front_url":  getattr(user, "kyc_id_front_url", None),
+        "kyc_id_back_url":   getattr(user, "kyc_id_back_url", None),
+        "kyc_selfie_url":    getattr(user, "kyc_selfie_url", None),
+        "kyc_reject_reason": getattr(user, "kyc_reject_reason", None),
+        "kyc_submitted_at":  user.kyc_submitted_at.isoformat() if getattr(user, "kyc_submitted_at", None) else None,
+        "student_id_url":    getattr(user, "student_id_url", None),
+        "student_cor_url":   getattr(user, "student_cor_url", None),
+        "student_reject_reason": getattr(user, "student_reject_reason", None),
+        "created_at":        user.created_at.isoformat() if user.created_at else None,
+        "updated_at":        user.updated_at.isoformat() if user.updated_at else None,
     }
 
 
@@ -59,7 +74,12 @@ def split_name(full_name: str):
 @users_bp.get("/users")
 @require_role("ADMIN")
 def list_users():
-    users = User.query.order_by(User.created_at.desc()).all()
+    # Exclude deactivated users by default; ?include_deactivated=true shows all
+    include_deactivated = request.args.get("include_deactivated", "").lower() == "true"
+    query = User.query
+    if not include_deactivated:
+        query = query.filter(User.is_active == True)  # noqa: E712
+    users = query.order_by(User.created_at.desc()).all()
     return jsonify({"users": [serialize_user(u) for u in users]}), 200
 
 
@@ -240,22 +260,198 @@ def patch_user(user_id: int):
 @users_bp.delete("/users/<int:user_id>")
 @require_role("ADMIN")
 def delete_user(user_id):
+    """Soft-delete: sets is_active = False instead of removing the row."""
     user = db.session.get(User, user_id)
     if not user:
         return json_error("User not found", 404)
 
     if g.current_user.id == user.id:
-        return json_error("You cannot delete your own admin account", 400)
+        return json_error("You cannot deactivate your own admin account", 400)
+
+    if not getattr(user, "is_active", True):
+        return json_error("User is already deactivated", 400)
+
+    user.is_active = False
+    # Bump token_version to invalidate all their active sessions immediately
+    user.token_version = int(user.token_version or 0) + 1
 
     try:
-        db.session.delete(user)
         db.session.commit()
-        return jsonify({"message": "User deleted"}), 200
+        return jsonify({"message": "User deactivated", "user": serialize_user(user)}), 200
     except SQLAlchemyError:
         db.session.rollback()
         return json_error("Database error", 500)
 
-# ══ Reset strikes for a user ══════════════════════════════
+
+@users_bp.post("/admin/users/<int:user_id>/reactivate")
+@require_role("ADMIN")
+def reactivate_user(user_id: int):
+    """Re-enable a soft-deleted user account."""
+    user = db.session.get(User, user_id)
+    if not user:
+        return json_error("User not found", 404)
+
+    if getattr(user, "is_active", True):
+        return json_error("User is already active", 400)
+
+    user.is_active = True
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "User reactivated", "user": serialize_user(user)}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+
+# ══ Self-service — logged-in user's own account ══════════════════════════════
+# These routes use @require_auth directly (not @require_role) so any
+# authenticated role (OWNER, RESIDENT, ADMIN) can manage their own account.
+from ..auth.jwt import require_auth  # noqa: E402
+
+
+@users_bp.patch("/users/me/profile")
+@require_auth
+def update_own_profile():
+    """PATCH /api/users/me/profile — update first_name, last_name, phone, based_in.
+    Phone is locked (400) if the user is an OWNER with KYC PENDING or APPROVED.
+    """
+    user = g.current_user
+    data = request.get_json(silent=True) or {}
+
+    first_name = (data.get("first_name") or "").strip() or None
+    last_name  = (data.get("last_name")  or "").strip() or None
+    phone      = (data.get("phone")      or "").strip() or None
+    based_in   = (data.get("based_in")   or "").strip() or None
+
+    if not first_name and not last_name:
+        return json_error("At least first name or last name is required.", 400)
+
+    # Phone lock: OWNER with KYC PENDING or APPROVED cannot change phone
+    if phone and phone != user.phone:
+        role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+        kyc_val  = user.kyc_status.value if hasattr(user.kyc_status, "value") else str(user.kyc_status or "NONE")
+        if role_val == "OWNER" and kyc_val in ("PENDING", "APPROVED"):
+            return json_error("Phone number is locked while KYC is pending or approved.", 403)
+
+    if first_name is not None:
+        user.first_name = first_name
+    if last_name is not None:
+        user.last_name = last_name
+    if phone is not None:
+        user.phone = phone
+    if based_in is not None:
+        user.based_in = based_in
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Profile updated.", "user": user.to_dict()}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)
+
+
+@users_bp.patch("/users/me/avatar")
+@require_auth
+def update_own_avatar():
+    """PATCH /api/users/me/avatar — save Cloudinary avatar URL after client-side upload.
+    The frontend uploads directly to Cloudinary (signed), then sends us the secure_url.
+    """
+    user = g.current_user
+    data = request.get_json(silent=True) or {}
+
+    avatar_url = (data.get("avatar_url") or "").strip() or None
+
+    # Basic guard — must be a Cloudinary URL or null (to remove avatar)
+    if avatar_url and not avatar_url.startswith("https://res.cloudinary.com/"):
+        return json_error("Invalid avatar URL.", 400)
+
+    user.avatar_url = avatar_url
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Avatar updated.", "user": user.to_dict()}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)
+
+
+@users_bp.post("/users/me/logout-all")
+@require_auth
+def logout_all_devices():
+    """POST /api/users/me/logout-all — bumps token_version, invalidating all existing JWTs."""
+    user = g.current_user
+    user.token_version = int(user.token_version or 0) + 1
+
+    try:
+        db.session.commit()
+        # Clear the current session cookie too
+        from flask import make_response
+        resp = make_response(jsonify({"message": "Logged out from all devices."}), 200)
+        resp.delete_cookie(
+            "access_token",
+            path="/",
+            samesite="Lax",
+        )
+        return resp
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)
+
+
+@users_bp.post("/users/me/deactivate")
+@require_auth
+def deactivate_own_account():
+    """Self-service account deactivation. Blocked if user has active bookings."""
+    from ..models.booking import Booking
+
+    user = g.current_user
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+
+    # Check for active bookings — block deactivation if any exist
+    active_statuses = ("PENDING", "APPROVED", "ACTIVE")
+    if role_val == "OWNER":
+        # Owner: check bookings on their listings
+        from ..models.listing import Listing
+        owner_listing_ids = [l.id for l in Listing.query.filter_by(owner_id=user.id).all()]
+        if owner_listing_ids:
+            active_bookings = Booking.query.filter(
+                Booking.listing_id.in_(owner_listing_ids),
+                Booking.status.in_(active_statuses),
+            ).count()
+            if active_bookings > 0:
+                return json_error(
+                    f"Cannot deactivate: you have {active_bookings} active booking(s) on your listings. "
+                    "Please resolve them first.",
+                    409,
+                )
+    else:
+        # Resident: check their own bookings
+        active_bookings = Booking.query.filter(
+            Booking.user_id == user.id,
+            Booking.status.in_(active_statuses),
+        ).count()
+        if active_bookings > 0:
+            return json_error(
+                f"Cannot deactivate: you have {active_bookings} active booking(s). "
+                "Please cancel or complete them first.",
+                409,
+            )
+
+    user.is_active = False
+    user.token_version = int(user.token_version or 0) + 1
+
+    try:
+        db.session.commit()
+        from flask import make_response
+        from ..auth.jwt import clear_auth_cookie
+        resp = make_response(jsonify({"message": "Account deactivated."}), 200)
+        clear_auth_cookie(resp)
+        return resp
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)
+
 @users_bp.post("/admin/users/<int:user_id>/reset-strikes")
 @require_role("ADMIN")
 def reset_strikes(user_id: int):

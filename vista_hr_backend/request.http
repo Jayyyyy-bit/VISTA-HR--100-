@@ -1,0 +1,7 @@
+POST http://127.0.0.1:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin1@vista-hr.com",
+  "password": "admin123"
+}

@@ -247,7 +247,7 @@
             updatePendingBadge();
             renderList();
         } catch (err) {
-            alert(err.message);
+            showError(err.message);
         } finally {
             btn.textContent = "Yes, cancel";
             btn.disabled = false;

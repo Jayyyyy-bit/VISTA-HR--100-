@@ -9,6 +9,30 @@
 
     const DASHBOARD_URL = "/Property-Owner/dashboard/property-owner-dashboard.html";
 
+    // ── UI helpers — fallback if not defined globally elsewhere ──────────────
+    function showError(msg) {
+        if (typeof window.showError === "function" && window.showError !== showError) {
+            return window.showError(msg);
+        }
+        // Simple toast fallback
+        let toast = document.getElementById("_routerToast");
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "_routerToast";
+            toast.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#dc2626;color:#fff;padding:12px 20px;border-radius:10px;font-size:0.9rem;font-weight:600;z-index:9999;max-width:400px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.2);";
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.style.display = "block";
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => { toast.style.display = "none"; }, 4000);
+    }
+
+    function showInfo(msg) {
+        if (typeof window.showInfo === "function") return window.showInfo(msg);
+        alert(msg);
+    }
+
     const ROUTES = [
         { id: "step-1", file: "steps/step1_unit_category.html", init: window.Step1Init, sync: "syncStep1" },
         { id: "step-2", file: "steps/step2_space_type.html", init: window.Step2Init, sync: "syncStep2" },
@@ -18,6 +42,8 @@
         { id: "step-6", file: "steps/step6_highlights.html", init: window.Step6Init, sync: "syncStep6" },
         { id: "step-7", file: "steps/step7_photos.html", init: window.Step7Init, sync: "syncStep7" },
         { id: "step-8", file: "steps/step8_details.html", init: window.Step8Init, sync: "syncStep8" },
+        { id: "step-9", file: "steps/step9_pricing.html", init: window.Step9Init, sync: "syncStep9" },
+        { id: "step-10", file: "steps/step10_preview.html", init: window.Step10Init, sync: null },
     ];
 
     function setHash(id) { location.hash = `#/${id}`; }
@@ -142,7 +168,7 @@
                 e?.error ||
                 e?.message ||
                 "Failed to save this step. Please try again.";
-            alert(msg);
+            showError(msg);
             nextBtn.disabled = false;
         }
     });
@@ -152,7 +178,7 @@
         location.href = `${DASHBOARD_URL}#/listings`;
     });
 
-    on($("#questionsBtn"), "click", () => alert("FAQ coming soon."));
+    on($("#questionsBtn"), "click", () => showInfo("FAQ coming soon."));
 
     on($("#btsDismiss"), "click", () => {
         window.SidePanel?.dismissTips?.();
@@ -216,7 +242,7 @@
                         createErr?.error ||
                         createErr?.message ||
                         "Could not start a new listing. Please try again.";
-                    alert(msg);
+                    showError(msg);
                     // Redirect back to dashboard so the owner isn't stuck
                     location.href = DASHBOARD_URL;
                     return;

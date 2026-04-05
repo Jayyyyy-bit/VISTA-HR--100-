@@ -5,6 +5,8 @@ from sqlalchemy.exc import SQLAlchemyError
 import random, string
 from datetime import datetime, timedelta, timezone
 
+
+
 from ..extensions import db
 from ..models import User
 from ..auth.jwt import create_access_token, require_auth, COOKIE_NAME
@@ -134,6 +136,11 @@ def login():
     if not user or not user.check_password(password):
         return json_error("Invalid credentials", 401)
 
+    # Block deactivated (soft-deleted) accounts from logging in
+    if not getattr(user, "is_active", True):
+        return json_error("This account has been deactivated.", 403,
+                          code="ACCOUNT_DEACTIVATED")
+
     if getattr(user, "is_suspended", False):
         sus_until = getattr(user, "suspended_until", None)
         reason    = getattr(user, "suspension_reason", None) or "Violation of platform terms."
@@ -162,6 +169,8 @@ def login():
                               fields={"strikes": strikes})
 
     # Allow login even if email not verified — actions are gated per role on dashboard
+    user.last_login_at = datetime.now(timezone.utc)
+    db.session.commit()
     token = create_access_token(user)
     resp = jsonify({"message": "Logged in", "user": user.to_dict()})
     return _set_auth_cookie(resp, token), 200

@@ -6,6 +6,18 @@
 
 <section class="photoShell">
 
+    <!-- ── Dark Image Warning Banner (shown/hidden by JS) ── -->
+    <div class="darkWarning" id="darkWarning" style="display:none;">
+        <div class="darkWarning__icon">⚠️</div>
+        <div class="darkWarning__body">
+            <p class="darkWarning__text" id="darkWarningText">
+                Some photos appear too dark. Bright, well-lit photos get more inquiries.
+            </p>
+            <p class="darkWarning__list" id="darkWarningList"></p>
+        </div>
+        <button type="button" class="darkWarning__close" id="darkWarningClose" aria-label="Dismiss">✕</button>
+    </div>
+
     <!-- Regular photos upload zone -->
     <div class="uploadZone" id="uploadZone" tabindex="0">
         <div class="uzTop">
@@ -61,7 +73,7 @@
                         <i data-lucide="upload"></i> Choose panorama file
                     </button>
                 </div>
-                <!-- Preview (shown after upload) -->
+                <!-- Flat preview (shown briefly after upload, before viewer loads) -->
                 <div class="panoPreview" id="panoPreview" hidden>
                     <img id="panoPreviewImg" alt="360° panorama preview" />
                     <div class="panoPreviewOverlay">
@@ -73,6 +85,18 @@
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <!-- ── LIVE 360° VIEWER (Pannellum) ── -->
+            <div class="panoViewerWrap" id="panoViewerWrap" style="display:none;">
+                <div class="panoViewerHeader">
+                    <span class="panoViewerLabel"><i data-lucide="rotate-3d"></i> 360° Preview — drag to look
+                        around</span>
+                    <button type="button" class="panoRemoveBtn2" id="panoRemoveBtn2">
+                        <i data-lucide="trash-2"></i> Remove panorama
+                    </button>
+                </div>
+                <div id="panoViewer" class="panoViewer"></div>
             </div>
 
             <!-- Or paste URL option -->

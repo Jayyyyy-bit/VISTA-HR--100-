@@ -16,6 +16,8 @@ def create_app():
     app.config.from_object(Config)
 
     db.init_app(app)
+    # Import models so db.create_all() creates their tables
+    from .models import amenity as _amenity_models  # noqa
     print("ACTUAL DB:", app.config.get("SQLALCHEMY_DATABASE_URI"))
 
     CORS(
@@ -40,7 +42,9 @@ def create_app():
     from .routes.messages import messages_bp
     from .routes.analytics import analytics_bp
     from .routes.notifications import notifications_bp
-    from .routes.reviews import reviews_bp          # ← new
+    from .routes.reviews   import reviews_bp          # ← new
+    from .routes.amenities import amenities_bp        # ← amenities CMS
+    from .routes.saved import saved_bp                # ← saved listings
 
     app.register_blueprint(auth_bp,          url_prefix="/api")
     app.register_blueprint(listings_bp,      url_prefix="/api")
@@ -53,6 +57,8 @@ def create_app():
     app.register_blueprint(analytics_bp,     url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api")
     app.register_blueprint(reviews_bp,       url_prefix="/api")  # ← new
+    app.register_blueprint(amenities_bp,     url_prefix="/api")  # ← amenities CMS
+    app.register_blueprint(saved_bp,         url_prefix="/api")  # ← saved listings
 
     @app.get("/health")
     def health():
@@ -70,7 +76,7 @@ def create_app():
 
     @app.route("/")
     def _index():
-        return _sfd(app.static_folder, "auth/login.html")
+        return _sfd(app.static_folder, "Landing_Page/ASSETS/front_index.html")
 
     @app.errorhandler(404)
     def _not_found(e):
@@ -78,7 +84,6 @@ def create_app():
         full = _os.path.join(app.static_folder, path)
         if _os.path.isfile(full):
             return _sfd(app.static_folder, path)
-        return _sfd(app.static_folder, "auth/login.html"), 200
+        return _sfd(app.static_folder, "Landing_Page/ASSETS/front_index.html"), 200
 
     return app
-    

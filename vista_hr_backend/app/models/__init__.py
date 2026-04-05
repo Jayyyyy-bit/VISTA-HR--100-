@@ -4,5 +4,6 @@ from .booking import Booking
 from .message import Message
 from .notification import Notification 
 from .review import Review
+from .saved_listing import SavedListing
 
-__all__ = ["User", "Listing", "Booking", "Message"]
+__all__ = ["User", "Listing", "Booking", "Message", "Notification", "Review", "SavedListing"]

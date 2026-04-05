@@ -606,6 +606,66 @@ def update_step8(listing_id: int):
     return _commit_or_500({"message": "Step 8 saved", "listing": listing.to_dict()}, 200)
 
 
+
+# =========================
+# Step 9 (pricing) — monthly_rent + student_discount_pct
+# Separated from Step 8 so price is its own dedicated step.
+# monthly_rent  → stored in capacity JSON (existing column)
+# student_discount_pct → stored in listing.student_discount (dedicated column)
+# =========================
+@listings_bp.patch("/listings/<int:listing_id>/step-9")
+@require_role("OWNER")
+def update_step9(listing_id: int):
+    data = request.get_json(silent=True) or {}
+    listing = _get_owned_listing_or_404(listing_id)
+    if not listing:
+        return json_error("Listing not found", 404)
+
+    monthly_rent_raw = data.get("monthly_rent")
+    student_discount_raw = data.get("student_discount_pct")
+
+    # ── Validate monthly_rent (required) ──────────────────────────────────────
+    if monthly_rent_raw is None or monthly_rent_raw == "":
+        return json_error("Validation failed", 400, fields={"monthly_rent": "Monthly rent is required."})
+
+    try:
+        monthly_rent = int(monthly_rent_raw)
+    except (TypeError, ValueError):
+        return json_error("Validation failed", 400, fields={"monthly_rent": "Must be a number."})
+
+    if monthly_rent < 500:
+        return json_error("Validation failed", 400, fields={"monthly_rent": "Minimum rent is ₱500."})
+    if monthly_rent > 500000:
+        return json_error("Validation failed", 400, fields={"monthly_rent": "Maximum rent is ₱500,000."})
+
+    # ── Validate student_discount_pct (optional) ──────────────────────────────
+    student_discount = None
+    if student_discount_raw not in (None, "", 0, "0"):
+        try:
+            pct = int(student_discount_raw)
+            if not (1 <= pct <= 50):
+                return json_error("Validation failed", 400,
+                    fields={"student_discount_pct": "Discount must be between 1% and 50%."})
+            student_discount = pct
+        except (TypeError, ValueError):
+            return json_error("Validation failed", 400,
+                fields={"student_discount_pct": "Must be a whole number."})
+
+    # ── Persist ───────────────────────────────────────────────────────────────
+    # monthly_rent lives inside the capacity JSON (existing schema)
+    cap = dict(listing.capacity or {})
+    cap["monthly_rent"] = monthly_rent
+    listing.capacity = cap
+
+    # student_discount lives in its own dedicated column
+    listing.student_discount = student_discount
+
+    listing.current_step = max(listing.current_step or 1, 9)
+    listing.status = "DRAFT"  # stays DRAFT until Step 10 (preview/finish)
+
+    return _commit_or_500({"message": "Step 9 saved", "listing": listing.to_dict()}, 200)
+
+
 # =========================
 # Publish Listing (optional button)
 # =========================

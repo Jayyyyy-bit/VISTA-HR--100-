@@ -1,4 +1,35 @@
 document.addEventListener("DOMContentLoaded", async () => {
+
+    // ══ Collapsible sidebar ═══════════════════════════════════
+    (function () {
+        const sidebar = document.getElementById("adminSidebar");
+        const toggleBtn = document.getElementById("sidebarToggle");
+        const iconClose = document.getElementById("toggleIconClose");
+        const iconOpen = document.getElementById("toggleIconOpen");
+        const STORAGE_KEY = "vista_sidebar_collapsed";
+
+        function setCollapsed(collapsed) {
+            if (!sidebar) return;
+            sidebar.classList.toggle("collapsed", collapsed);
+            if (iconClose) iconClose.hidden = collapsed;
+            if (iconOpen) iconOpen.hidden = !collapsed;
+            localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
+        }
+
+        // Restore saved state
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved === "1") setCollapsed(true);
+
+        // Toggle on button click
+        toggleBtn?.addEventListener("click", () => {
+            setCollapsed(!sidebar.classList.contains("collapsed"));
+            // Re-render lucide icons after transition
+            setTimeout(() => {
+                if (window.lucide?.createIcons) lucide.createIcons();
+            }, 260);
+        });
+    })();
+
     const LOGIN_URL = "/auth/login.html";
     const API_BASE = "http://127.0.0.1:5000/api";
 
@@ -18,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!me) { window.location.replace(LOGIN_URL); return; }
     if (String(me.role || "").toUpperCase() !== "ADMIN") {
-        alert("Admin access only.");
+        showInfo("Admin access only.");
         window.location.replace(LOGIN_URL);
         return;
     }
@@ -44,19 +75,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const views = {
         overview: document.getElementById("viewOverview"),
         users: document.getElementById("viewUsers"),
-        kyc: document.getElementById("viewKyc"),
-        student: document.getElementById("viewStudent"),
-        listings: document.getElementById("viewListings"),
+        content: document.getElementById("viewContent"),
         analytics: document.getElementById("viewAnalytics"),
     };
 
     const pageTitles = {
         overview: ["Overview", "Platform health at a glance"],
         analytics: ["Analytics", "Platform performance and trends"],
-        users: ["User Management", "Manage accounts, roles, and access"],
-        kyc: ["Owner KYC", "Review property owner ID verifications"],
-        student: ["Student Verification", "Review resident student ID submissions"],
-        listings: ["Listings Management", "View, filter, and moderate all listings"],
+        users: ["Users", "Manage accounts, roles, and verifications"],
+        content: ["Content", "Listings management and Amenities CMS"],
     };
 
     let currentView = "overview";
@@ -67,6 +94,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         currentView = name;
 
         Object.entries(views).forEach(([key, el]) => {
+            if (!el) return;
             el.hidden = (key !== name);
             el.classList.toggle("active", key === name);
         });
@@ -81,8 +109,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (name === "kyc") loadKyc();
         if (name === "student") loadStudent();
-        if (name === "users") loadUsers();
-        if (name === "listings") loadListings();
+        if (name === "users") { loadUsers(); initUserSubTabs(); }
+        if (name === "content") { initContentSubTabs(); }
     }
 
     document.querySelectorAll(".sidenav-item").forEach(a => {
@@ -243,7 +271,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 try {
                     await apiFetch(`/admin/kyc/${btn.dataset.ovKycApprove}/approve`, { method: "POST" });
                     await loadOverview();
-                } catch (err) { alert(err.message); }
+                } catch (err) { showError(err.message); }
             });
         });
 
@@ -257,7 +285,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         body: JSON.stringify({ reason: reason.trim() || "Documents were unclear." }),
                     });
                     await loadOverview();
-                } catch (err) { alert(err.message); }
+                } catch (err) { showError(err.message); }
             });
         });
     }
@@ -289,6 +317,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let editingId = null;
 
     const tableBody = document.getElementById("userTableBody");
+    const cardGrid = document.getElementById("userCardGrid");
     const searchInput = document.getElementById("searchInput");
     const roleFilter = document.getElementById("roleFilter");
     const statusFilter = document.getElementById("statusFilter");
@@ -306,9 +335,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const statusInput = document.getElementById("statusInput");
 
     function renderStats() {
-        document.getElementById("totalUsers").textContent = users.length;
-        document.getElementById("totalOwners").textContent = users.filter(u => u.role === "Property Owner").length;
-        document.getElementById("totalResidents").textContent = users.filter(u => u.role === "Resident").length;
+        const el = id => document.getElementById(id);
+        if (el("totalUsers")) el("totalUsers").textContent = users.length;
+        if (el("totalOwners")) el("totalOwners").textContent = users.filter(u => u.role === "Property Owner").length;
+        if (el("totalResidents")) el("totalResidents").textContent = users.filter(u => u.role === "Resident").length;
+        const suspended = users.filter(u => u.is_suspended).length;
+        if (el("ovSuspended")) el("ovSuspended").textContent = suspended;
+        const chip = el("suspendedChip");
+        if (chip) chip.style.display = suspended > 0 ? "" : "none";
     }
 
     function renderUsers() {
@@ -326,40 +360,72 @@ document.addEventListener("DOMContentLoaded", async () => {
             return matchKeyword && matchRole && matchStatus;
         });
 
-        if (!tableBody) return;
-        tableBody.innerHTML = filtered.length
-            ? filtered.map(u => `
-            <tr>
-                <td>
-                    <div style="font-weight:600">${escHtml(u.name)}</div>
-                    <div style="font-size:11px;color:var(--muted);margin-top:2px">${escHtml(u.email)}</div>
-                </td>
-                <td><span class="badge ${roleBadgeClass(u.role)}">${escHtml(u.role)}</span></td>
-                <td>
-                    <span class="badge ${u.status === 'Active' ? 'active' : u.status === 'Suspended' ? 'suspended' : 'pending'}">
-                        ${escHtml(u.status)}
-                    </span>
-                    ${u.is_suspended && u.suspended_until ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">Until ${new Date((u.suspended_until.includes('+') || u.suspended_until.endsWith('Z') ? u.suspended_until : u.suspended_until + 'Z')).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' })}</div>` : ''}
-                </td>
-                <td>
-                    <div class="strike-row">
-                        ${[1, 2, 3].map(i => `<span class="strike-pip${u.strike_count >= i ? ' filled' : ''}" title="Strike ${i}"></span>`).join('')}
-                        <span style="font-size:11px;color:var(--muted);margin-left:4px">${u.strike_count}/3</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="action-row">
-                        <button class="action-btn" data-action="edit" data-id="${u.id}">Edit</button>
-                        ${u.is_suspended
-                    ? `<button class="action-btn active" data-action="uplift" data-id="${u.id}">Uplift</button>`
-                    : `<button class="action-btn warn" data-action="suspend" data-id="${u.id}">Suspend</button>`}
-                        ${u.strike_count > 0 ? `<button class="action-btn ghost" data-action="reset-strikes" data-id="${u.id}" title="Reset strikes">↺</button>` : ''}
-                        <button class="action-btn danger" data-action="delete" data-id="${u.id}">Delete</button>
-                    </div>
-                </td>
-            </tr>`).join("")
-            : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">No users found.</td></tr>`;
+        const grid = document.getElementById("userCardGrid");
+        if (!grid) return;
 
+        if (!filtered.length) {
+            grid.innerHTML = `<div class="um-empty">
+                <i data-lucide="users"></i>
+                <p>No users found.</p>
+            </div>`;
+            if (window.lucide?.createIcons) lucide.createIcons();
+            renderStats();
+            return;
+        }
+
+        grid.innerHTML = filtered.map(u => {
+            const initials = (u.name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+            const statusCls = u.status === "Active" ? "active" : u.status === "Suspended" ? "suspended" : "pending";
+            const suspUntil = u.is_suspended && u.suspended_until
+                ? new Date((u.suspended_until.includes("+") || u.suspended_until.endsWith("Z") ? u.suspended_until : u.suspended_until + "Z"))
+                    .toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" })
+                : null;
+
+            return `<div class="um-card" data-id="${u.id}">
+                <div class="um-card-top">
+                    <div class="um-avatar um-avatar--${u.role === 'Admin' ? 'admin' : u.role === 'Property Owner' ? 'owner' : 'resident'}">
+                        ${initials}
+                    </div>
+                    <div class="um-card-info">
+                        <div class="um-card-name">${escHtml(u.name)}</div>
+                        <div class="um-card-email">${escHtml(u.email)}</div>
+                    </div>
+                    <span class="badge ${roleBadgeClass(u.role)}" style="margin-left:auto;flex-shrink:0">${escHtml(u.role)}</span>
+                </div>
+
+                <div class="um-card-mid">
+                    <span class="badge ${statusCls}">${escHtml(u.status)}</span>
+                    ${suspUntil ? `<span style="font-size:11px;color:var(--muted)">Until ${suspUntil}</span>` : ""}
+                    <div class="strike-row" style="margin-left:auto">
+                        ${[1, 2, 3, 4, 5].map(i => `<span class="strike-pip${u.strike_count >= i ? " filled" : ""}" title="Strike ${i}"></span>`).join("")}
+                        <span style="font-size:11px;color:var(--muted);margin-left:4px">${u.strike_count}/5</span>
+                    </div>
+                </div>
+
+                <div class="um-card-actions">
+                    <button class="um-btn" data-action="edit" data-id="${u.id}">
+                        <i data-lucide="edit-3"></i> Edit
+                    </button>
+                    ${u.is_suspended
+                    ? `<button class="um-btn um-btn--green" data-action="uplift" data-id="${u.id}">
+                            <i data-lucide="check-circle-2"></i> Uplift
+                           </button>`
+                    : `<button class="um-btn um-btn--warn" data-action="suspend" data-id="${u.id}">
+                            <i data-lucide="ban"></i> Suspend
+                           </button>`}
+                    ${u.strike_count > 0
+                    ? `<button class="um-btn um-btn--ghost" data-action="reset-strikes" data-id="${u.id}" title="Reset strikes">
+                            <i data-lucide="rotate-ccw"></i>
+                           </button>`
+                    : ""}
+                    <button class="um-btn um-btn--danger" data-action="delete" data-id="${u.id}">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>`;
+        }).join("");
+
+        if (window.lucide?.createIcons) lucide.createIcons();
         renderStats();
     }
 
@@ -387,7 +453,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    tableBody?.addEventListener("click", async e => {
+    document.getElementById("userCardGrid")?.addEventListener("click", async e => {
         const btn = e.target.closest("button[data-action]");
         if (!btn) return;
         const id = Number(btn.dataset.id);
@@ -411,7 +477,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     body: JSON.stringify({ is_suspended: false }),
                 });
                 await loadUsers();
-            } catch (err) { alert(err?.error || err.message); }
+            } catch (err) { showError(err?.error || err?.message || "An error occurred."); }
             return;
         }
 
@@ -420,7 +486,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             try {
                 await apiFetch(`/admin/users/${id}/reset-strikes`, { method: "POST" });
                 await loadUsers();
-            } catch (err) { alert(err?.error || err.message); }
+            } catch (err) { showError(err?.error || err?.message || "An error occurred."); }
             return;
         }
 
@@ -428,8 +494,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!confirm(`Delete ${user.name}? This cannot be undone.`)) return;
             try {
                 await apiFetch(`/users/${id}`, { method: "DELETE" });
+                addActivity("deleted", user);
                 await loadUsers();
-            } catch (err) { alert(err.message); }
+            } catch (err) { showError(err.message); }
         }
     });
 
@@ -467,9 +534,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const role = roleInput.value;
         const status = statusInput.value;
 
-        if (!name || !email) { alert("Name and email are required."); return; }
-        if (!editingId && !password) { alert("Password is required for new users."); return; }
-        if (!editingId && password.length < 8) { alert("Password must be at least 8 characters."); return; }
+        if (!name || !email) { showInfo("Name and email are required."); return; }
+        if (!editingId && !password) { showInfo("Password is required for new users."); return; }
+        if (!editingId && password.length < 8) { showInfo("Password must be at least 8 characters."); return; }
 
         const payload = {
             name,
@@ -488,7 +555,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             closeModal();
             await loadUsers();
-        } catch (err) { alert(err.message); }
+        } catch (err) { showError(err.message); }
     });
 
     addUserBtn?.addEventListener("click", () => openModal("add"));
@@ -965,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         await apiFetch(endpoint, { method: "POST" });
                         if (type === "kyc") loadKyc(); else loadStudent();
                         refreshBadges();
-                    } catch (err) { alert(err.message); }
+                    } catch (err) { showError(err.message); }
                 }
 
                 if (action.endsWith("-reject")) {
@@ -981,7 +1048,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         });
                         if (type === "kyc") loadKyc(); else loadStudent();
                         refreshBadges();
-                    } catch (err) { alert(err.message); }
+                    } catch (err) { showError(err.message); }
                 }
             });
         });
@@ -1184,7 +1251,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 body: JSON.stringify({ status: newStatus }),
             });
             loadListings();
-        } catch (err) { alert("Failed: " + err.message); }
+        } catch (err) { showError("Failed: " + err.message); }
     }
 
     // ══ Strike + Suspension Modal ═════════════════════════════
@@ -1192,7 +1259,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const existing = document.getElementById("strikeModal");
         if (existing) existing.remove();
 
-        const isBanned = user.strike_count >= 3;
+        const isBanned = user.strike_count >= 5;
         const strikes = user.strike_count || 0;
 
         const modal = document.createElement("div");
@@ -1220,15 +1287,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="strike-meter-wrap">
           <div class="strike-meter-label">
             <span>Strike history</span>
-            <span class="strike-meter-count">${strikes}/3 strikes</span>
+            <span class="strike-meter-count">${strikes}/5 strikes</span>
           </div>
           <div class="strike-meter">
             ${[1, 2, 3].map(i => `<div class="strike-pip-lg${strikes >= i ? " filled" : ""}">
               ${i}
-              ${i === 3 ? '<span class="strike-pip-label">Ban</span>' : ''}
+              ${i === 5 ? '<span class="strike-pip-label">Ban</span>' : ''}
             </div>`).join('')}
           </div>
-          ${isBanned ? '<p class="strike-warn">This user already has 3 strikes. Suspending will result in a <strong>permanent ban</strong>.</p>' : ''}
+          ${isBanned ? '<p class="strike-warn">This user already has 5 strikes. Suspending will result in a <strong>permanent ban</strong>.</p>' : ''}
         </div>
 
         <!-- Add strike checkbox -->
@@ -1309,7 +1376,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 modal.remove();
                 await loadUsers();
             } catch (err) {
-                alert(err?.error || "Failed to suspend account.");
+                showError(err?.error || "Failed to suspend account.");
                 btn.disabled = false; btn.textContent = isBanned ? "Permanently Ban" : "Suspend";
             }
         });
@@ -1340,4 +1407,329 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ── Init ─────────────────────────────────────────────────
     await loadOverview();
     if (window.lucide?.createIcons) lucide.createIcons();
+
+    // ══ AMENITIES CMS ═════════════════════════════════════════
+    (function () {
+        let activeAmenTab = "pending";
+
+        // Tab switching
+        document.getElementById("amenitiesTabBar")?.addEventListener("click", e => {
+            const btn = e.target.closest(".amenities-tab");
+            if (!btn) return;
+            document.querySelectorAll(".amenities-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            activeAmenTab = btn.dataset.tab;
+            document.getElementById("amenTabPending").hidden = activeAmenTab !== "pending";
+            document.getElementById("amenTabSystem").hidden = activeAmenTab !== "system";
+            document.getElementById("amenTabHighlights").hidden = activeAmenTab !== "highlights";
+            if (activeAmenTab === "pending") loadPending();
+            if (activeAmenTab === "system") loadSystemAmenities();
+            if (activeAmenTab === "highlights") loadSystemHighlights();
+        });
+
+        // ── Pending review ─────────────────────────────────────
+        async function loadPending() {
+            const list = document.getElementById("amenPendingList");
+            if (!list) return;
+            list.innerHTML = `<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">Loading…</div>`;
+            try {
+                const res = await apiFetch("/admin/amenities/pending");
+                const rows = res.pending || [];
+
+                const badge = document.getElementById("amenPendingBadge");
+                if (badge) { badge.textContent = rows.length; badge.hidden = rows.length === 0; }
+                const navBadge = document.getElementById("amenitiesBadge");
+                if (navBadge) { navBadge.textContent = rows.length; navBadge.hidden = rows.length === 0; }
+
+                if (!rows.length) {
+                    list.innerHTML = `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px">
+                        No pending custom amenities. All clear! ✓
+                    </div>`;
+                    return;
+                }
+
+                list.innerHTML = rows.map(r => `
+                <div class="amenity-row" data-id="${r.id}">
+                    <div class="amenity-row-left">
+                        <div class="amenity-icon-wrap">
+                            <i data-lucide="${escHtml(r.icon || "sparkles")}"></i>
+                        </div>
+                        <div>
+                            <div class="amenity-label">${escHtml(r.label)}</div>
+                            <div class="amenity-meta">
+                                ${r.type === "highlight" ? "Highlight" : `Amenity · ${r.category || ""}`}
+                                ${r.owner_name ? ` · by <strong>${escHtml(r.owner_name)}</strong>` : ""}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="amenity-row-actions">
+                        <button class="btn success" data-action="approve" data-id="${r.id}" type="button">
+                            <i data-lucide="check"></i> Apply to All
+                        </button>
+                        <button class="btn danger-outline" data-action="reject" data-id="${r.id}" type="button">
+                            <i data-lucide="x"></i> Reject
+                        </button>
+                    </div>
+                </div>`).join("");
+
+                if (window.lucide?.createIcons) lucide.createIcons();
+
+                list.querySelectorAll("[data-action]").forEach(btn => {
+                    btn.addEventListener("click", async () => {
+                        const id = btn.dataset.id;
+                        const action = btn.dataset.action;
+                        btn.disabled = true;
+                        try {
+                            await apiFetch(`/admin/amenities/${id}/${action}`, { method: "PATCH" });
+                            await loadPending();
+                        } catch (err) {
+                            showError(err?.error || "Failed.");
+                            btn.disabled = false;
+                        }
+                    });
+                });
+
+            } catch (err) {
+                list.innerHTML = `<div style="padding:24px;color:#ef4444;font-size:13px">Failed to load. ${err?.error || ""}</div>`;
+            }
+        }
+
+        // ── System amenities ───────────────────────────────────
+        async function loadSystemAmenities() {
+            const list = document.getElementById("amenSystemList");
+            if (!list) return;
+            list.innerHTML = `<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">Loading…</div>`;
+            try {
+                const res = await apiFetch("/admin/amenities");
+                const rows = (res.amenities || []).filter(r => r.type === "amenity");
+                renderAmenityList(list, rows, "amenity");
+            } catch (err) {
+                list.innerHTML = `<div style="padding:24px;color:#ef4444;font-size:13px">Failed to load.</div>`;
+            }
+        }
+
+        async function loadSystemHighlights() {
+            const list = document.getElementById("amenHighlightsList");
+            if (!list) return;
+            list.innerHTML = `<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">Loading…</div>`;
+            try {
+                const res = await apiFetch("/admin/amenities");
+                const rows = (res.amenities || []).filter(r => r.type === "highlight");
+                renderAmenityList(list, rows, "highlight");
+            } catch (err) {
+                list.innerHTML = `<div style="padding:24px;color:#ef4444;font-size:13px">Failed to load.</div>`;
+            }
+        }
+
+        function renderAmenityList(container, rows, type) {
+            if (!rows.length) {
+                container.innerHTML = `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px">No ${type}s yet.</div>`;
+                return;
+            }
+            container.innerHTML = rows.map(r => `
+            <div class="amenity-row" data-id="${r.id}">
+                <div class="amenity-row-left">
+                    <div class="amenity-icon-wrap">
+                        <i data-lucide="${escHtml(r.icon || "sparkles")}"></i>
+                    </div>
+                    <div>
+                        <div class="amenity-label">${escHtml(r.label)}</div>
+                        <div class="amenity-meta">
+                            ${type === "highlight" ? "Highlight" : `${r.category || "amenity"}`}
+                            · <span style="color:${r.is_active ? "#16a34a" : "#9ca3af"}">${r.is_active ? "Active" : "Hidden"}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="amenity-row-actions">
+                    <button class="btn ghost" data-action="toggle" data-id="${r.id}"
+                        data-active="${r.is_active}" type="button">
+                        ${r.is_active ? "Hide" : "Show"}
+                    </button>
+                    <button class="btn danger-outline" data-action="delete" data-id="${r.id}" type="button">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>`).join("");
+
+            if (window.lucide?.createIcons) lucide.createIcons();
+
+            container.querySelectorAll("[data-action]").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const id = btn.dataset.id;
+                    const action = btn.dataset.action;
+                    btn.disabled = true;
+                    try {
+                        if (action === "toggle") {
+                            const isActive = btn.dataset.active === "true";
+                            await apiFetch(`/admin/amenities/${id}`, {
+                                method: "PATCH",
+                                body: JSON.stringify({ is_active: !isActive }),
+                            });
+                        } else if (action === "delete") {
+                            if (!confirm("Delete this amenity?")) { btn.disabled = false; return; }
+                            await apiFetch(`/admin/amenities/${id}`, { method: "DELETE" });
+                        }
+                        if (type === "amenity") loadSystemAmenities();
+                        else loadSystemHighlights();
+                    } catch (err) {
+                        showError(err?.error || "Failed.");
+                        btn.disabled = false;
+                    }
+                });
+            });
+        }
+
+        // Expose for switchView to call
+        window.loadAmenitiesAdmin = function () {
+            loadPending();
+            document.getElementById("amenTabPending").hidden = false;
+            document.getElementById("amenTabSystem").hidden = true;
+            document.getElementById("amenTabHighlights").hidden = true;
+            document.querySelectorAll(".amenities-tab").forEach(b => {
+                b.classList.toggle("active", b.dataset.tab === "pending");
+            });
+        };
+
+        // Poll pending count every 60s
+        setInterval(async () => {
+            try {
+                const res = await apiFetch("/admin/amenities/pending");
+                const count = (res.pending || []).length;
+                const badge = document.getElementById("amenitiesBadge");
+                if (badge) { badge.textContent = count; badge.hidden = count === 0; }
+            } catch { }
+        }, 60_000);
+
+    })();
+
+
+    // ══ User sub-tabs ═════════════════════════════════════════
+    function initUserSubTabs() {
+        const wrap = document.getElementById("userSubTabs");
+        if (!wrap || wrap.dataset.bound) return;
+        wrap.dataset.bound = "1";
+        wrap.querySelectorAll(".user-subtab[data-utab]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                wrap.querySelectorAll(".user-subtab").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                const tab = btn.dataset.utab;
+                document.getElementById("uTabList").hidden = tab !== "list";
+                document.getElementById("uTabKyc").hidden = tab !== "kyc";
+                document.getElementById("uTabStudent").hidden = tab !== "student";
+                document.getElementById("uTabResident").hidden = tab !== "resident";
+                if (tab === "kyc") loadKyc();
+                if (tab === "student") loadStudent();
+            });
+        });
+    }
+
+    // ══ Content sub-tabs ══════════════════════════════════════
+    function initContentSubTabs() {
+        const wrap = document.getElementById("contentSubTabs");
+        if (!wrap) return;
+        if (!wrap.dataset.bound) {
+            wrap.dataset.bound = "1";
+            wrap.querySelectorAll(".user-subtab[data-ctab]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    wrap.querySelectorAll(".user-subtab").forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    const tab = btn.dataset.ctab;
+                    document.getElementById("cTabListings").hidden = tab !== "listings";
+                    document.getElementById("cTabAmenities").hidden = tab !== "amenities";
+                    if (tab === "listings") loadListings();
+                    if (tab === "amenities") loadAmenitiesAdmin();
+                });
+            });
+        }
+        // Load default tab (listings)
+        loadListings();
+    }
+
+
+    // ══ User page sub-tabs ════════════════════════════════════
+    function initUserSubTabs() {
+        const wrap = document.getElementById("userSubTabs");
+        if (!wrap || wrap.dataset.bound) return;
+        wrap.dataset.bound = "1";
+
+        wrap.querySelectorAll(".um-subtab[data-utab]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                wrap.querySelectorAll(".um-subtab").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                const tab = btn.dataset.utab;
+                ["list", "kyc", "student", "resident", "history"].forEach(t => {
+                    const el = document.getElementById(`uTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                    if (el) el.hidden = t !== tab;
+                });
+                if (tab === "kyc") loadKyc();
+                if (tab === "student") loadStudent();
+                if (tab === "history") loadActivityLog();
+            });
+        });
+    }
+
+    // ══ Activity log (client-side — from loaded users) ═══════
+    const _activityLog = [];
+
+    function addActivity(action, user) {
+        _activityLog.unshift({
+            action,
+            userName: user.name || user.email,
+            userRole: user.role,
+            userId: user.id,
+            timestamp: new Date().toISOString(),
+        });
+        if (_activityLog.length > 100) _activityLog.pop();
+    }
+
+    function loadActivityLog() {
+        const list = document.getElementById("activityLogList");
+        if (!list) return;
+
+        const roleF = document.getElementById("historyRoleFilter")?.value || "all";
+        const actionF = document.getElementById("historyActionFilter")?.value || "all";
+
+        const filtered = _activityLog.filter(e =>
+            (roleF === "all" || (e.userRole || "").toUpperCase().includes(roleF.toUpperCase())) &&
+            (actionF === "all" || e.action === actionF)
+        );
+
+        if (!filtered.length) {
+            list.innerHTML = `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px">
+                No activity recorded yet in this session.
+            </div>`;
+            return;
+        }
+
+        list.innerHTML = filtered.map(e => {
+            const time = new Date(e.timestamp).toLocaleString("en-PH", {
+                month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila"
+            });
+            const icons = { suspended: "ban", uplifted: "check-circle-2", created: "user-plus", deleted: "trash-2" };
+            const colors = { suspended: "#dc2626", uplifted: "#16a34a", created: "#123458", deleted: "#9ca3af" };
+            const icon = icons[e.action] || "activity";
+            const color = colors[e.action] || "#6b7280";
+            return `<div class="um-history-row">
+                <div class="um-history-icon" style="background:${color}20;color:${color}">
+                    <i data-lucide="${icon}"></i>
+                </div>
+                <div class="um-history-body">
+                    <div class="um-history-text">
+                        <strong>${escHtml(e.userName)}</strong>
+                        <span class="badge ${e.userRole === 'Property Owner' ? 'role-owner' : e.userRole === 'Admin' ? 'role-admin' : 'role-resident'}" style="font-size:10px;padding:1px 6px">${escHtml(e.userRole || "")}</span>
+                        was <strong>${e.action}</strong>
+                    </div>
+                    <div class="um-history-time">${time}</div>
+                </div>
+            </div>`;
+        }).join("");
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+
+        // Wire filters
+        ["historyRoleFilter", "historyActionFilter"].forEach(id => {
+            document.getElementById(id)?.addEventListener("change", loadActivityLog);
+        });
+    }
+
 });

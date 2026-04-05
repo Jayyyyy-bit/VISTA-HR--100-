@@ -2,19 +2,19 @@
   document.addEventListener("DOMContentLoaded", async () => {
     if (!window.AuthGuard) {
       console.error("AuthGuard missing. Check /auth/sessionGuard.js path.");
-      alert("AuthGuard missing. Fix sessionGuard.js include/path.");
+      showInfo("AuthGuard missing. Fix sessionGuard.js include/path.");
       return;
     }
     if (!window.ListingStore) {
       console.error("ListingStore missing. Check /core/store.js path.");
-      alert("ListingStore missing. Fix store.js include/path.");
+      showInfo("ListingStore missing. Fix store.js include/path.");
       return;
     }
 
     const ok = await window.AuthGuard.requireOwner();
     if (!ok) return;
 
-    const API_BASE = "http://127.0.0.1:5000/api";
+    const API_BASE = "/api";
     const WIZARD_URL = "/PO-after-signup/listing-wizard/index.html";
 
     // ===== Tabs (.dashTab + #tab-*) =====
@@ -427,7 +427,7 @@
                     location.href = `${WIZARD_URL}#/step-${step}`;
                   } catch (err) {
                     console.error(err);
-                    alert(err?.message || err?.error || "Unable to continue editing.");
+                    showError(err?.message || err?.error || "Unable to continue editing.");
                   }
                 }
               });
@@ -437,7 +437,7 @@
                 location.href = `${WIZARD_URL}#/step-${step}`;
               } catch (err) {
                 console.error(err);
-                alert(err?.message || err?.error || "Unable to continue editing.");
+                showError(err?.message || err?.error || "Unable to continue editing.");
               }
             }
             return;
@@ -466,7 +466,7 @@
                   // Set status back to DRAFT via step-8 or a direct patch
                   // Use submit-for-verification in reverse - set back to DRAFT
                   // by patching step-8 with a special unpublish flag
-                  const res = await fetch(`http://127.0.0.1:5000/api/listings/${id}/pull`, {
+                  const res = await fetch(`/api/listings/${id}/pull`, {
                     method: "POST", credentials: "include",
                     headers: { "Content-Type": "application/json" },
                   });
@@ -476,7 +476,7 @@
                   }
                   await renderListings();
                 } catch (err) {
-                  alert(err.message || "Failed to unpublish.");
+                  showError(err.message || "Failed to unpublish.");
                 }
               }
             });
@@ -498,7 +498,7 @@
                 confirmText: "Verify email →",
                 cancelText: "Not now",
                 onConfirm: () => {
-                  location.href = `/auth/verify-email.html?email=${email}&role=OWNER`;
+                  location.href = `/auth/account-settings.html#email?email=${email}`;
                 }
               });
               return;
@@ -539,7 +539,7 @@
                   await renderListings();
                 } catch (err) {
                   console.error(err);
-                  alert(err?.message || err?.error || "Publish failed.");
+                  showError(err?.message || err?.error || "Publish failed.");
                 }
               }
             });
@@ -574,7 +574,7 @@
                   await renderListings();
                 } catch (err) {
                   console.error(err);
-                  alert(err?.message || err?.error || "Delete failed.");
+                  showError(err?.message || err?.error || "Delete failed.");
                 }
               }
             });
@@ -723,7 +723,6 @@
 
       if (key === "today") { window.DashToday?.render(); window.DashToday?.bindFilterBar?.(); }
       if (key === "listings") renderListings();
-      if (key === "messages") window.MessagesPanel?.init?.();
 
       if (key === "calendar" && window.DashboardCalendar?.render) {
         window.DashboardCalendar.render();
@@ -752,7 +751,7 @@
     profileMenu?.addEventListener("click", (e) => e.stopPropagation());
 
     menuAccount?.addEventListener("click", () => { openMenu(false); location.href = "/auth/account-settings.html"; });
-    menuHelp?.addEventListener("click", () => { openMenu(false); alert("Help center (later)."); });
+    menuHelp?.addEventListener("click", () => { openMenu(false); showInfo("Help center (later)."); });
     menuLogout?.addEventListener("click", async () => { openMenu(false); await AuthGuard.logout(); });
 
     document.addEventListener("click", (evt) => {
@@ -807,7 +806,7 @@
   // ══════════════════════════════════════════════════════════
   // NOTIFICATIONS — Bell dropdown (Property Owner)
   // ══════════════════════════════════════════════════════════
-  const API_NOTIF = "http://127.0.0.1:5000/api";
+  const API_NOTIF = "/api";
 
   // escapeHtml needs to be in outer scope so loadNotifications can access it
   function escapeHtmlN(str) {
@@ -833,7 +832,7 @@
       // Update badge
       const badge = elN("notifBadge");
       if (badge) {
-        badge.textContent = unread > 10 ? "10+" : unread;
+        badge.textContent = unread > 9 ? "9+" : unread;
         badge.hidden = unread === 0;
       }
 
@@ -855,22 +854,9 @@
         // Determine redirect URL based on notification type
         const notifType = (n.notif_type || n.type || "").toUpperCase();
         let redirectUrl = null;
-
-        if (notifType.includes("MESSAGE")) {
-          const params = new URLSearchParams();
-          const senderMatch = String(n.title || "").match(/^New message from\s+(.+)$/i);
-          const listingMatch = String(n.body || "").match(/^Re:\s*(.+?)(?:\s+[—-]\s+|$)/i);
-
-          if (senderMatch?.[1]) params.set("sender", senderMatch[1].trim());
-          if (listingMatch?.[1]) params.set("listing", listingMatch[1].trim());
-
-          const query = params.toString();
-          redirectUrl = `/Property-Owner/dashboard/property-owner-dashboard.html${query ? `?${query}` : ""}#/messages`;
-        } else if (notifType.includes("BOOKING")) {
-          redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
-        } else if (notifType.includes("KYC") || notifType.includes("VERIF")) {
-          redirectUrl = "/Property-Owner/verification/verify.html";
-        }
+        if (notifType.includes("MESSAGE")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
+        else if (notifType.includes("BOOKING")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
+        else if (notifType.includes("KYC") || notifType.includes("VERIF")) redirectUrl = "/Property-Owner/verification/verify.html";
 
         return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}"
                     style="cursor:${redirectUrl ? 'pointer' : 'default'}"

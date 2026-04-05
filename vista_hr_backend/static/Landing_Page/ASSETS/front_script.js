@@ -4,10 +4,10 @@
 
 const API = "http://127.0.0.1:5000/api";
 const PATHS = {
-    login: "/vista_hr_backend/static/auth/login.html",
-    signup: "/vista_hr_backend/static/Login_Register_Page/Signup/roles.html",
-    residentHome: "/vista_hr_backend/static/Resident/resident_home.html",
-    ownerDash: "/vista_hr_backend/static/Property-Owner/dashboard/property-owner-dashboard.html",
+    login: "/auth/login.html",
+    signup: "/Login_Register_Page/Signup/roles.html",
+    residentHome: "/Resident/resident_home.html",
+    ownerDash: "/Property-Owner/dashboard/property-owner-dashboard.html",
 };
 
 
@@ -136,22 +136,28 @@ async function initAuth() {
     document.getElementById("ownerCtaBtn")?.addEventListener("click", () => exitTo(PATHS.signup));
     document.getElementById("demoCta")?.addEventListener("click", () => exitTo(PATHS.login));
 
-    // Check localStorage
+    // Check localStorage first
     let session = null;
     try { session = JSON.parse(localStorage.getItem("vista_session_user")); } catch { }
     if (session?.user) patchNav(session.user, loginBtn, startBtn);
 
-    // Verify with server
-    try {
-        const r = await fetch(`${API}/auth/me`, { credentials: "include" });
-        if (r.ok) {
-            const d = await r.json();
-            if (d?.user) {
-                localStorage.setItem("vista_session_user", JSON.stringify({ user: d.user }));
-                patchNav(d.user, loginBtn, startBtn);
-            }
-        } else { localStorage.removeItem("vista_session_user"); }
-    } catch { }
+    // Verify with server (non-blocking, timeout after 3s)
+    setTimeout(async () => {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3000);
+            const r = await fetch(`${API}/auth/me`, { credentials: "include", signal: controller.signal });
+            clearTimeout(timeout);
+
+            if (r.ok) {
+                const d = await r.json();
+                if (d?.user) {
+                    localStorage.setItem("vista_session_user", JSON.stringify({ user: d.user }));
+                    patchNav(d.user, loginBtn, startBtn);
+                }
+            } else { localStorage.removeItem("vista_session_user"); }
+        } catch { }
+    }, 0);
 }
 
 function patchNav(user, loginBtn, startBtn) {
@@ -185,32 +191,49 @@ function countUp(el, target, dur = 1100) {
 }
 
 async function initStats() {
+    // Check cache first (5 minute TTL)
+    const cached = localStorage.getItem("vista_stats_cache");
+    const cacheTime = localStorage.getItem("vista_stats_cache_time");
+    const now = Date.now();
+
     let totalListings = 0;
     let totalOwners = 0;
     let totalCities = 0;
 
-    try {
-        const r = await fetch(`${API}/public/stats`);
-        if (r.ok) {
-            const d = await r.json();
-            totalListings = d.total_listings || 0;
-            totalOwners = d.total_owners || 0;
-            // Count distinct cities from feed for the cities stat
-            try {
-                const fr = await fetch(`${API}/listings/feed?limit=60`);
-                if (fr.ok) {
-                    const fd = await fr.json();
-                    const cities = new Set((fd.listings || []).map(l => l.city).filter(Boolean));
-                    totalCities = cities.size;
-                }
-            } catch { }
-        }
-    } catch { }
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < 5 * 60 * 1000) {
+        // Use cached data
+        try {
+            const d = JSON.parse(cached);
+            totalListings = d.totalListings || 0;
+            totalOwners = d.totalOwners || 0;
+            totalCities = d.totalCities || 0;
+        } catch { }
+    } else {
+        // Fetch data in parallel
+        try {
+            const [statsRes, feedRes] = await Promise.allSettled([
+                fetch(`${API}/public/stats`).then(r => r.ok ? r.json() : null),
+                fetch(`${API}/listings/feed?limit=60`).then(r => r.ok ? r.json() : null)
+            ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : null));
+
+            if (statsRes) {
+                totalListings = statsRes.total_listings || 0;
+                totalOwners = statsRes.total_owners || 0;
+            }
+            if (feedRes?.listings) {
+                const cities = new Set(feedRes.listings.map(l => l.city).filter(Boolean));
+                totalCities = cities.size;
+            }
+
+            // Cache results
+            localStorage.setItem("vista_stats_cache", JSON.stringify({ totalListings, totalOwners, totalCities }));
+            localStorage.setItem("vista_stats_cache_time", String(now));
+        } catch { }
+    }
 
     const fire = () => {
         countUp(document.getElementById("statListings"), Math.max(totalListings, 1));
         countUp(document.getElementById("statOwners"), Math.max(totalOwners, 1), 1300);
-        // Update the static "5+" cities if we have real data
         const citiesEl = document.querySelector(".stat-n:not(#statListings):not(#statOwners)");
         if (citiesEl && totalCities > 0) {
             citiesEl.textContent = totalCities + "+";
@@ -227,6 +250,11 @@ async function initListings() {
     const grid = document.getElementById("featuredGrid");
     if (!grid) return;
 
+    // Check cache first (10 minute TTL)
+    const cached = localStorage.getItem("vista_listings_cache");
+    const cacheTime = localStorage.getItem("vista_listings_cache_time");
+    const now = Date.now();
+
     // Skeleton
     grid.innerHTML = Array.from({ length: 4 }, () => `
     <article class="listing listing-skeleton">
@@ -239,10 +267,31 @@ async function initListings() {
     </article>`).join("");
 
     let data = [];
-    try {
-        const r = await fetch(`${API}/listings/feed?limit=8`, { credentials: "include" });
-        if (r.ok) { const d = await r.json(); data = (d.listings || []).slice(0, 4); }
-    } catch { }
+
+    // Try cache first
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < 10 * 60 * 1000) {
+        try {
+            data = JSON.parse(cached);
+        } catch { }
+    }
+
+    // If no cache, fetch (with timeout)
+    if (!data.length) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 4000);
+            const r = await fetch(`${API}/listings/feed?limit=8`, { credentials: "include", signal: controller.signal });
+            clearTimeout(timeout);
+
+            if (r.ok) {
+                const d = await r.json();
+                data = (d.listings || []).slice(0, 4);
+                // Cache results
+                localStorage.setItem("vista_listings_cache", JSON.stringify(data));
+                localStorage.setItem("vista_listings_cache_time", String(now));
+            }
+        } catch { }
+    }
 
     if (!data.length) {
         grid.innerHTML = `
@@ -315,9 +364,30 @@ function initTilt() {
 /* ════════════════════════════════════════
    BOOT
 ════════════════════════════════════════ */
-lucide.createIcons();
-fp.init();
-initAuth();
-initStats();
-initListings();
-initTilt();
+function bootPage() {
+    lucide.createIcons();
+    fp.init();
+    initTilt();
+    initAuth();
+
+    // Deferred init (after page is interactive)
+    setTimeout(() => {
+        initStats();
+        initListings();
+    }, 100);
+}
+
+// Initial load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootPage);
+} else {
+    bootPage();
+}
+
+// Handle back button (page restoration from history)
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+        // Page was restored from back-forward cache
+        bootPage();
+    }
+});
