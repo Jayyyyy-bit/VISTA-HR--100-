@@ -5,7 +5,7 @@
  *   fetchMe(), saveSession(), clearSession(), logout()
  */
 (function () {
-    const KEY = "vista_session_user";
+    const KEY = "railway_user_session";
     const API_BASE = "/api";
     const LOGIN = "/auth/login.html";
 
