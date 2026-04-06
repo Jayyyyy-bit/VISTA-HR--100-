@@ -197,11 +197,11 @@
 }
 
 .td-greeting-name {
-    font-size: 27px;
-    font-weight: 800;
-    color: var(--text, #0f172a);
-    letter-spacing: -.6px;
-    line-height: 1.15;
+    font-size: 42px;
+    font-weight: 950;
+    color: var(--dash-ink-strong, #030303);
+    letter-spacing: -0.05em;
+    line-height: 1.02;
 }
 
 .td-greeting-date {
@@ -1146,7 +1146,7 @@
     }
 
     .td-greeting-name {
-        font-size: 23px;
+        font-size: 32px;
     }
 
     .bk-task-list {

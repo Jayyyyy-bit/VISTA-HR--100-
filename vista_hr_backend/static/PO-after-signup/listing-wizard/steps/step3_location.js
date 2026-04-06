@@ -47,7 +47,7 @@ window.Step3Init = function Step3Init() {
         return;
     }
 
-    const API_BASE = "";
+    const API_BASE = "/api";
     const norm = (s) => (s || "").toLowerCase().trim();
 
     // PSGC city code map — populated by loadCities()
@@ -260,7 +260,22 @@ window.Step3Init = function Step3Init() {
     }
 
     function setCity(next) {
-        const v = (next || "").trim();
+        let v = (next || "").trim();
+
+        // Normalize PSGC names to match our dropdown values
+        // PSGC uses "City Of X" but our data uses "X City"
+        if (v && !Array.from(els.city.options).some(o => o.value === v)) {
+            // Try to find a matching option (case-insensitive, partial)
+            const lower = v.toLowerCase();
+            const match = Array.from(els.city.options).find(o => {
+                const ol = o.value.toLowerCase();
+                return ol && (ol.includes(lower) || lower.includes(ol) ||
+                    ol.replace(" city", "").includes(lower.replace("city of ", "")) ||
+                    lower.replace("city of ", "").includes(ol.replace(" city", "")));
+            });
+            if (match) v = match.value;
+        }
+
         if ((els.city.value || "").trim() === v) { closeDD(); return; }
         els.city.value = v;
         updateCityUIFromSelect();

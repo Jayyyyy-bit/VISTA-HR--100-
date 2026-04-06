@@ -206,8 +206,8 @@
                 <!-- CENTER: main grid -->
                 <div class="calendarCenterPanel">
                     <div class="calendarCenterHeader">
-
-                        <button class="btn ghost calendarTodayBtn" id="calTodayBtn" type="button">Today</button>
+                        <h2 class="pageTitle" style="margin:0;line-height:1;">Calendar</h2>
+                        <button class="btn ghost calendarTodayBtn" id="calTodayBtn" type="button">Jump to today</button>
                     </div>
                     <div class="calendarMainCard calendarMainScroll">
                         <div class="calendarWeekdays" id="calendarWeekdays"></div>
@@ -344,6 +344,58 @@
                 </div>
             </div>
 
+            <!-- Reserved & Occupied album sections -->
+            <div class="occupancyRow" id="occupancyRow" hidden>
+                <div class="occupancyCard" id="reservedAlbum">
+                    <div class="occAlbumMosaic" id="reservedMosaic"></div>
+                    <div class="occAlbumLabel">Reserved</div>
+                    <div class="occAlbumCount" id="reservedCount">0 listings</div>
+                </div>
+                <div class="occupancyCard" id="occupiedAlbum">
+                    <div class="occAlbumMosaic" id="occupiedMosaic"></div>
+                    <div class="occAlbumLabel">Occupied</div>
+                    <div class="occAlbumCount" id="occupiedCount">0 listings</div>
+                </div>
+            </div>
+
+            <!-- Slide-in side panel for reserved/occupied details -->
+            <div class="occExpandedBackdrop" id="occBackdrop"></div>
+            <div class="occExpanded" id="occExpandedPanel">
+                <div class="occExpandedHeader">
+                    <div class="occExpandedTitle" id="occExpandedTitle">Reserved</div>
+                    <button class="occExpandedClose" id="occExpandedClose" type="button"><i
+                            data-lucide="x"></i></button>
+                </div>
+                <div id="occExpandedList"></div>
+
+                <!-- Listing detail sub-panel (shown when clicking a listing) -->
+                <div id="occDetailPanel" hidden
+                    style="margin-top:16px;padding:16px;background:#f8f9fa;border-radius:12px;animation:fadeUp 200ms ease-out;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="font-size:15px;font-weight:700;" id="occDetailTitle">—</div>
+                        <button onclick="document.getElementById('occDetailPanel').hidden=true"
+                            style="background:none;border:none;cursor:pointer;color:#6b7280;"><i data-lucide="x"
+                                style="width:16px;height:16px;"></i></button>
+                    </div>
+                    <img id="occDetailImg"
+                        style="width:100%;height:160px;object-fit:cover;border-radius:10px;margin-bottom:12px;background:#e5e7eb;" />
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+                        <div><span
+                                style="font-weight:700;color:#6b7280;text-transform:uppercase;font-size:10px;">Status</span><br><span
+                                id="occDetailStatus">—</span></div>
+                        <div><span
+                                style="font-weight:700;color:#6b7280;text-transform:uppercase;font-size:10px;">Price</span><br><span
+                                id="occDetailPrice">—</span></div>
+                        <div><span
+                                style="font-weight:700;color:#6b7280;text-transform:uppercase;font-size:10px;">Location</span><br><span
+                                id="occDetailLocation">—</span></div>
+                        <div><span
+                                style="font-weight:700;color:#6b7280;text-transform:uppercase;font-size:10px;">Type</span><br><span
+                                id="occDetailType">—</span></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="listingGrid" id="listingGrid"></div>
         </section>
 
@@ -354,7 +406,7 @@
                 <!-- LEFT: conversation list -->
                 <div class="msgSidebar">
                     <div class="msgSidebarHead">
-                        <h2 class="msgSidebarTitle">Messages</h2>
+                        <h2 class="pageTitle msgSidebarTitle" style="font-size:42px;">Messages</h2>
                         <span class="msgUnreadPill" id="msgUnreadPill">3</span>
                     </div>
                     <div class="msgSearchWrap">

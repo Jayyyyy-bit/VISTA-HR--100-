@@ -47,7 +47,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
     const gmProgressBar = document.getElementById("gmProgressBar");
 
     const MIN_PHOTOS = 5;
-    const API_BASE = "";
+    const API_BASE = "/api";
     let guideStep = 1;
     const GUIDE_TOTAL = 5;
 
@@ -365,7 +365,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
             fd.append("api_key", sig.apiKey);
             fd.append("timestamp", sig.timestamp);
             fd.append("signature", sig.signature);
-            fd.append("folder", sig.folder + "/panoramas");
+            fd.append("folder", sig.folder);
 
             const res = await fetch(
                 `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
@@ -465,7 +465,7 @@ window.Step7Init = function Step7Init({ nextBtn }) {
             try { pannellumViewer.destroy(); } catch (e) { /* ignore */ }
             pannellumViewer = null;
         }
-        if (panoViewerWrap) panoViewerWrap.style.display = "none";
+        if (panoViewerWrap) panoViewerWrap.style.display = "block";
         // Clear the viewer container's inner HTML (Pannellum adds children)
         if (panoViewerEl) panoViewerEl.innerHTML = "";
     }

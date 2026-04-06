@@ -45,6 +45,7 @@ def create_app():
     from .routes.reviews   import reviews_bp          # ← new
     from .routes.amenities import amenities_bp        # ← amenities CMS
     from .routes.saved import saved_bp                # ← saved listings
+    from .routes.tickets import tickets_bp            # ← ticketing system
 
     app.register_blueprint(auth_bp,          url_prefix="/api")
     app.register_blueprint(listings_bp,      url_prefix="/api")
@@ -59,6 +60,7 @@ def create_app():
     app.register_blueprint(reviews_bp,       url_prefix="/api")  # ← new
     app.register_blueprint(amenities_bp,     url_prefix="/api")  # ← amenities CMS
     app.register_blueprint(saved_bp,         url_prefix="/api")  # ← saved listings
+    app.register_blueprint(tickets_bp,       url_prefix="/api")  # ← ticketing system
 
     @app.get("/health")
     def health():

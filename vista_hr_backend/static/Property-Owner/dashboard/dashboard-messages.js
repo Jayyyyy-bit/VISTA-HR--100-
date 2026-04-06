@@ -45,7 +45,7 @@
 
     function threadKey(t) { return `${t.listing_id}_${t.other_user_id}`; }
 
-    const API_BASE = "";
+    const API_BASE = "/api";
 
     async function apiFetch(path, opts = {}) {
         const url = path.startsWith("http") ? path : `${API_BASE}${path}`;

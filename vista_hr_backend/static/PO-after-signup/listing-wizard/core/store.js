@@ -1,5 +1,5 @@
 // core/store.js
-const API_BASE = "";
+const API_BASE = "/api";
 
 // ===== Draft multi-store keys =====
 const INDEX_KEY = "vista_draft_index";       // JSON array of draftIds

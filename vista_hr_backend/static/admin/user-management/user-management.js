@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     })();
 
     const LOGIN_URL = "/auth/login.html";
-    const API_BASE = "";
+    const API_BASE = "/api";
 
     // ── Auth guard ──────────────────────────────────────────
     let me = null;
@@ -77,6 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         users: document.getElementById("viewUsers"),
         content: document.getElementById("viewContent"),
         analytics: document.getElementById("viewAnalytics"),
+        tickets: document.getElementById("viewTickets"),
     };
 
     const pageTitles = {
@@ -84,6 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         analytics: ["Analytics", "Platform performance and trends"],
         users: ["Users", "Manage accounts, roles, and verifications"],
         content: ["Content", "Listings management and Amenities CMS"],
+        tickets: ["Tickets", "Manage support tickets and concerns"],
     };
 
     let currentView = "overview";
@@ -111,6 +113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (name === "student") loadStudent();
         if (name === "users") { loadUsers(); initUserSubTabs(); }
         if (name === "content") { initContentSubTabs(); }
+        if (name === "tickets") { tkLoad(); }
     }
 
     document.querySelectorAll(".sidenav-item").forEach(a => {
@@ -1384,7 +1387,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ── Logout ───────────────────────────────────────────────
     document.getElementById("adminLogoutBtn")?.addEventListener("click", async () => {
-        await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => { });
+        await fetch(`/api/auth/logout`, { method: "POST", credentials: "include" }).catch(() => { });
         window.location.replace("/auth/login.html");
     });
 
@@ -1731,5 +1734,127 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById(id)?.addEventListener("change", loadActivityLog);
         });
     }
+
+    // ── Tickets panel ────────────────────────────────────────
+    let tkAllTickets = [];
+    let tkCurrent = null;
+
+    async function tkLoad() {
+        try {
+            const data = await apiFetch("/admin/tickets");
+            tkAllTickets = data.tickets || [];
+        } catch { tkAllTickets = []; }
+        tkRender(tkAllTickets);
+        tkUpdateStats(tkAllTickets);
+
+        // Badge on sidebar
+        const openCount = tkAllTickets.filter(t => t.status === "OPEN").length;
+        const badge = document.getElementById("ticketsBadge");
+        if (badge) { badge.textContent = openCount; badge.hidden = openCount === 0; }
+    }
+
+    function tkRender(tickets) {
+        const tbody = document.getElementById("tkBody");
+        const empty = document.getElementById("tkEmpty");
+        if (!tickets.length) { tbody.innerHTML = ""; empty.hidden = false; return; }
+        empty.hidden = true;
+
+        tbody.innerHTML = tickets.map(t => {
+            const sts = (t.status || "OPEN").toLowerCase().replace("_", "-");
+            const cat = (t.category || "OTHER").toLowerCase();
+            const date = t.created_at ? new Date(t.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : "—";
+            const statusColors = { open: "#92400e;background:#fef3c7", "in-progress": "#1e40af;background:#dbeafe", resolved: "#065f46;background:#d1fae5", closed: "#6b7280;background:#f3f4f6" };
+            const sc = statusColors[sts] || statusColors.open;
+            return `<tr>
+                <td>#${t.id}</td>
+                <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.subject || ""}</td>
+                <td style="font-size:12px;color:var(--muted);">${t.user_name || "—"}<br><small>${t.user_role || ""}</small></td>
+                <td><span style="padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;background:rgba(0,0,0,0.05);color:var(--muted);">${t.category}</span></td>
+                <td><span style="padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;color:${sc};">${t.status.replace("_", " ")}</span></td>
+                <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${date}</td>
+                <td><button class="btn ghost" style="padding:4px 12px;font-size:11px;" data-tkid="${t.id}">View</button></td>
+            </tr>`;
+        }).join("");
+
+        tbody.querySelectorAll("[data-tkid]").forEach(btn => {
+            btn.addEventListener("click", () => tkOpenModal(parseInt(btn.dataset.tkid)));
+        });
+    }
+
+    function tkUpdateStats(tickets) {
+        setText("tkStatOpen", tickets.filter(t => t.status === "OPEN").length);
+        setText("tkStatProg", tickets.filter(t => t.status === "IN_PROGRESS").length);
+        setText("tkStatResolved", tickets.filter(t => t.status === "RESOLVED").length);
+        setText("tkStatTotal", tickets.length);
+    }
+
+    document.getElementById("tkFilterStatus")?.addEventListener("change", tkApplyFilters);
+    document.getElementById("tkFilterCat")?.addEventListener("change", tkApplyFilters);
+
+    function tkApplyFilters() {
+        const s = document.getElementById("tkFilterStatus").value;
+        const c = document.getElementById("tkFilterCat").value;
+        let f = tkAllTickets;
+        if (s) f = f.filter(t => t.status === s);
+        if (c) f = f.filter(t => t.category === c);
+        tkRender(f);
+    }
+
+    // Reply modal
+    function tkOpenModal(id) {
+        const t = tkAllTickets.find(x => x.id === id);
+        if (!t) return;
+        tkCurrent = t;
+        document.getElementById("tkModalTitle").textContent = `Ticket #${t.id}`;
+        document.getElementById("tkDetailUser").textContent = `${t.user_name || "—"} (${t.user_email || ""})`;
+        document.getElementById("tkDetailCat").textContent = t.category;
+        document.getElementById("tkDetailStatus").textContent = (t.status || "").replace("_", " ");
+        document.getElementById("tkDetailDate").textContent = t.created_at ? new Date(t.created_at).toLocaleString("en-PH") : "—";
+        document.getElementById("tkDetailBody").textContent = t.body;
+
+        const prev = document.getElementById("tkPrevReply");
+        if (t.admin_reply) { prev.hidden = false; document.getElementById("tkPrevReplyText").textContent = t.admin_reply; }
+        else { prev.hidden = true; }
+
+        document.getElementById("tkReplyStatus").value = t.status;
+        document.getElementById("tkReplyText").value = "";
+        document.getElementById("tkReplyOverlay").style.display = "flex";
+        lucide.createIcons();
+    }
+
+    function tkCloseModal() { document.getElementById("tkReplyOverlay").style.display = "none"; tkCurrent = null; }
+    document.getElementById("tkCloseBtn")?.addEventListener("click", tkCloseModal);
+    document.getElementById("tkCancelBtn")?.addEventListener("click", tkCloseModal);
+    document.getElementById("tkReplyOverlay")?.addEventListener("click", e => { if (e.target.id === "tkReplyOverlay") tkCloseModal(); });
+
+    document.getElementById("tkSubmitBtn")?.addEventListener("click", async () => {
+        if (!tkCurrent) return;
+        const btn = document.getElementById("tkSubmitBtn");
+        btn.disabled = true; btn.textContent = "Sending...";
+        try {
+            const body = {};
+            const reply = document.getElementById("tkReplyText").value.trim();
+            const status = document.getElementById("tkReplyStatus").value;
+            if (reply) body.admin_reply = reply;
+            if (status) body.status = status;
+            await apiFetch(`/admin/tickets/${tkCurrent.id}`, { method: "PATCH", body: JSON.stringify(body) });
+            tkCloseModal();
+            await tkLoad();
+            showInfo("Ticket updated");
+        } catch { showInfo("Failed to update ticket"); }
+        finally { btn.disabled = false; btn.textContent = "Send reply"; }
+    });
+
+    // Load tickets when view is shown
+    const origSwitchView = window._adminSwitchView;
+    document.querySelectorAll(".sidenav-item[data-view]").forEach(item => {
+        item.addEventListener("click", () => {
+            if (item.dataset.view === "tickets") tkLoad();
+        });
+    });
+
+    // Initial load if starting on tickets view
+    if (location.hash === "#tickets") tkLoad();
+
 
 });

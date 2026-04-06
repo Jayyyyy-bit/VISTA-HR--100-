@@ -1,4 +1,6 @@
 from flask import Blueprint, jsonify, g
+
+from ..utils.errors import json_error
 from ..extensions import db
 from ..models.notification import Notification
 from ..auth.jwt import require_role
@@ -30,3 +32,20 @@ def mark_all_read():
     Notification.query.filter_by(user_id=user.id, is_read=False).update({"is_read": True})
     db.session.commit()
     return jsonify({"message": "All marked as read"}), 200
+
+
+@notifications_bp.delete("/notifications/<int:notif_id>")
+@require_role("RESIDENT", "OWNER", "ADMIN")
+def delete_notification(notif_id):
+    notif = db.session.get(Notification, notif_id)
+    if not notif:
+        return json_error("Not found", 404)
+    if notif.user_id != g.current_user.id:
+        return json_error("Forbidden", 403)
+    try:
+        db.session.delete(notif)
+        db.session.commit()
+        return jsonify({"message": "Deleted"}), 200
+    except:
+        db.session.rollback()
+        return json_error("Database error", 500)

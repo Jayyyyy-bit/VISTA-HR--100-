@@ -1316,3 +1316,253 @@ button.disabled {
 .notif-empty p {
     margin: 0;
 }
+
+.occupancyRow {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+
+.occupancyCard {
+    width: 220px;
+    cursor: pointer;
+    transition: transform 250ms ease, box-shadow 250ms ease;
+}
+
+.occupancyCard:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.occAlbumMosaic {
+    width: 220px;
+    height: 220px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #e5e7eb;
+}
+
+.occAlbumMosaic img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.occAlbumPlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+}
+
+.occAlbumPlaceholder i {
+    width: 24px;
+    height: 24px;
+    color: #9ca3af;
+    opacity: 0.5;
+}
+
+.occAlbumLabel {
+    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.occAlbumCount {
+    font-size: 13px;
+    color: var(--muted, #6b7280);
+    margin-top: 2px;
+}
+
+/* Expanded list (shown on click) */
+.occExpanded {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 400px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.1);
+    z-index: 150;
+    transition: right 300ms ease;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.occExpanded.open {
+    right: 0;
+}
+
+.occExpandedBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.2);
+    z-index: 149;
+    display: none;
+}
+
+.occExpandedBackdrop.open {
+    display: block;
+}
+
+.occExpandedHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.occExpandedTitle {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.occExpandedClose {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted, #6b7280);
+    padding: 4px;
+}
+
+.occExpandedClose:hover {
+    color: #1a1a1a;
+}
+
+.occExpandedClose i {
+    width: 20px;
+    height: 20px;
+}
+
+.occItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f8f9fa;
+    margin-bottom: 8px;
+    transition: background 150ms;
+}
+
+.occItem:hover {
+    background: #f0f1f3;
+}
+
+.occItem:last-child {
+    margin-bottom: 0;
+}
+
+.occThumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #e5e7eb;
+    flex-shrink: 0;
+}
+
+.occInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.occTitle {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.occMeta {
+    font-size: 12px;
+    color: var(--muted, #6b7280);
+    margin-top: 2px;
+}
+
+.occBadge {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.occBadge--reserved {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.occBadge--occupied {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.occEmpty {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted, #6b7280);
+    font-size: 13px;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .occupancyRow {
+        flex-direction: column;
+    }
+}
+
+.notif-item {
+    position: relative;
+    overflow: hidden;
+    transition: transform 200ms ease, background 200ms ease;
+    cursor: pointer;
+}
+
+.notif-item:hover {
+    transform: translateX(-40px);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.notif-delete {
+    position: absolute;
+    right: -40px;
+    top: 0;
+    height: 100%;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    cursor: pointer;
+    transition: right 200ms ease;
+}
+
+.notif-item:hover .notif-delete {
+    right: 0;
+}
+
+.notif-delete i {
+    width: 16px;
+    height: 16px;
+}

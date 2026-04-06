@@ -295,11 +295,16 @@
         <div class="emptyListingsSub">Create your first listing to start accepting bookings.</div>
       </div>
     `;
-        if (window.lucide?.createIcons) lucide.createIcons();
         return;
       }
 
-      listingGrid.innerHTML = listings.map((l) => {
+      const gridListings = listings.filter(l => {
+        const bk = String(l.booking_status || "").toUpperCase();
+        const st = String(l.status || "").toUpperCase();
+        return !(st === "PUBLISHED" && (bk === "APPROVED" || bk === "ACTIVE"));
+      });
+
+      listingGrid.innerHTML = gridListings.map((l) => {
         const status = String(l.status || "").toUpperCase();
         const badge = statusBadge(l);
         const images = galleryImages(l);
@@ -396,6 +401,7 @@
 `;
       }).join("");
 
+      renderOccupancySections(listings);
       initCardPreviews();
 
       listingGrid.onclick = async (e) => {
@@ -590,6 +596,150 @@
 
       if (window.lucide?.createIcons) lucide.createIcons();
     }
+
+    function renderOccupancySections(listings) {
+      const row = document.getElementById("occupancyRow");
+      if (!row) return;
+
+      const reserved = listings.filter(l => {
+        const bk = String(l.booking_status || "").toUpperCase();
+        const st = String(l.status || "").toUpperCase();
+        return st === "PUBLISHED" && bk === "APPROVED";
+      });
+
+      const occupied = listings.filter(l => {
+        const bk = String(l.booking_status || "").toUpperCase();
+        const st = String(l.status || "").toUpperCase();
+        return st === "PUBLISHED" && bk === "ACTIVE";
+      });
+
+      if (!reserved.length && !occupied.length) {
+        row.hidden = true;
+        return;
+      }
+
+      row.hidden = false;
+
+      // Build mosaics
+      buildMosaic("reservedMosaic", reserved);
+      buildMosaic("occupiedMosaic", occupied);
+
+      document.getElementById("reservedCount").textContent =
+        `${reserved.length} listing${reserved.length !== 1 ? "s" : ""}`;
+      document.getElementById("occupiedCount").textContent =
+        `${occupied.length} listing${occupied.length !== 1 ? "s" : ""}`;
+
+      // Store data for click expand
+      window._occData = { reserved, occupied };
+
+      // Album click handlers
+      document.getElementById("reservedAlbum").onclick = () => openOccExpanded("Reserved", reserved);
+      document.getElementById("occupiedAlbum").onclick = () => openOccExpanded("Occupied", occupied);
+
+      // Close handler
+      document.getElementById("occExpandedClose").onclick = () => {
+        document.getElementById("occExpandedPanel").classList.remove("open");
+      };
+
+      if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function buildMosaic(containerId, listings) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const photos = [];
+      for (const l of listings) {
+        const imgs = galleryImages(l);
+        if (imgs[0]) photos.push(imgs[0]);
+        if (photos.length >= 4) break;
+      }
+      let html = "";
+      for (let i = 0; i < 4; i++) {
+        if (photos[i]) {
+          html += `<img src="${escapeHtml(photos[i])}" alt="Listing" loading="lazy" />`;
+        } else {
+          html += `<div class="occAlbumPlaceholder"><i data-lucide="image"></i></div>`;
+        }
+      }
+      el.innerHTML = html;
+    }
+
+    function openOccExpanded(title, listings) {
+      const panel = document.getElementById("occExpandedPanel");
+      const backdrop = document.getElementById("occBackdrop");
+      const titleEl = document.getElementById("occExpandedTitle");
+      const listEl = document.getElementById("occExpandedList");
+
+      document.getElementById("occDetailPanel").hidden = true;
+      titleEl.textContent = `${title} (${listings.length})`;
+
+      if (!listings.length) {
+        listEl.innerHTML = `<div class="occEmpty">No ${title.toLowerCase()} listings</div>`;
+      } else {
+        listEl.innerHTML = listings.map((l, i) => {
+          const images = galleryImages(l);
+          const thumb = images[0]
+            ? `<img class="occThumb" src="${escapeHtml(images[0])}" alt="Listing" />`
+            : `<div class="occThumb"></div>`;
+          const name = (l.title || "").trim() || "Untitled space";
+          const type = title === "Reserved" ? "reserved" : "occupied";
+          const label = title === "Reserved" ? "Reserved" : "Occupied";
+          const meta = title === "Reserved" ? "Booking approved" : "Currently occupied";
+          return `<div class="occItem" data-occ-idx="${i}" style="cursor:pointer;">
+                    ${thumb}
+                    <div class="occInfo">
+                        <div class="occTitle">${escapeHtml(name)}</div>
+                        <div class="occMeta">${meta}</div>
+                    </div>
+                    <span class="occBadge occBadge--${type}">${label}</span>
+                </div>`;
+        }).join("");
+
+        // Click a listing item → show detail
+        listEl.querySelectorAll(".occItem").forEach(item => {
+          item.addEventListener("click", () => {
+            const idx = parseInt(item.dataset.occIdx);
+            const l = listings[idx];
+            if (!l) return;
+            showOccDetail(l, title);
+          });
+        });
+      }
+
+      panel.classList.add("open");
+      backdrop.classList.add("open");
+      if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function showOccDetail(l, type) {
+      const panel = document.getElementById("occDetailPanel");
+      const images = galleryImages(l);
+      const cap = typeof l.capacity === "object" ? l.capacity : {};
+      const loc = typeof l.location === "object" ? l.location : {};
+
+      document.getElementById("occDetailTitle").textContent = (l.title || "").trim() || "Untitled space";
+
+      const imgEl = document.getElementById("occDetailImg");
+      if (images[0]) { imgEl.src = images[0]; imgEl.style.display = "block"; }
+      else { imgEl.style.display = "none"; }
+
+      document.getElementById("occDetailStatus").textContent = type === "Reserved" ? "Reserved (Approved)" : "Occupied (Active)";
+      document.getElementById("occDetailPrice").textContent = cap.monthly_rent ? `₱${Number(cap.monthly_rent).toLocaleString()}/mo` : "On request";
+      document.getElementById("occDetailLocation").textContent = [loc.city, loc.barangay].filter(Boolean).join(", ") || "—";
+      document.getElementById("occDetailType").textContent = l.place_type || "—";
+
+      panel.hidden = false;
+      if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function closeOccExpanded() {
+      document.getElementById("occExpandedPanel").classList.remove("open");
+      document.getElementById("occBackdrop").classList.remove("open");
+      document.getElementById("occDetailPanel").hidden = true;
+    }
+
+    document.getElementById("occExpandedClose")?.addEventListener("click", closeOccExpanded);
+    document.getElementById("occBackdrop")?.addEventListener("click", closeOccExpanded);
 
     //  Buttons to
     btnCompleteListing?.addEventListener("click", () => {
@@ -854,9 +1004,10 @@
         // Determine redirect URL based on notification type
         const notifType = (n.notif_type || n.type || "").toUpperCase();
         let redirectUrl = null;
-        if (notifType.includes("MESSAGE")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
-        else if (notifType.includes("BOOKING")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html";
-        else if (notifType.includes("KYC") || notifType.includes("VERIF")) redirectUrl = "/Property-Owner/verification/verify.html";
+        if (notifType.includes("MESSAGE")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html#/messages";
+        else if (notifType.includes("BOOKING")) redirectUrl = "/Property-Owner/dashboard/property-owner-dashboard.html#listings";
+        else if (notifType.includes("KYC") || notifType.includes("VERIF")) redirectUrl = "/auth/account-settings.html#verification";
+        else if (notifType.includes("TICKET")) redirectUrl = "/shared/my-tickets.html";
 
         return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}"
                     style="cursor:${redirectUrl ? 'pointer' : 'default'}"
@@ -867,7 +1018,7 @@
                         ${n.body ? `<div class="notif-item-body-txt">${escapeHtmlN(n.body)}</div>` : ""}
                         <div class="notif-item-time">${time}</div>
                     </div>
-                    ${redirectUrl ? '<div class="notif-item-arrow">›</div>' : ""}
+                    <button class="notif-delete" data-notif-del="${n.id}"><i data-lucide="trash-2"></i></button>
                 </div>`;
       }).join("");
 
@@ -912,8 +1063,21 @@
     }
   });
 
-  // Initial load + poll every 60s
+  // Initial load + poll every 10s
   loadNotifications();
-  setInterval(loadNotifications, 60_000);
+  setInterval(loadNotifications, 10_000);
+
+  document.addEventListener("click", (e) => {
+    const delBtn = e.target.closest("[data-notif-del]");
+    if (!delBtn) return;
+    const id = delBtn.dataset.notifDel;
+    const item = delBtn.closest(".notif-item");
+    if (item) {
+      item.style.transform = "translateX(-100%)";
+      item.style.opacity = "0";
+      setTimeout(() => item.remove(), 200);
+    }
+    fetch(`/api/notifications/${id}`, { method: "DELETE", credentials: "include" }).catch(() => { });
+  });
 
 })();

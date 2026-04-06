@@ -86,6 +86,10 @@ function setupHeader() {
     menu?.classList.remove("open");
     location.href = "/Resident/resident_messages.html";
   });
+  $("udTickets")?.addEventListener("click", () => {
+    menu?.classList.remove("open");
+    location.href = "/Resident/my_tickets.html";
+  });
   $("udBookings")?.addEventListener("click", () => {
     menu?.classList.remove("open");
     location.href = "/Resident/my-bookings.html";
@@ -849,6 +853,8 @@ function closeBookingModal() {
         let rUrl = null;
         if (nType.includes("MESSAGE")) rUrl = "/Resident/resident_messages.html";
         else if (nType.includes("BOOKING")) rUrl = "/Resident/my-bookings.html";
+        else if (nType.includes("STUDENT")) rUrl = "/auth/account-settings.html#verification";
+        else if (nType.includes("TICKET")) rUrl = "/shared/my-tickets.html";
         return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}"
                     style="cursor:${rUrl ? 'pointer' : 'default'}"
                     ${rUrl ? `onclick="window.location.href='${rUrl}'"` : ""}>
@@ -857,7 +863,7 @@ function closeBookingModal() {
                         ${n.body ? `<div class="notif-item-body-txt">${esc(n.body)}</div>` : ""}
                         <div class="notif-item-time">${time}</div>
                     </div>
-                    ${rUrl ? '<span style="color:#9ca3af;font-size:16px;align-self:center">›</span>' : ""}
+                     <button class="notif-delete" data-notif-del="${n.id}"><i data-lucide="trash-2"></i></button>
                 </div>`;
       }).join("");
 
@@ -894,5 +900,18 @@ function closeBookingModal() {
   });
 
   loadNotif();
-  setInterval(loadNotif, 60_000);
+  setInterval(loadNotif, 10_000);
+
+  document.addEventListener("click", (e) => {
+    const delBtn = e.target.closest("[data-notif-del]");
+    if (!delBtn) return;
+    const id = delBtn.dataset.notifDel;
+    const item = delBtn.closest(".notif-item");
+    if (item) {
+      item.style.transform = "translateX(-100%)";
+      item.style.opacity = "0";
+      setTimeout(() => item.remove(), 200);
+    }
+    fetch(`/api/notifications/${id}`, { method: "DELETE", credentials: "include" }).catch(() => { });
+  });
 })();

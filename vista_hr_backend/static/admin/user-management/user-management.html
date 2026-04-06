@@ -54,6 +54,13 @@
                 <i data-lucide="bar-chart-3"></i>
                 <span class="sidebar-label">Analytics</span>
             </a>
+
+            <a class="sidenav-item" data-view="tickets" href="#" title="Tickets">
+                <i data-lucide="ticket"></i>
+                <span class="sidebar-label">Tickets</span>
+                <span class="nav-badge sidebar-badge" id="ticketsBadge" hidden></span>
+            </a>
+
         </nav>
 
         <!-- Bottom -->
@@ -507,6 +514,140 @@
             </div>
         </section>
 
+        <section id="viewTickets" class="view" hidden>
+            <div class="topbar-row"
+                style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <h2 class="view-title">Support Tickets</h2>
+                <div style="display:flex;gap:8px;">
+                    <select id="tkFilterStatus" class="filter-select"
+                        style="padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:12px;">
+                        <option value="">All status</option>
+                        <option value="OPEN">Open</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="RESOLVED">Resolved</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+                    <select id="tkFilterCat" class="filter-select"
+                        style="padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:12px;">
+                        <option value="">All categories</option>
+                        <option value="TECHNICAL">Technical</option>
+                        <option value="BILLING">Billing</option>
+                        <option value="LISTING">Listing</option>
+                        <option value="ACCOUNT">Account</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="an-stats-row" style="margin-bottom:20px;">
+                <div class="stat-card">
+                    <div class="stat-icon an-amber"><i data-lucide="circle-alert"></i></div>
+                    <div class="stat-body"><span class="stat-label">Open</span><strong class="stat-value"
+                            id="tkStatOpen">0</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-blue"><i data-lucide="loader"></i></div>
+                    <div class="stat-body"><span class="stat-label">In progress</span><strong class="stat-value"
+                            id="tkStatProg">0</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-teal"><i data-lucide="circle-check"></i></div>
+                    <div class="stat-body"><span class="stat-label">Resolved</span><strong class="stat-value"
+                            id="tkStatResolved">0</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-green"><i data-lucide="ticket"></i></div>
+                    <div class="stat-body"><span class="stat-label">Total</span><strong class="stat-value"
+                            id="tkStatTotal">0</strong></div>
+                </div>
+            </div>
+
+            <div class="panel" style="padding:0;overflow:hidden;">
+                <table class="user-table" id="tkTable" style="font-size:13px;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Subject</th>
+                            <th>User</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tkBody"></tbody>
+                </table>
+            </div>
+            <div id="tkEmpty" hidden style="text-align:center;padding:48px 20px;color:var(--muted);">
+                <i data-lucide="ticket" style="width:36px;height:36px;opacity:0.3;margin-bottom:10px;"></i>
+                <p>No tickets found</p>
+            </div>
+        </section>
+
+        <!-- Ticket reply modal -->
+        <div class="modal-overlay" id="tkReplyOverlay" style="display:none;">
+            <div class="modal-card" style="max-width:560px;">
+                <div class="modal-header">
+                    <h3 id="tkModalTitle">Ticket #—</h3>
+                    <button class="icon-btn" id="tkCloseBtn" type="button"><i data-lucide="x"></i></button>
+                </div>
+                <div style="padding:16px 24px;">
+                    <div
+                        style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px;background:var(--bg2,#f7f7f7);border-radius:10px;margin-bottom:14px;font-size:12px;">
+                        <div><span
+                                style="font-weight:700;color:var(--muted);text-transform:uppercase;font-size:10px;">From</span><br><span
+                                id="tkDetailUser">—</span></div>
+                        <div><span
+                                style="font-weight:700;color:var(--muted);text-transform:uppercase;font-size:10px;">Category</span><br><span
+                                id="tkDetailCat">—</span></div>
+                        <div><span
+                                style="font-weight:700;color:var(--muted);text-transform:uppercase;font-size:10px;">Status</span><br><span
+                                id="tkDetailStatus">—</span></div>
+                        <div><span
+                                style="font-weight:700;color:var(--muted);text-transform:uppercase;font-size:10px;">Submitted</span><br><span
+                                id="tkDetailDate">—</span></div>
+                    </div>
+                    <div style="margin-bottom:14px;">
+                        <div
+                            style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">
+                            Description</div>
+                        <div id="tkDetailBody"
+                            style="font-size:13px;padding:12px;background:var(--bg2,#f7f7f7);border-radius:8px;white-space:pre-wrap;line-height:1.6;">
+                        </div>
+                    </div>
+                    <div id="tkPrevReply" hidden style="margin-bottom:14px;">
+                        <div
+                            style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">
+                            Previous reply</div>
+                        <div id="tkPrevReplyText"
+                            style="font-size:13px;padding:12px;background:var(--bg2,#f7f7f7);border-radius:8px;border-left:3px solid var(--accent,#123458);white-space:pre-wrap;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom:14px;">
+                        <label
+                            style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Update
+                            status</label>
+                        <select id="tkReplyStatus"
+                            style="width:100%;padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:13px;margin-top:4px;">
+                            <option value="OPEN">Open</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="RESOLVED">Resolved</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Admin
+                            reply</label>
+                        <textarea id="tkReplyText" rows="4" placeholder="Type your response..."
+                            style="width:100%;padding:12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;margin-top:4px;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn ghost" id="tkCancelBtn" type="button">Cancel</button>
+                    <button class="btn solid" id="tkSubmitBtn" type="button">Send reply</button>
+                </div>
+            </div>
+        </div>
 
     </div><!-- /main-wrap -->
 

@@ -2558,3 +2558,42 @@ body {
 .dd-thumb:hover {
     opacity: 0.9;
 }
+
+
+
+.notif-item {
+    position: relative;
+    overflow: hidden;
+    transition: transform 200ms ease, background 200ms ease;
+    cursor: pointer;
+}
+
+.notif-item:hover {
+    transform: translateX(-40px);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.notif-delete {
+    position: absolute;
+    right: -40px;
+    top: 0;
+    height: 100%;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    cursor: pointer;
+    transition: right 200ms ease;
+}
+
+.notif-item:hover .notif-delete {
+    right: 0;
+}
+
+.notif-delete i {
+    width: 16px;
+    height: 16px;
+}

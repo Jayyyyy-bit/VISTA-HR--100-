@@ -407,16 +407,6 @@ def update_step3(listing_id: int):
     elif not re.fullmatch(r"^\d{4}$", zip_code):
         fields["zip"] = "ZIP must be a 4-digit code."
 
-    ncr = _load_ncr_barangays()
-    if isinstance(city, str) and city.strip():
-        if city not in ncr:
-            fields["city"] = f"Unknown city '{city}'."
-        if barangay and city in ncr:
-            allowed = ncr.get(city) or []
-            allowed_norm = {_norm(b) for b in allowed}
-            if _norm(barangay) not in allowed_norm:
-                fields["barangay"] = f"Unknown barangay '{barangay}' for {city}."
-
     if fields:
         return json_error("Validation failed", 400, fields=fields)
 
@@ -424,6 +414,8 @@ def update_step3(listing_id: int):
     listing.current_step = max(listing.current_step or 1, 3)
     listing.status = "DRAFT"
 
+
+    
     return _commit_or_500({"message": "Step 3 saved", "listing": listing.to_dict()}, 200)
 
 

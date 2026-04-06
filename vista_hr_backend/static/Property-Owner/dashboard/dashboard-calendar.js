@@ -1,5 +1,5 @@
 (() => {
-    const API_BASE = "";
+    const API_BASE = "/api";
 
     const STATUS = {
         AVAILABLE: "AVAILABLE",

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR | My Tickets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/auth/toast.js"></script>
+    <link rel="stylesheet" href="/shared/my_tickets.css" />
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" id="brandLink" href="#">
+                <span class="brand-dot"></span>
+                <span>VISTA<b>-HR</b></span>
+            </a>
+            <button class="back-btn" id="backBtn" type="button">
+                <i data-lucide="arrow-left"></i> Back
+            </button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">My Tickets</h1>
+                <p class="page-sub">Submit and track your concerns</p>
+            </div>
+            <button class="btn-primary" id="newTicketBtn" type="button">
+                <i data-lucide="plus"></i> New ticket
+            </button>
+        </div>
+
+        <div class="tickets-list" id="ticketsList"></div>
+
+        <div class="empty-state" id="emptyState" hidden>
+            <div class="empty-icon"><i data-lucide="ticket"></i></div>
+            <h2>No tickets yet</h2>
+            <p>Have a concern? Submit a ticket and our team will get back to you.</p>
+            <button class="btn-primary" id="emptyNewBtn" type="button">
+                <i data-lucide="plus"></i> Submit a ticket
+            </button>
+        </div>
+    </main>
+
+    <!-- New ticket modal -->
+    <div class="modal-overlay" id="newTicketOverlay" hidden>
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">Submit a ticket</h3>
+                <button class="modal-close" id="newTicketClose" type="button"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label class="field-label">Category</label>
+                    <select id="ticketCategory" class="field-select">
+                        <option value="TECHNICAL">Technical issue</option>
+                        <option value="BILLING">Billing</option>
+                        <option value="LISTING">Listing concern</option>
+                        <option value="ACCOUNT">Account issue</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field-label">Subject</label>
+                    <input id="ticketSubject" class="field-input" type="text"
+                        placeholder="Brief summary of your concern" maxlength="200" />
+                </div>
+                <div class="field">
+                    <label class="field-label">Description</label>
+                    <textarea id="ticketBody" class="field-textarea" rows="5"
+                        placeholder="Describe your concern in detail..." maxlength="5000"></textarea>
+                </div>
+                <small class="field-err" id="ticketErr"></small>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="ticketCancelBtn" type="button">Cancel</button>
+                <button class="btn-primary" id="ticketSubmitBtn" type="button">
+                    <span class="btn-label">Submit</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket detail modal -->
+    <div class="modal-overlay" id="detailOverlay" hidden>
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title" id="detailTitle">Ticket #—</h3>
+                <button class="modal-close" id="detailClose" type="button"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-meta">
+                    <span class="badge" id="detailStatus">—</span>
+                    <span class="badge" id="detailCat">—</span>
+                    <span class="detail-date" id="detailDate">—</span>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-label">Your message</div>
+                    <div class="detail-body" id="detailBody"></div>
+                </div>
+                <div class="detail-section" id="replySection" hidden>
+                    <div class="detail-label">Admin reply</div>
+                    <div class="detail-body detail-body--reply" id="detailReply"></div>
+                    <div class="detail-date" id="replyDate" style="margin-top:6px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/auth/sessionGuard.js" defer></script>
+    <script src="/shared/my_tickets.js" defer></script>
+</body>
+
+</html>
