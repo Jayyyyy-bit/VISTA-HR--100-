@@ -1,6 +1,6 @@
 /* PO-after-signup/PO_welcome-page.js */
 (() => {
-    const API = "http://127.0.0.1:5000/api";
+    const API = "/api";
     const DASH_URL = "/Property-Owner/dashboard/property-owner-dashboard.html";
     const WIZARD_URL = "/PO-after-signup/listing-wizard/index.html?new=1";
     const VERIFY_URL = "/Property-Owner/verification/verify.html";
