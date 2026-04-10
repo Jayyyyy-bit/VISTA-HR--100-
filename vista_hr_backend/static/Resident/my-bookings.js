@@ -1,6 +1,6 @@
 /* Resident/my-bookings.js */
 (() => {
-    const API = "http://127.0.0.1:5000/api";
+    const API = "/api";
 
     let _all = [];
     let _status = "ALL";
@@ -8,9 +8,9 @@
 
     const STATUS_MAP = {
         PENDING: { label: "Pending", cls: "bc-status--pending" },
-        APPROVED: { label: "Approved", cls: "bc-status--approved" },
-        ACTIVE: { label: "Active", cls: "bc-status--active" },
-        COMPLETED: { label: "Completed", cls: "bc-status--completed" },
+        APPROVED: { label: "Reserved", cls: "bc-status--approved" },
+        ACTIVE: { label: "Occupied", cls: "bc-status--active" },
+        COMPLETED: { label: "Moved Out", cls: "bc-status--completed" },
         REJECTED: { label: "Rejected", cls: "bc-status--rejected" },
         CANCELLED: { label: "Cancelled", cls: "bc-status--cancelled" },
     };
@@ -60,8 +60,8 @@
         if (!el) return;
         const total = _all.length;
         const pending = _all.filter(b => b.status === "PENDING").length;
-        if (!total) { el.textContent = "No move-in requests yet."; return; }
-        el.textContent = `${total} move-in request${total !== 1 ? "s" : ""}${pending ? ` · ${pending} pending` : ""}`;
+        if (!total) { el.textContent = "No reservations yet."; return; }
+        el.textContent = `${total} reservation${total !== 1 ? "s" : ""}${pending ? ` · ${pending} pending` : ""}`;
     }
 
     function updatePendingBadge() {
@@ -104,6 +104,11 @@
         // Bind cancel buttons
         list.querySelectorAll("[data-cancel-id]").forEach(btn => {
             btn.addEventListener("click", () => openCancelModal(Number(btn.dataset.cancelId), btn.dataset.cancelTitle));
+        });
+
+        // Bind receipt buttons
+        list.querySelectorAll("[data-receipt-id]").forEach(btn => {
+            btn.addEventListener("click", () => openReceipt(Number(btn.dataset.receiptId)));
         });
 
         if (window.lucide?.createIcons) lucide.createIcons();
@@ -149,6 +154,13 @@
                </button>`
             : "";
 
+        const RECEIPT_STATUSES = ["APPROVED", "ACTIVE", "COMPLETED"];
+        const receiptBtn = RECEIPT_STATUSES.includes(status)
+            ? `<button class="bc-receipt-btn" data-receipt-id="${b.id}">
+                    <i data-lucide="file-text"></i> View Receipt
+               </button>`
+            : "";
+
         return `
         <div class="booking-card" style="animation-delay:${idx * 40}ms">
             <div class="bc-main">
@@ -173,7 +185,10 @@
             ${noteBlock}
             <div class="bc-actions">
                 <span class="bc-timestamp">Requested ${fmtDate(b.created_at)}</span>
-                ${cancelBtn}
+                <div class="bc-actions-right">
+                    ${receiptBtn}
+                    ${cancelBtn}
+                </div>
             </div>
         </div>`;
     }
@@ -181,11 +196,11 @@
     // ── Empty states ──────────────────────────────────────────
     function emptyStateHTML(status) {
         const msgs = {
-            ALL: { icon: "calendar-x-2", title: "No bookings yet", sub: "Browse listings and submit your first move-in request." },
-            PENDING: { icon: "clock", title: "No pending move-in requests", sub: "Move-in requests waiting for owner approval." },
-            APPROVED: { icon: "check-circle-2", title: "No approved requests", sub: "Approved bookings will appear here." },
-            ACTIVE: { icon: "home", title: "No active stays", sub: "Confirmed and ongoing stays will show here." },
-            COMPLETED: { icon: "badge-check", title: "No completed stays", sub: "Past completed stays will appear here." },
+            ALL: { icon: "calendar-x-2", title: "No reservations yet", sub: "Browse listings and submit your first reservation request." },
+            PENDING: { icon: "clock", title: "No pending requests", sub: "Reservation requests waiting for owner approval." },
+            APPROVED: { icon: "check-circle-2", title: "No reserved listings", sub: "Approved reservations will appear here." },
+            ACTIVE: { icon: "home", title: "No occupied listings", sub: "Listings you've moved into will show here." },
+            COMPLETED: { icon: "badge-check", title: "No past stays", sub: "Listings you've moved out of will appear here." },
             REJECTED: { icon: "x-circle", title: "No rejected requests", sub: "" },
             CANCELLED: { icon: "ban", title: "No cancelled requests", sub: "" },
         };
@@ -215,7 +230,7 @@
     function openCancelModal(id, title) {
         _cancelTarget = id;
         const sub = document.getElementById("modalSub");
-        if (sub) sub.textContent = `Cancel your request for "${title}"?`;
+        if (sub) sub.textContent = `Cancel your reservation for "${title}"?`;
         document.getElementById("modalOverlay").hidden = false;
         if (window.lucide?.createIcons) lucide.createIcons();
     }
@@ -274,7 +289,7 @@
         if (list) list.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon"><i data-lucide="wifi-off"></i></div>
-                <div class="empty-title">Could not load move-in requests</div>
+                <div class="empty-title">Could not load reservations</div>
                 <p class="empty-sub">${esc(msg)}</p>
             </div>`;
         if (window.lucide?.createIcons) lucide.createIcons();
@@ -306,4 +321,94 @@
             return fmtDate(dt);
         } catch { return "—"; }
     }
+
+    // ── Receipt modal ─────────────────────────────────────────
+    async function openReceipt(bookingId) {
+        const overlay = document.getElementById("receiptOverlay");
+        const content = document.getElementById("receiptContent");
+        if (!overlay || !content) return;
+
+        // Show modal with loading state
+        content.innerHTML = `<div class="receiptLoading">Loading receipt…</div>`;
+        overlay.hidden = false;
+        document.body.style.overflow = "hidden";
+
+        try {
+            const res = await fetch(`${API}/bookings/${bookingId}/receipt`, { credentials: "include" });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to load receipt.");
+
+            const r = data.receipt;
+            content.innerHTML = `
+                <div class="rcpt-brand">
+                    <div class="rcpt-brand-name">VISTA-HR</div>
+                    <div class="rcpt-brand-sub">Reservation Receipt</div>
+                </div>
+                <div class="rcpt-ref">${esc(r.reference)}</div>
+                <div class="rcpt-grid">
+                    <div class="rcpt-full">
+                        <div class="rcpt-field-label">Resident</div>
+                        <div class="rcpt-field-value">${esc(r.resident_name)}</div>
+                    </div>
+                    <hr class="rcpt-divider">
+                    <div class="rcpt-full">
+                        <div class="rcpt-field-label">Listing</div>
+                        <div class="rcpt-field-value">${esc(r.listing_title)}</div>
+                    </div>
+                    <div class="rcpt-full">
+                        <div class="rcpt-field-label">Address</div>
+                        <div class="rcpt-field-value">${esc(r.listing_address)}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Property Owner</div>
+                        <div class="rcpt-field-value">${esc(r.owner_name)}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Status</div>
+                        <div class="rcpt-field-value">${esc(r.status)}</div>
+                    </div>
+                    <hr class="rcpt-divider">
+                    <div>
+                        <div class="rcpt-field-label">Move-in Date</div>
+                        <div class="rcpt-field-value">${r.move_in_date ? fmtDate(r.move_in_date) : "—"}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Monthly Rent</div>
+                        <div class="rcpt-field-value">${r.monthly_rent ? "₱" + Number(r.monthly_rent).toLocaleString() : "—"}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Date Approved</div>
+                        <div class="rcpt-field-value">${r.approved_at ? fmtDate(r.approved_at) : "—"}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Date Requested</div>
+                        <div class="rcpt-field-value">${r.created_at ? fmtDate(r.created_at) : "—"}</div>
+                    </div>
+                    <div class="rcpt-footer-note">
+                        This receipt was generated by VISTA-HR. For concerns, contact your property owner.
+                    </div>
+                </div>`;
+        } catch (err) {
+            content.innerHTML = `
+                <div class="receiptLoading" style="color:#dc2626;">
+                    ${esc(err.message)}
+                </div>`;
+        }
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function closeReceipt() {
+        const overlay = document.getElementById("receiptOverlay");
+        if (overlay) overlay.hidden = true;
+        document.body.style.overflow = "";
+    }
+
+    // Receipt modal event listeners
+    document.getElementById("receiptClose")?.addEventListener("click", closeReceipt);
+    document.getElementById("receiptCloseBtn")?.addEventListener("click", closeReceipt);
+    document.getElementById("receiptOverlay")?.addEventListener("click", e => {
+        if (e.target === e.currentTarget) closeReceipt();
+    });
+    document.getElementById("receiptPrintBtn")?.addEventListener("click", () => window.print());
 })();

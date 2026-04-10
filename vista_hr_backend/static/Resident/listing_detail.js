@@ -2,7 +2,7 @@
    VISTA-HR · listing_detail.js
    Full-featured listing detail page
 ============================================================ */
-const API = "http://127.0.0.1:5000/api";
+const API = "/api";
 const STAR_LABELS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
 
 const AMEN_ICONS = {
@@ -64,6 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadReviews(lid, true),
     ]);
 
+    await checkReservationStatus(lid);
     checkEligibility(lid);
     loadSimilar(lid);
     setupScrollNav();
@@ -624,6 +625,45 @@ function updateSaveBtn(btn, saved) {
     btn.classList.toggle("saved", saved);
     const sv = btn.querySelector("svg");
     if (sv) { sv.style.fill = saved ? "#DC2626" : "none"; sv.style.stroke = saved ? "#DC2626" : "currentColor"; }
+}
+
+// ── Reservation status guard ──────────────────────────────
+async function checkReservationStatus(lid) {
+    try {
+        const session = window.AuthGuard?.getSession?.()?.user;
+        if (!session) return; // not logged in — skip, button stays enabled
+
+        const r = await fetch(`${API}/bookings/me/status`, { credentials: "include" });
+        if (!r.ok) return;
+        const d = await r.json();
+
+        if (!d.has_live_booking) return;
+
+        const liveBooking = d.booking || {};
+        const isThisListing = liveBooking.listing_id === lid;
+
+        const statusLabels = {
+            PENDING: "Pending", APPROVED: "Reserved",
+            ACTIVE: "Occupied", COMPLETED: "Moved Out",
+        };
+        const statusLabel = statusLabels[liveBooking.status] || liveBooking.status;
+
+        const msg = isThisListing
+            ? "You already have a reservation for this listing"
+            : "You already have an active reservation";
+
+        // Disable both desktop and mobile reserve buttons
+        ["ldReserveBtn", "ldMobReserveBtn"].forEach(id => {
+            const btn = $(id);
+            if (!btn) return;
+            btn.disabled = true;
+            btn.classList.add("btn--disabled");
+            btn.title = `Status: ${statusLabel}`;
+            // Update button text — find the text node or span
+            const span = btn.querySelector("span") || btn;
+            span.textContent = msg;
+        });
+    } catch { /* silent — button stays enabled */ }
 }
 
 // ── Booking ───────────────────────────────────────────────

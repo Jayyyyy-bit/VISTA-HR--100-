@@ -2305,13 +2305,11 @@ select option {
 /* =========================
    STEP 7 — PHOTOS
    ========================= */
-body.wiz-step-step-7 .wizard-shell {
-    width: min(1000px, 96vw) !important;
-}
 
 .photoShell {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
+    grid-template-rows: auto auto 1fr;
     gap: 24px;
     align-items: start;
     width: 100%;
@@ -2319,29 +2317,50 @@ body.wiz-step-step-7 .wizard-shell {
 
 .photoShell .darkWarning {
     grid-column: 1 / -1;
+    grid-row: 1;
 }
 
 .photoShell .uploadZone {
     grid-column: 1;
+    grid-row: 2;
 }
 
 .photoShell .thumbGrid {
     grid-column: 1;
+    grid-row: 3;
 }
 
 .photoShell .vtCard {
     grid-column: 2;
-    grid-row: 2 / 5;
+    grid-row: 2 / 4;
+    align-self: stretch;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 @media (max-width: 900px) {
     .photoShell {
         grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+
+    .photoShell .darkWarning {
+        grid-row: auto;
+    }
+
+    .photoShell .uploadZone {
+        grid-row: auto;
+    }
+
+    .photoShell .thumbGrid {
+        grid-row: auto;
     }
 
     .photoShell .vtCard {
         grid-column: 1;
         grid-row: auto;
+        height: auto;
+        align-self: auto;
     }
 }
 
@@ -4659,9 +4678,7 @@ body {
 }
 
 /* ── Step 7 exception — two-column photo layout ── */
-body.wiz-step-step-7 .wizard-shell {
-    width: min(1000px, 96vw) !important;
-}
+
 
 /* ── Stage — single column ── */
 .stage-centered {
@@ -4999,5 +5016,295 @@ body.wiz-step-step-3 .page {
 
     .loc-osmMap {
         height: 220px !important
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   STEP 7 — TWO-COLUMN PHOTO LAYOUT (FINAL FIX)
+   
+   PASTE THIS AT THE VERY END OF wizard.css (after line 5025)
+   
+   Body class confirmed: wiz-step-step-7
+   Fallback: body:has(.photoShell) — matches by content
+   
+   Also delete these now-dead rules to keep things clean:
+     • Lines 2308-2310  (body.wiz-step-7 — wrong class, never fires)
+     • Lines 4683-4686  (body.wiz-step-step-7 — superseded by this block)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Widen wizard shell for step 7 ── */
+body.wiz-step-step-7 .wizard-shell,
+body:has(.photoShell) .wizard-shell {
+    width: min(1040px, 96vw) !important;
+}
+
+/* ── 2. Page container — allow scroll + don't clip wider shell ── */
+body.wiz-step-step-7 .page,
+body:has(.photoShell) .page {
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* ── 3. photoShell — two-column grid ── */
+body.wiz-step-step-7 .photoShell,
+body:has(.photoShell) .photoShell {
+    display: grid !important;
+    grid-template-columns: 1.2fr 1fr !important;
+    grid-template-rows: auto auto 1fr !important;
+    gap: 20px !important;
+    align-items: start !important;
+    width: 100% !important;
+}
+
+/* Dark warning — full width row 1 */
+body.wiz-step-step-7 .photoShell>.darkWarning,
+body:has(.photoShell) .photoShell>.darkWarning {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+}
+
+/* Upload zone — left col, row 2 */
+body.wiz-step-step-7 .photoShell>.uploadZone,
+body:has(.photoShell) .photoShell>.uploadZone {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+}
+
+/* Thumb grid — left col, row 3 */
+body.wiz-step-step-7 .photoShell>.thumbGrid,
+body:has(.photoShell) .photoShell>.thumbGrid {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+}
+
+/* VT card — right col, spans rows 2-3 */
+body.wiz-step-step-7 .photoShell>.vtCard,
+body:has(.photoShell) .photoShell>.vtCard {
+    grid-column: 2 !important;
+    grid-row: 2 / 4 !important;
+    align-self: stretch !important;
+    height: auto !important;
+}
+
+
+/* ════════════════════════════════════════
+   THUMB GRID — 3-COLUMN WRAPPING GRID
+   ════════════════════════════════════════ */
+
+body.wiz-step-step-7 .thumbGrid,
+body:has(.photoShell) .thumbGrid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+
+    /* kill horizontal scroll */
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    scroll-snap-type: none !important;
+    padding-bottom: 4px !important;
+}
+
+/* Thumb cards — fill grid cell */
+body.wiz-step-step-7 .thumb,
+body:has(.photoShell) .thumb {
+    flex: unset !important;
+    width: 100% !important;
+    scroll-snap-align: unset !important;
+}
+
+body.wiz-step-step-7 .thumb img,
+body:has(.photoShell) .thumb img {
+    width: 100% !important;
+    height: 120px !important;
+    object-fit: cover !important;
+}
+
+/* Compact thumb controls */
+body.wiz-step-step-7 .thumbBar,
+body:has(.photoShell) .thumbBar {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+}
+
+body.wiz-step-step-7 .tBtn,
+body:has(.photoShell) .tBtn {
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+    border-radius: 8px !important;
+}
+
+/* Compact cover tag */
+body.wiz-step-step-7 .coverTag,
+body:has(.photoShell) .coverTag {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    left: 6px !important;
+    top: 6px !important;
+}
+
+/* Dark badge */
+body.wiz-step-step-7 .darkBadge,
+body:has(.photoShell) .darkBadge {
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+}
+
+
+/* ════════════════════════════════════════
+   UPLOAD ZONE — COMPACT FOR TWO-COL
+   ════════════════════════════════════════ */
+
+body.wiz-step-step-7 .uploadZone,
+body:has(.photoShell) .uploadZone {
+    padding: 14px !important;
+    gap: 10px !important;
+}
+
+body.wiz-step-step-7 .uzTitle,
+body:has(.photoShell) .uzTitle {
+    font-size: 14px !important;
+}
+
+body.wiz-step-step-7 .uzSub,
+body:has(.photoShell) .uzSub {
+    font-size: 12px !important;
+}
+
+body.wiz-step-step-7 .uzMeta,
+body:has(.photoShell) .uzMeta {
+    font-size: 12px !important;
+}
+
+
+/* ════════════════════════════════════════
+   VT CARD — FIT NARROW RIGHT COLUMN
+   ════════════════════════════════════════ */
+
+/* VT head — stack title row above controls row */
+body.wiz-step-step-7 .vtHead,
+body:has(.photoShell) .vtHead {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+}
+
+body.wiz-step-step-7 .vtHeadLeft,
+body:has(.photoShell) .vtHeadLeft {
+    flex: 1 1 100% !important;
+    gap: 10px !important;
+}
+
+body.wiz-step-step-7 .vtHeadRight,
+body:has(.photoShell) .vtHeadRight {
+    flex: 1 1 100% !important;
+    justify-content: space-between !important;
+}
+
+body.wiz-step-step-7 .vtTitle,
+body:has(.photoShell) .vtTitle {
+    font-size: 14px !important;
+}
+
+body.wiz-step-step-7 .vtSub,
+body:has(.photoShell) .vtSub {
+    font-size: 11px !important;
+}
+
+body.wiz-step-step-7 .vtGuideBtn,
+body:has(.photoShell) .vtGuideBtn {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+}
+
+/* Pannellum viewer — constrained height in column */
+body.wiz-step-step-7 .panoViewer,
+body:has(.photoShell) .panoViewer {
+    min-height: 220px !important;
+    max-height: 320px !important;
+}
+
+/* Panorama upload zone — compact */
+body.wiz-step-step-7 .panoUploadTitle,
+body:has(.photoShell) .panoUploadTitle {
+    font-size: 13px !important;
+}
+
+body.wiz-step-step-7 .panoUploadSub,
+body:has(.photoShell) .panoUploadSub {
+    font-size: 11px !important;
+}
+
+body.wiz-step-step-7 .panoChooseBtn,
+body:has(.photoShell) .panoChooseBtn {
+    font-size: 12px !important;
+    padding: 8px 16px !important;
+}
+
+/* VT URL + hints — compact */
+body.wiz-step-step-7 .vtOrRow,
+body:has(.photoShell) .vtOrRow {
+    font-size: 11px !important;
+}
+
+body.wiz-step-step-7 .vtInput,
+body:has(.photoShell) .vtInput {
+    height: 38px !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+}
+
+body.wiz-step-step-7 .vtHint,
+body:has(.photoShell) .vtHint {
+    font-size: 11px !important;
+}
+
+
+/* ════════════════════════════════════════
+   RESPONSIVE — STACK BELOW 900px
+   ════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+
+    body.wiz-step-step-7 .wizard-shell,
+    body:has(.photoShell) .wizard-shell {
+        width: min(640px, 96vw) !important;
+    }
+
+    body.wiz-step-step-7 .photoShell,
+    body:has(.photoShell) .photoShell {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto !important;
+    }
+
+    body.wiz-step-step-7 .photoShell>.darkWarning,
+    body.wiz-step-step-7 .photoShell>.uploadZone,
+    body.wiz-step-step-7 .photoShell>.thumbGrid,
+    body.wiz-step-step-7 .photoShell>.vtCard,
+    body:has(.photoShell) .photoShell>.darkWarning,
+    body:has(.photoShell) .photoShell>.uploadZone,
+    body:has(.photoShell) .photoShell>.thumbGrid,
+    body:has(.photoShell) .photoShell>.vtCard {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+    }
+
+    /* Restore VT head to single-row on wider single-column */
+    body.wiz-step-step-7 .vtHeadLeft,
+    body:has(.photoShell) .vtHeadLeft {
+        flex: 1 1 auto !important;
+    }
+
+    body.wiz-step-step-7 .vtHeadRight,
+    body:has(.photoShell) .vtHeadRight {
+        flex: 0 0 auto !important;
+    }
+}
+
+@media (max-width: 500px) {
+
+    body.wiz-step-step-7 .thumbGrid,
+    body:has(.photoShell) .thumbGrid {
+        grid-template-columns: repeat(2, 1fr) !important;
     }
 }

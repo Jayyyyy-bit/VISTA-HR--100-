@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VISTA-HR · My Bookings</title>
+    <title>VISTA-HR · My Reservations</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -41,8 +41,8 @@
         <!-- Page header -->
         <div class="pageHeader">
             <div>
-                <h1 class="pageTitle">My Bookings</h1>
-                <p class="pageSub" id="pageSub">Loading your booking history…</p>
+                <h1 class="pageTitle">My Reservations</h1>
+                <p class="pageSub" id="pageSub">Loading your reservation history…</p>
             </div>
         </div>
 
@@ -53,9 +53,9 @@
                 Pending
                 <span class="tabCount" id="countPending" hidden></span>
             </button>
-            <button class="filterTab" data-status="APPROVED">Approved</button>
-            <button class="filterTab" data-status="ACTIVE">Active</button>
-            <button class="filterTab" data-status="COMPLETED">Completed</button>
+            <button class="filterTab" data-status="APPROVED">Reserved</button>
+            <button class="filterTab" data-status="ACTIVE">Occupied</button>
+            <button class="filterTab" data-status="COMPLETED">Moved Out</button>
             <button class="filterTab" data-status="REJECTED">Rejected</button>
             <button class="filterTab" data-status="CANCELLED">Cancelled</button>
         </div>
@@ -71,13 +71,32 @@
             <div class="modalHead">
                 <div class="modalIcon"><i data-lucide="alert-triangle"></i></div>
                 <div>
-                    <div class="modalTitle">Cancel booking?</div>
+                    <div class="modalTitle">Cancel reservation?</div>
                     <div class="modalSub" id="modalSub">This will cancel your pending request.</div>
                 </div>
             </div>
             <div class="modalActions">
                 <button class="modalBtn modalBtn--ghost" id="modalCancel">Keep it</button>
                 <button class="modalBtn modalBtn--danger" id="modalConfirm">Yes, cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modalOverlay" id="receiptOverlay" hidden>
+        <div class="modalCard receiptModal">
+            <div class="receiptModalHeader">
+                <div class="receiptModalTitle">Reservation Receipt</div>
+                <button class="receiptCloseBtn" id="receiptClose" type="button">&times;</button>
+            </div>
+            <div class="receiptContent" id="receiptContent">
+                <div class="receiptLoading">Loading receipt…</div>
+            </div>
+            <div class="receiptFooter">
+                <button class="modalBtn modalBtn--ghost" id="receiptCloseBtn">Close</button>
+                <button class="modalBtn modalBtn--primary" id="receiptPrintBtn">
+                    <i data-lucide="printer"></i> Print
+                </button>
             </div>
         </div>
     </div>

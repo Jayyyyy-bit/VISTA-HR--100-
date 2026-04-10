@@ -97,40 +97,20 @@
 
     <!-- ══ CATEGORY ICON BAR (like Airbnb) ══ -->
     <div class="cat-bar" id="catBar">
-        <div class="cat-bar-inner">
-            <button class="cat-item active" data-type="">
-                <div class="cat-icon"><i data-lucide="layout-grid"></i></div>
-                <span>All</span>
-            </button>
-            <button class="cat-item" data-type="Room">
-                <div class="cat-icon"><i data-lucide="door-open"></i></div>
-                <span>Room</span>
-            </button>
-            <button class="cat-item" data-type="Boarding House">
-                <div class="cat-icon"><i data-lucide="home"></i></div>
-                <span>Boarding House</span>
-            </button>
-            <button class="cat-item" data-type="Apartment">
-                <div class="cat-icon"><i data-lucide="building"></i></div>
-                <span>Apartment</span>
-            </button>
-            <button class="cat-item" data-type="Condo">
-                <div class="cat-icon"><i data-lucide="building-2"></i></div>
-                <span>Condo</span>
-            </button>
-            <button class="cat-item" data-type="Bedspace">
-                <div class="cat-icon"><i data-lucide="bed"></i></div>
-                <span>Bedspace</span>
-            </button>
-        </div>
-
-        <!-- Filter toggle -->
-        <div class="cat-bar-right">
-            <button class="filter-btn" id="filterToggle">
-                <i data-lucide="sliders-horizontal"></i>
-                <span>Filters</span>
-            </button>
-        </div>
+        <button class="cat-item active" data-type="">
+            <i data-lucide="grid-2x2"></i>
+            <span>All</span>
+        </button>
+        <!-- Populated dynamically from API -->
+    </div>
+    
+    <!-- Filter toggle -->
+    <div class="cat-bar-right">
+        <button class="filter-btn" id="filterToggle">
+            <i data-lucide="sliders-horizontal"></i>
+            <span>Filters</span>
+        </button>
+    </div>
     </div>
 
     <!-- ══ MAIN ══ -->

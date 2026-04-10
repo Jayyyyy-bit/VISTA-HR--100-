@@ -1836,3 +1836,11 @@ a {
         grid-template-columns: 1fr;
     }
 }
+
+.btn--disabled {
+    background: #9ca3af !important;
+    color: #fff !important;
+    cursor: not-allowed !important;
+    pointer-events: none;
+    opacity: 0.7;
+}

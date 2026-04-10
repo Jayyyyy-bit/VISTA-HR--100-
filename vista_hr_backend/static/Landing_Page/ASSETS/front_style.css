@@ -1061,11 +1061,15 @@ body.dark-slide .btn-pill:hover {
     border: 1px solid var(--ink-10);
 }
 
-.tour-card img {
+.tour-card img,
+.tour-card .tour-panorama {
     width: 100%;
     height: 380px;
-    object-fit: cover;
     display: block;
+}
+
+.tour-card .tour-panorama {
+    background: #000;
 }
 
 .tour-badge {

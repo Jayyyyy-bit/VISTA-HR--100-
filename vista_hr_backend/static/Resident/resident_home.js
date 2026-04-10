@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEmailVerifyBanner();
   setupHeader();
   setupSearchPill();
-  setupCategoryBar();
+  await setupCategoryBar();
   setupFilterPanel();
   setupDropdownClose();
 
@@ -342,7 +342,46 @@ function rowCardHTML(l) {
 /* ════════════════════════════════════════
    CATEGORY BAR
 ════════════════════════════════════════ */
-function setupCategoryBar() {
+async function setupCategoryBar() {
+  const catBar = document.getElementById("catBar");
+
+  // Fetch property types from API
+  try {
+    const res = await fetch(`${API}/listings/property-types`);
+    if (res.ok) {
+      const data = await res.json();
+      const types = data.types || [];
+      const icons = {
+        "Room": "door-open",
+        "Boarding House": "house",
+        "Apartment": "building",
+        "Condo": "building-2",
+        "Condominium": "building-2",      // API returns full word
+        "Bedspace": "bed-single",
+        "House": "home",
+        "Dormitory": "school",
+        "Shared House": "users",
+        "Studio Unit": "layout-panel-left",
+        "Townhouse": "layers",
+      };
+
+      const seen = new Set();
+      types.forEach(t => {
+        if (seen.has(t)) return;
+        seen.add(t);
+
+        const btn = document.createElement("button");
+        btn.className = "cat-item";
+        btn.dataset.type = t;
+        btn.innerHTML = `<i data-lucide="${icons[t] || 'home'}"></i><span>${t}</span>`;
+        catBar.appendChild(btn);
+      });
+
+      if (window.lucide?.createIcons) lucide.createIcons();
+    }
+  } catch { /* silent — "All" button still works */ }
+
+  // Bind click handlers
   document.querySelectorAll(".cat-item").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".cat-item").forEach(b => b.classList.remove("active"));

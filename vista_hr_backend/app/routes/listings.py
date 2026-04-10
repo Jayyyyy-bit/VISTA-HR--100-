@@ -322,6 +322,14 @@ def create_step1():
     
 
 
+
+PROPERTY_TYPES = ["Room", "Boarding House", "Apartment", "Condominium", "Bedspace" , "House", "Dormitory", "Shared House", "Studio Unit", "Room" , "Townhouse"]
+
+@listings_bp.get("/listings/property-types")
+def get_property_types():
+    """Returns available property types — no auth required."""
+    return jsonify({"types": PROPERTY_TYPES}), 200
+
 # =========================
 # Step 1 Place type 
 # =========================

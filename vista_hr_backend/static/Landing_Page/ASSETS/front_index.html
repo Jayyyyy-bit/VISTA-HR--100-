@@ -11,7 +11,9 @@
         href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
         rel="stylesheet" />
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="Landing_Page/ASSETS/front_style.css" />
+    <link rel="stylesheet" href="/Landing_Page/ASSETS/front_style.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 </head>
 
 <body>
@@ -58,9 +60,9 @@
                     </div>
 
                     <h1 class="hero-title">
-                        <span class="line-wrap"><span class="line l1">Sorry na</span></span>
-                        <span class="line-wrap"><span class="line l2 italic-accent">Rhane Dejucos</span></span>
-                        <span class="line-wrap"><span class="line l3">I love you so much</span></span>
+                        <span class="line-wrap"><span class="line l1">Find your</span></span>
+                        <span class="line-wrap"><span class="line l2 italic-accent">perfect stay</span></span>
+                        <span class="line-wrap"><span class="line l3">in Metro Manila</span></span>
                     </h1>
 
                     <p class="hero-sub">
@@ -86,8 +88,8 @@
 
                 <div class="hero-visual">
                     <div class="visual-card" id="visualCard">
-                        <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200"
-                            alt="Room" />
+                        <div id="panorama" style="width: 100%; height: 100%; border-radius: 16px; overflow: hidden;">
+                        </div>
                         <div class="visual-overlay">
                             <div class="visual-chip"><i data-lucide="star"></i><span><b>4.9</b> near UE</span></div>
                             <div class="visual-chip"><i data-lucide="map-pin"></i><span>Metro Manila</span></div>
@@ -104,9 +106,11 @@
                 <div class="stat"><span class="stat-n" id="statOwners">—</span><span class="stat-l">Verified
                         owners</span></div>
                 <div class="stat-div"></div>
-                <div class="stat"><span class="stat-n">5+</span><span class="stat-l">Cities covered</span></div>
+                <div class="stat"><span class="stat-n" id="statUsers">—</span><span class="stat-l">Users</span></div>
                 <div class="stat-div"></div>
-                <div class="stat"><span class="stat-n">100%</span><span class="stat-l">Free to browse</span></div>
+                <div class="stat"><span class="stat-n">16</span><span class="stat-l">Cities
+                        covered</span>
+                </div>
             </div>
 
             <button class="scroll-cue" id="scrollHint">
@@ -143,7 +147,7 @@
                     <div class="feature-list">
                         <div class="feature">
                             <div class="feat-icon"><i data-lucide="scan-eye"></i></div>
-                            <div><b>4K clarity</b><span>See ventilation, room size, and natural light.</span></div>
+                            <div><b>Clear Clarity</b><span>See 360° views</span></div>
                         </div>
                         <div class="feature">
                             <div class="feat-icon"><i data-lucide="badge-check"></i></div>
@@ -157,8 +161,7 @@
                 </div>
                 <div class="split-media">
                     <div class="tour-card">
-                        <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1200"
-                            alt="Tour" />
+                        <div id="tourPanorama" class="tour-panorama"></div>
                         <div class="tour-badge">
                             <div class="pulse-ring"></div>360° Tour Available
                         </div>
@@ -237,7 +240,7 @@
 
     </div>
 
-    <script src="Landing_Page/ASSETS/front_script.js"></script>
+    <script src="/Landing_Page/ASSETS/front_script.js"></script>
 </body>
 
 </html>

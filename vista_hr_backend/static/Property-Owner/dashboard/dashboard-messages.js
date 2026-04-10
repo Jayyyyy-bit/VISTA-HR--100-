@@ -364,19 +364,7 @@
                 </div>
             </div>
 
-            <div class="msgInfoSection">
-                <div class="msgInfoSectionLabel">Actions</div>
-                <div class="msgActionBtns">
-                    <button class="msgActionBtn isPrimary" type="button" id="msgBtnViewing">
-                        <i data-lucide="calendar" style="width:13px;height:13px;stroke-width:2"></i>
-                        Schedule viewing
-                    </button>
-                    <button class="msgActionBtn" type="button" id="msgBtnContract">
-                        <i data-lucide="file-text" style="width:13px;height:13px;stroke-width:2"></i>
-                        Send contract
-                    </button>
-                </div>
-            </div>
+            
 
             <div class="msgInfoSection">
                 <div class="msgInfoSectionLabel">Private notes</div>

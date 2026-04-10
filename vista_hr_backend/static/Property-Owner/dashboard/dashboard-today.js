@@ -4,7 +4,7 @@
 ───────────────────────────────────────────────────────────── */
 
 window.DashToday = (() => {
-    const API = "http://127.0.0.1:5000/api";
+    const API = "/api";
     let _bookings = [], _listings = [], _bkStatus = "ALL", _chart = null;
 
     // ── Utilities ────────────────────────────────────────────
@@ -450,8 +450,8 @@ window.DashToday = (() => {
             COMPLETED: "dot--approved", REJECTED: "dot--rejected", CANCELLED: "dot--cancelled"
         }[b.status] || "";
         const label = {
-            PENDING: "Pending", APPROVED: "Approved", ACTIVE: "Active",
-            COMPLETED: "Completed", REJECTED: "Rejected", CANCELLED: "Cancelled"
+            PENDING: "Pending", APPROVED: "Reserved", ACTIVE: "Occupied",
+            COMPLETED: "Moved Out", REJECTED: "Rejected", CANCELLED: "Cancelled"
         }[b.status] || b.status;
 
         const moveIn = b.move_in_date
@@ -468,6 +468,13 @@ window.DashToday = (() => {
                     <i data-lucide="x"></i> Reject
                 </button>
             </div>` : "";
+
+        const RECEIPT_STATUSES = ["APPROVED", "ACTIVE", "COMPLETED"];
+        const receiptBtn = RECEIPT_STATUSES.includes(b.status)
+            ? `<button class="bk-action-btn bk-action-btn--receipt" data-receipt-id="${b.id}" type="button">
+                    <i data-lucide="file-text"></i> Receipt
+               </button>`
+            : "";
 
 
 
@@ -500,6 +507,7 @@ window.DashToday = (() => {
                     </div>
                 </div>
                 ${actions ? `<div class="bk-card-actions">${actions.replace('<div class="bk-task-actions">', '').replace('</div>', '')}</div>` : ""}
+                ${receiptBtn ? `<div class="bk-card-actions">${receiptBtn}</div>` : ""}
             </div>`;
     }
 
@@ -528,7 +536,94 @@ window.DashToday = (() => {
                 } catch (e) { alert(e?.error || "Failed."); btn.disabled = false; }
             });
         });
+
+        // Receipt buttons
+        container.querySelectorAll(".bk-action-btn--receipt").forEach(btn => {
+            btn.addEventListener("click", () => _openReceipt(Number(btn.dataset.receiptId)));
+        });
     }
+
+    // ── Receipt modal ────────────────────────────────────────
+    async function _openReceipt(bookingId) {
+        const overlay = document.getElementById("receiptOverlay");
+        const content = document.getElementById("receiptContent");
+        if (!overlay || !content) return;
+
+        content.innerHTML = `<div class="receiptLoading">Loading receipt…</div>`;
+        overlay.hidden = false;
+        document.body.style.overflow = "hidden";
+
+        try {
+            const data = await apiFetch(`/bookings/${bookingId}/receipt`);
+            const r = data.receipt;
+            content.innerHTML = `
+                <div class="rcpt-brand">
+                    <div class="rcpt-brand-name">VISTA-HR</div>
+                    <div class="rcpt-brand-sub">Reservation Receipt</div>
+                </div>
+                <div class="rcpt-ref">${esc(r.reference)}</div>
+                <div class="rcpt-grid">
+                    <div class="rcpt-full">
+                        <div class="rcpt-field-label">Resident</div>
+                        <div class="rcpt-field-value">${esc(r.resident_name)}</div>
+                    </div>
+                    <hr class="rcpt-divider">
+                    <div class="rcpt-full">
+                        <div class="rcpt-field-label">Listing</div>
+                        <div class="rcpt-field-value">${esc(r.listing_title)}</div>
+                    </div>
+                    <div class="rcpt-full">
+                        <div class="rcpt-field-label">Address</div>
+                        <div class="rcpt-field-value">${esc(r.listing_address)}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Property Owner</div>
+                        <div class="rcpt-field-value">${esc(r.owner_name)}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Status</div>
+                        <div class="rcpt-field-value">${esc(r.status)}</div>
+                    </div>
+                    <hr class="rcpt-divider">
+                    <div>
+                        <div class="rcpt-field-label">Move-in Date</div>
+                        <div class="rcpt-field-value">${r.move_in_date ? new Date(r.move_in_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—"}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Monthly Rent</div>
+                        <div class="rcpt-field-value">${r.monthly_rent ? "₱" + Number(r.monthly_rent).toLocaleString() : "—"}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Date Approved</div>
+                        <div class="rcpt-field-value">${r.approved_at ? new Date(r.approved_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—"}</div>
+                    </div>
+                    <div>
+                        <div class="rcpt-field-label">Date Requested</div>
+                        <div class="rcpt-field-value">${r.created_at ? new Date(r.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—"}</div>
+                    </div>
+                    <div class="rcpt-footer-note">
+                        This receipt was generated by VISTA-HR. For concerns, contact the resident.
+                    </div>
+                </div>`;
+        } catch (err) {
+            content.innerHTML = `<div class="receiptLoading" style="color:#dc2626;">${esc(err?.error || err?.message || "Failed to load receipt.")}</div>`;
+        }
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function _closeReceipt() {
+        const overlay = document.getElementById("receiptOverlay");
+        if (overlay) overlay.hidden = true;
+        document.body.style.overflow = "";
+    }
+
+    // Receipt modal event listeners (safe to bind early — elements may not exist yet on other tabs)
+    document.addEventListener("click", (e) => {
+        if (e.target.id === "receiptClose" || e.target.id === "receiptCloseBtn") _closeReceipt();
+        if (e.target.id === "receiptPrintBtn") window.print();
+        if (e.target.id === "receiptOverlay") _closeReceipt();
+    });
 
     // ── Recent activity (timeline) ───────────────────────────
     function _renderActivity() {
@@ -563,8 +658,8 @@ window.DashToday = (() => {
                 : (b.updated_at || b.created_at);
             const time = relTime(timeStamp);
             const label = {
-                APPROVED: "Approved", REJECTED: "Rejected", CANCELLED: "Cancelled",
-                ACTIVE: "Moved in", COMPLETED: "Completed"
+                APPROVED: "Reserved", REJECTED: "Rejected", CANCELLED: "Cancelled",
+                ACTIVE: "Occupied", COMPLETED: "Moved Out"
             }[b.status] || b.status;
             return `
                 <div class="td-act-row">

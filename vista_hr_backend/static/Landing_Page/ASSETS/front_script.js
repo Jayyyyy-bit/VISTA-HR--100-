@@ -199,6 +199,7 @@ async function initStats() {
     let totalListings = 0;
     let totalOwners = 0;
     let totalCities = 0;
+    let totalUsers = 0;
 
     if (cached && cacheTime && (now - parseInt(cacheTime)) < 5 * 60 * 1000) {
         // Use cached data
@@ -206,19 +207,23 @@ async function initStats() {
             const d = JSON.parse(cached);
             totalListings = d.totalListings || 0;
             totalOwners = d.totalOwners || 0;
-            totalCities = d.totalCities || 0;
+            totalUsers = d.totalUsers || 0;
         } catch { }
     } else {
         // Fetch data in parallel
         try {
-            const [statsRes, feedRes] = await Promise.allSettled([
+            const results = await Promise.allSettled([
                 fetch(`${API}/public/stats`).then(r => r.ok ? r.json() : null),
                 fetch(`${API}/listings/feed?limit=60`).then(r => r.ok ? r.json() : null)
-            ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : null));
+            ]);
+            const [statsRes, feedRes] = results.map(r => r.status === 'fulfilled' ? r.value : null);
+            console.log('statsRes:', statsRes);
+            console.log('totalUsers:', totalUsers);
 
             if (statsRes) {
                 totalListings = statsRes.total_listings || 0;
                 totalOwners = statsRes.total_owners || 0;
+                totalUsers = (statsRes.total_owners || 0) + (statsRes.total_residents || 0);
             }
             if (feedRes?.listings) {
                 const cities = new Set(feedRes.listings.map(l => l.city).filter(Boolean));
@@ -226,7 +231,7 @@ async function initStats() {
             }
 
             // Cache results
-            localStorage.setItem("vista_stats_cache", JSON.stringify({ totalListings, totalOwners, totalCities }));
+            localStorage.setItem("vista_stats_cache", JSON.stringify({ totalListings, totalOwners, totalCities, totalUsers }));
             localStorage.setItem("vista_stats_cache_time", String(now));
         } catch { }
     }
@@ -234,9 +239,10 @@ async function initStats() {
     const fire = () => {
         countUp(document.getElementById("statListings"), Math.max(totalListings, 1));
         countUp(document.getElementById("statOwners"), Math.max(totalOwners, 1), 1300);
-        const citiesEl = document.querySelector(".stat-n:not(#statListings):not(#statOwners)");
-        if (citiesEl && totalCities > 0) {
-            citiesEl.textContent = totalCities + "+";
+        countUp(document.getElementById("statUsers"), totalUsers, 1300);
+        const citiesEl = document.getElementById("statCities");
+        if (citiesEl) {
+            citiesEl.textContent = totalCities > 0 ? `${totalCities}+` : "—";
         }
     };
 
@@ -280,12 +286,12 @@ async function initListings() {
         try {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 4000);
-            const r = await fetch(`${API}/listings/feed?limit=8`, { credentials: "include", signal: controller.signal });
+            const r = await fetch(`${API}/listings/feed?limit=30`, { credentials: "include", signal: controller.signal });
             clearTimeout(timeout);
 
             if (r.ok) {
                 const d = await r.json();
-                data = (d.listings || []).slice(0, 4);
+                data = d.listings || [];
                 // Cache results
                 localStorage.setItem("vista_listings_cache", JSON.stringify(data));
                 localStorage.setItem("vista_listings_cache_time", String(now));
@@ -302,7 +308,7 @@ async function initListings() {
         return;
     }
 
-    grid.innerHTML = data.map(cardHTML).join("");
+    grid.innerHTML = (data.slice(0, 4)).map(cardHTML).join("");
 
     grid.querySelectorAll(".listing[data-id]").forEach(card => {
         card.addEventListener("click", (e) => {
@@ -362,12 +368,44 @@ function initTilt() {
 }
 
 /* ════════════════════════════════════════
-   BOOT
+   360° PANORAMA VIEWER
 ════════════════════════════════════════ */
+function initPanorama() {
+    if (typeof pannellum === 'undefined') return;
+    pannellum.viewer('panorama', {
+        "type": "equirectangular",
+        "panorama": "https://pannellum.org/images/alma.jpg",
+        "autoLoad": true,
+        "showControls": false,
+        "mouseZoom": false,
+        "compass": false,
+        "hotSpots": []
+    });
+}
+
+function initTourPanorama() {
+    if (typeof pannellum === 'undefined') return;
+    pannellum.viewer('tourPanorama', {
+        "type": "equirectangular",
+        "panorama": "https://pannellum.org/images/bma-1.jpg",
+        "autoLoad": true,
+        "showControls": true,
+        "mouseZoom": true,
+        "compass": false,
+        "autoRotate": -2,
+        "hotSpots": []
+    });
+}
+
+/* ════════════════════════════════════════
+   BOOT
+════════════════════════════════ */
 function bootPage() {
     lucide.createIcons();
     fp.init();
     initTilt();
+    initPanorama();
+    initTourPanorama();
     initAuth();
 
     // Deferred init (after page is interactive)

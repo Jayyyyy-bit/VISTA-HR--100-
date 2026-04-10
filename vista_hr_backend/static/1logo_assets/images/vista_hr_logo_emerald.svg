@@ -1,0 +1,33 @@
+<svg width="680" height="300" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .logo-vista { font-family: system-ui, sans-serif; font-weight: 700; font-size: 56px; fill: #0F172A; letter-spacing: -2px; }
+      .logo-hr    { font-family: system-ui, sans-serif; font-weight: 700; font-size: 56px; fill: #065F46; letter-spacing: -2px; }
+      .logo-dash  { font-family: system-ui, sans-serif; font-weight: 300; font-size: 56px; fill: #6EE7B7; letter-spacing: -2px; }
+      .logo-tag   { font-family: system-ui, sans-serif; font-weight: 400; font-size: 11.5px; fill: #065F46; letter-spacing: 3.5px; }
+    </style>
+  </defs>
+  <rect x="52" y="48" width="152" height="188" rx="20" fill="#064E3B"/>
+  <polygon points="128,74 180,116 76,116" fill="#065F46"/>
+  <polygon points="128,74 180,116 76,116" fill="none" stroke="#10B981" stroke-width="1.5" stroke-linejoin="round"/>
+  <rect x="80" y="116" width="96" height="80" rx="3" fill="#065F46"/>
+  <rect x="88" y="126" width="24" height="18" rx="3" fill="#D1FAE5" opacity="0.9"/>
+  <rect x="99" y="126" width="1.5" height="18" fill="#10B981" opacity="0.5"/>
+  <rect x="88" y="134" width="24" height="1.5" fill="#10B981" opacity="0.5"/>
+  <rect x="144" y="126" width="24" height="18" rx="3" fill="#D1FAE5" opacity="0.9"/>
+  <rect x="155" y="126" width="1.5" height="18" fill="#10B981" opacity="0.5"/>
+  <rect x="144" y="134" width="24" height="1.5" fill="#10B981" opacity="0.5"/>
+  <rect x="110" y="152" width="36" height="44" rx="5" fill="#064E3B"/>
+  <circle cx="141" cy="176" r="3" fill="#10B981"/>
+  <rect x="68" y="196" width="120" height="4" rx="2" fill="#10B981" opacity="0.4"/>
+  <circle cx="100" cy="218" r="5" fill="#1E3A8A"/>
+  <circle cx="116" cy="218" r="5" fill="#F59E0B"/>
+  <circle cx="132" cy="218" r="5" fill="#10B981"/>
+  <text x="234" y="154"><tspan class="logo-vista">VISTA</tspan></text>
+  <text x="234" y="212"><tspan class="logo-dash">—</tspan><tspan class="logo-hr">HR</tspan></text>
+  <text x="236" y="242" class="logo-tag">ROOM &amp; BOARDING HOUSE</text>
+  <text x="236" y="260" class="logo-tag">RENTAL PLATFORM</text>
+  <rect x="236" y="272" width="72" height="3" rx="1.5" fill="#065F46"/>
+  <rect x="312" y="272" width="72" height="3" rx="1.5" fill="#1E3A8A"/>
+  <rect x="388" y="272" width="72" height="3" rx="1.5" fill="#F59E0B"/>
+</svg>
