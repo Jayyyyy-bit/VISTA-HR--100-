@@ -77,7 +77,45 @@ def register():
     if len(password) < 8:
         return json_error("Validation failed", 400, fields={"password": "Password must be at least 8 characters."})
 
-    if User.query.filter_by(email=email).first():
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        # Option A — deactivated account: reactivate with new credentials
+        if not getattr(existing, "is_active", True):
+            if existing.role.value if hasattr(existing.role, "value") else str(existing.role) != role:
+                return json_error(
+                    "This email was previously registered as a different role. "
+                    "Please use a different email.", 409
+                )
+            existing.set_password(password)
+            existing.first_name     = first_name
+            existing.last_name      = last_name
+            existing.phone          = phone
+            existing.is_active      = True
+            existing.is_verified    = False
+            existing.email_verified = False
+            existing.is_suspended   = False
+            existing.kyc_status     = "NONE"
+            existing.student_status = "NONE"
+            existing.token_version  = int(existing.token_version or 0) + 1
+            otp = _attach_otp(existing)
+            try:
+                db.session.commit()
+                display_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                _send_async(send_otp_email, email, otp, display_name)
+            except SQLAlchemyError:
+                db.session.rollback()
+                return json_error("Database error", 500)
+            token = create_access_token(existing)
+            resp = jsonify({"message": "Account reactivated", "user": existing.to_dict()})
+            return _set_auth_cookie(resp, token), 201
+
+        # Option B — active account exists: clear error by state
+        if getattr(existing, "is_suspended", False):
+            return json_error(
+                "This email is associated with a suspended account. "
+                "Please contact support.", 409,
+                code="ACCOUNT_SUSPENDED"
+            )
         return json_error("Email already registered", 409)
 
     user = User(email=email, role=role)
@@ -216,7 +254,8 @@ def send_otp():
         _send_async(send_otp_email, email, otp, name)
     except Exception as mail_err:
         current_app.logger.warning(f"OTP resend failed for {email}: {mail_err}")
-        return json_error("Failed to send email. Check mail configuration.", 500)
+        current_app.logger.error(f"OTP email failed: {mail_err}")
+        # Still return 200 — OTP is saved in DB, user can retry
 
     return jsonify({"message": "Verification code sent."}), 200
 
@@ -498,7 +537,8 @@ def reset_password():
     data         = request.get_json(silent=True) or {}
     email        = (data.get("email")        or "").strip().lower()
     reset_token  = (data.get("reset_token")  or "").strip()
-    new_password = (data.get("new_password") or "").strip()
+    new_password     = (data.get("new_password")     or "").strip()
+    confirm_password = (data.get("confirm_password") or "").strip()
 
     if not email or not reset_token or not new_password:
         return json_error("Email, reset token, and new password are required.", 400)
@@ -506,6 +546,10 @@ def reset_password():
     if len(new_password) < 8:
         return json_error("Validation failed", 400,
                           fields={"new_password": "Password must be at least 8 characters."})
+
+    if confirm_password and new_password != confirm_password:
+        return json_error("Validation failed", 400,
+                          fields={"confirm_password": "Passwords do not match."})
 
     user = User.query.filter_by(email=email).first()
     if not user or not user.email_otp:

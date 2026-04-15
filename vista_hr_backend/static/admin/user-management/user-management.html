@@ -13,6 +13,31 @@
     <script src="/auth/toast.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/admin/user-management/user-management.css" />
+    <style>
+        /* Search bar white background overrides */
+        .um-search {
+            background: #ffffff !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .um-search input {
+            background: #ffffff !important;
+        }
+
+        .lsb-input-wrap {
+            background: #ffffff !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .lsb-input-wrap input {
+            background: #ffffff !important;
+        }
+
+        /* Amenity cards hover */
+        .amenity-card:hover {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -27,8 +52,8 @@
 
         <div class="sidebar-top">
             <div class="brand">
-                <img src="../../../1logo_assets/images/vista_hr_logo_admin.svg" alt="VISTA-HR"
-                    style="width: 360px; height: 90px;">
+
+                <h2>VISTA-HR</h2>
             </div>
             <div class="admin-pill sidebar-label">Admin</div>
         </div>
@@ -80,7 +105,7 @@
                 <p class="page-sub" id="pageSub">Platform health at a glance</p>
             </div>
             <div class="topbar-right">
-                <div class="admin-avatar" id="adminAvatar">A</div>
+                <div class="admin-avatar" id="adminAvatar" data-user-initials>A</div>
             </div>
         </header>
 
@@ -697,6 +722,77 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="/auth/user-avatar.js"></script>
+
+    <!-- Reject application modal -->
+    <div class="modal-overlay" id="rejectOverlay" style="display:none;z-index:300;">
+        <div class="modal-card" style="max-width:480px;">
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div
+                        style="width:36px;height:36px;border-radius:10px;background:#fef2f2;color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="x-circle" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size:16px;font-weight:700;margin:0;" id="rejectModalTitle">Reject Application
+                        </h3>
+                        <p style="font-size:12px;color:#6b7280;margin:0;">This reason will be shown to the user</p>
+                    </div>
+                </div>
+                <button class="icon-btn" id="rejectModalClose" type="button"><i data-lucide="x"></i></button>
+            </div>
+            <div style="padding:16px 24px;">
+                <p
+                    style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;margin-bottom:8px;">
+                    Common reasons</p>
+                <div id="rejectSuggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+                    <button class="reject-chip"
+                        data-reason="Documents are blurry or unclear. Please resubmit with clearer photos."
+                        type="button">Blurry / unclear</button>
+                    <button class="reject-chip"
+                        data-reason="The document appears to be expired. Please submit a valid, unexpired ID."
+                        type="button">Expired document</button>
+                    <button class="reject-chip" data-reason="The ID provided is not a valid government-issued ID."
+                        type="button">Invalid ID type</button>
+                    <button class="reject-chip"
+                        data-reason="The photo is too dark or poorly lit. Please retake in better lighting."
+                        type="button">Poor lighting</button>
+                    <button class="reject-chip"
+                        data-reason="The document is partially cut off. Please ensure all corners are visible."
+                        type="button">Partially cut off</button>
+                    <button class="reject-chip"
+                        data-reason="The name on the document does not match your registered name." type="button">Name
+                        mismatch</button>
+                    <button class="reject-chip"
+                        data-reason="The selfie does not clearly show your face alongside the ID." type="button">Invalid
+                        selfie</button>
+                    <button class="reject-chip"
+                        data-reason="School ID is not valid or not from a recognized institution." type="button">Invalid
+                        school ID</button>
+                    <button class="reject-chip"
+                        data-reason="Certificate of Registration (CoR) is incomplete or unclear." type="button">Invalid
+                        CoR</button>
+                </div>
+                <p
+                    style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;margin-bottom:6px;">
+                    Reason <span style="color:#dc2626;">*</span></p>
+                <textarea id="rejectReasonInput" rows="3" maxlength="500"
+                    placeholder="Describe why this application is being rejected…"
+                    style="width:100%;padding:10px 14px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-family:inherit;font-size:13px;resize:vertical;outline:none;"></textarea>
+                <div style="text-align:right;font-size:11px;color:#9ca3af;margin-top:3px;"><span
+                        id="rejectCharCount">0</span>/500</div>
+                <p id="rejectModalErr"
+                    style="font-size:12px;color:#dc2626;font-weight:600;margin-top:6px;display:none;"></p>
+            </div>
+            <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:10px;">
+                <button class="btn ghost" id="rejectModalCancel" type="button">Cancel</button>
+                <button class="btn danger" id="rejectModalConfirm" type="button">
+                    <span id="rejectModalLbl">Reject application</span>
+                    <span class="btn-spinner" id="rejectModalSpin" hidden></span>
+                </button>
+            </div>
+        </div>
+    </div>
     <script src="/auth/sessionGuard.js" defer></script>
     <script src="/admin/user-management/user-management.js" defer></script>
 </body>

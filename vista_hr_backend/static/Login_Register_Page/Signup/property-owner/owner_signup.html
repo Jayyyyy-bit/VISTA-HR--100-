@@ -24,10 +24,10 @@
     </div>
 
     <header class="topbar">
-        <div class="mini-brand">
-            <span class="mini-logo"><i data-lucide="building-2"></i></span>
+        <a href="../../index.html" class="mini-brand" style="text-decoration: none; color: inherit;">
+            <span class="brand-mark"></span>
             <span class="mini-text">VISTA<span>-HR</span></span>
-        </div>
+        </a>
 
         <button class="ghost" id="backBtn">
             <i data-lucide="arrow-left"></i> Back
@@ -71,7 +71,6 @@
                             <span class="dial">+63</span>
                             <i data-lucide="chevron-down" class="chev"></i>
                         </button>
-
                         <input class="input phone-input" type="tel" name="phone" id="phone" inputmode="numeric"
                             autocomplete="tel" placeholder="9XXXXXXXXX" maxlength="10" required />
                     </div>
@@ -111,8 +110,10 @@
 
                 <label class="check">
                     <input type="checkbox" id="agree" required />
-                    <span>I agree to the <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</span>
+                    <span>I agree to the <a href="#" id="termsLink">Terms</a> and <a href="#" id="privacyLink">Privacy
+                            Policy</a>.</span>
                 </label>
+                <script src="/Login_Register_Page/Signup/terms-modal.js"></script>
                 <small class="error" id="agreeError"></small>
 
                 <button class="primary" type="submit">
@@ -120,17 +121,18 @@
                 </button>
 
                 <p class="mini center">
-                    Already have an account? <a href="../../../auth/login.html">Log in</a>
+                    Already have an account? <a href="/auth/login.html">Log in</a>
                 </p>
             </form>
         </section>
     </main>
 
+    <div class="page-transition" aria-hidden="true"></div>
+
     <script src="../../../auth/sessionGuard.js"></script>
     <script src="owner_signup.js"></script>
-    <script>lucide.createIcons();</script>
-    <div class="page-transition" aria-hidden="true"></div>
     <script src="../../transition.js"></script>
+    <script>lucide.createIcons();</script>
 </body>
 
 </html>

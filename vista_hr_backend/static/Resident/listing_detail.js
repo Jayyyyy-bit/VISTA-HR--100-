@@ -31,7 +31,12 @@ function amenIcon(name) {
     return "check-circle";
 }
 
-const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const esc = s => String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
 const $ = id => document.getElementById(id);
 const on = (id, ev, fn) => $(id)?.addEventListener(ev, fn);
 
@@ -47,6 +52,7 @@ let selRating = 0;
 let ownerId = null;
 let ownerName = "";
 let pannellumViewer = null;
+let currentUser = null; // fetched on boot for student discount + review eligibility
 
 // ── Boot ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
@@ -59,10 +65,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!ok) return;
     }
 
+    // loadCatalog must finish BEFORE loadListing so _highlightMap/_amenityMap
+    // are populated when render() runs. loadReviews is independent — run in parallel.
     await Promise.all([
-        loadListing(lid),
+        loadCatalog(),
         loadReviews(lid, true),
+        loadCurrentUser(),
     ]);
+    await loadListing(lid);
 
     await checkReservationStatus(lid);
     checkEligibility(lid);
@@ -77,6 +87,43 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     lucide.createIcons();
 });
+
+// ── Lookup maps: id → { label, icon, category } ──────────
+// Populated once on boot, used by render() to resolve IDs → labels
+let _amenityMap = new Map(); // amenity id  → { label, icon, category }
+let _highlightMap = new Map(); // highlight id → { label, icon }
+
+async function loadCatalog() {
+    try {
+        const [ar, hr] = await Promise.all([
+            fetch(`${API}/amenities`, { credentials: "include" }),
+            fetch(`${API}/highlights`, { credentials: "include" }),
+        ]);
+        if (ar.ok) {
+            const { amenities = {} } = await ar.json();
+            // Response is grouped: { appliances: [...], activities: [...], safety: [...] }
+            for (const items of Object.values(amenities)) {
+                for (const a of items) _amenityMap.set(a.id, a);
+            }
+        }
+        if (hr.ok) {
+            const { highlights = [] } = await hr.json();
+            for (const h of highlights) _highlightMap.set(h.id, h);
+        }
+    } catch {
+        // Non-fatal — render() falls back to raw value if maps are empty
+    }
+}
+
+// ── Load current user (for student discount + review eligibility) ──
+async function loadCurrentUser() {
+    try {
+        const r = await fetch(`${API}/auth/me`, { credentials: "include" });
+        if (!r.ok) return;
+        const d = await r.json();
+        currentUser = d.user || null;
+    } catch { }
+}
 
 // ── Load listing ──────────────────────────────────────────
 async function loadListing(lid) {
@@ -95,10 +142,32 @@ function render(l) {
     document.title = `VISTA-HR · ${l.title || "Listing"}`;
 
     // Photos
-    const raw = l.photos || [];
-    allPhotos = raw.map(p => typeof p === "object" ? p?.url : p).filter(Boolean);
-    buildPhotoGrid(allPhotos, l.title);
-    buildMobileSlides(allPhotos);
+    const raw = (l.photos && l.photos.length)
+        ? l.photos
+        : (l.cover ? [l.cover] : []);
+    const normalPhotos = raw
+        .map(p => typeof p === "object" ? p?.url : p)
+        .filter(Boolean);
+
+    const tourUrl = l.virtualTour?.enabled
+        ? l.virtualTour?.panoUrl
+        : (l.virtualTour?.panoUrl || l.tour_url || l.pano_url || "");
+
+    // Grid items: only 5 visible slots
+    let photoItems = normalPhotos.slice(0, 5).map(url => ({ url, is360: false }));
+
+    // If may 360, replace the last visible tile so it always shows in the grid
+    if (tourUrl) {
+        if (photoItems.length >= 5) {
+            photoItems[4] = { url: tourUrl, is360: true };
+        } else {
+            photoItems.push({ url: tourUrl, is360: true });
+        }
+    }
+
+    allPhotos = normalPhotos; // lightbox only for real photos
+    buildPhotoGrid(photoItems, l.title, tourUrl);
+    buildMobileSlides(photoItems, tourUrl, l.title);
 
     // Title
     $("ldTitle").textContent = l.title || "Untitled space";
@@ -107,7 +176,7 @@ function render(l) {
     const badges = [];
     if (l.place_type) badges.push(`<span class="ld-badge type">${esc(l.place_type)}</span>`);
     if (l.status === "PUBLISHED") badges.push(`<span class="ld-badge avail">Available</span>`);
-    if (l.student_discount) badges.push(`<span class="ld-badge disc">${l.student_discount}% student discount</span>`);
+    // student_discount_pct lives in capacity — resolved after cap is declared below
     $("ldBadges").innerHTML = badges.join("");
 
     // Location
@@ -139,6 +208,13 @@ function render(l) {
 
     // Room breakdown cards
     const cap = l.capacity || {};
+
+    // Now cap is available — append student discount badge if applicable
+    const discountPct = cap.student_discount_pct || 0;
+    if (discountPct > 0) {
+        $("ldBadges").innerHTML += `<span class="ld-badge disc">${discountPct}% student discount</span>`;
+    }
+
     const rbEl = $("ldRoomBreakdown");
     if (rbEl) {
         const spaceType = l.space_type || l.placeType || null;
@@ -158,19 +234,17 @@ function render(l) {
         </div>`).join("");
     }
 
-    // Description — 3 lines clamped, show more → modal
+    // Description
     const descEl = $("ldDesc");
     if (descEl) {
         const fullDesc = l.description || "";
         descEl.textContent = fullDesc;
         const showMore = $("ldShowMore");
         if (showMore) {
-            // Always show "show more" if description is non-empty
             if (fullDesc.trim()) {
                 showMore.hidden = false;
                 showMore.innerHTML = `Show more <i data-lucide="chevron-right"></i>`;
-                showMore.addEventListener("click", () => {
-                    // Build modal body — split by newlines for paragraphs
+                showMore.onclick = () => {
                     const body = $("descModalBody");
                     if (body) {
                         body.innerHTML = fullDesc.split(/\n+/).filter(p => p.trim()).map(p =>
@@ -181,62 +255,118 @@ function render(l) {
                     $("descModal").hidden = false;
                     document.body.style.overflow = "hidden";
                     lucide.createIcons();
-                });
+                };
             }
         }
     }
-    // Desc modal close
-    const closeDesc = () => { $("descOv").hidden = true; $("descModal").hidden = true; document.body.style.overflow = ""; };
+
+    const closeDesc = () => {
+        $("descOv").hidden = true;
+        $("descModal").hidden = true;
+        document.body.style.overflow = "";
+    };
     on("descClose", "click", closeDesc);
     on("descOv", "click", closeDesc);
 
-    // Virtual tour
-    const tourUrl = l.tour_url || l.pano_url || (l.virtualTour?.panoUrl);
-    if (tourUrl) {
+    // Virtual tour section
+    const detailTourUrl = l.virtualTour?.enabled
+        ? l.virtualTour?.panoUrl
+        : (l.virtualTour?.panoUrl || l.tour_url || l.pano_url || "");
+
+    if (detailTourUrl) {
         $("ldTourSec").hidden = false;
-        $("ldTourHr") && ($("ldTourHr").hidden = false);
-        on("ldTourLaunch", "click", () => launchTour(tourUrl, l.title));
+        if ($("ldTourHr")) $("ldTourHr").hidden = false;
+        $("ldTourLaunch").onclick = () => launchTour(detailTourUrl, l.title);
     }
 
     // Highlights
+    // l.highlights is an array of IDs (integers) — resolve via _highlightMap
     const hl = l.highlights || [];
     function niceLabel(s) {
         return String(s || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
     }
     if (hl.length) {
         $("ldHighSec").hidden = false;
-        $("ldHighlights").innerHTML = hl.map(h =>
-            `<div class="ld-hl"><i data-lucide="star"></i>${esc(niceLabel(h))}</div>`).join("");
+        $("ldHighlights").innerHTML = hl.map(h => {
+            const meta = _highlightMap.get(Number(h));
+            const label = meta ? esc(meta.label) : esc(niceLabel(h));
+            const icon = meta?.icon || "star";
+            return `<div class="ld-hl"><i data-lucide="${icon}"></i>${label}</div>`;
+        }).join("");
     }
 
     // Amenities
-    const amen = l.amenities || {};
-    const groups = [
-        { label: "Appliances", items: amen.appliances || [] },
-        { label: "Activities & common areas", items: amen.activities || [] },
-        { label: "Safety", items: amen.safety || [] },
-    ].filter(g => g.items.length);
-    if (groups.length) {
+    // l.amenities is an array of IDs (integers) — resolve via _amenityMap
+    // then regroup by category for the modal view
+    const rawAmenIds = Array.isArray(l.amenities)
+        ? l.amenities
+        : Object.values(l.amenities || {}).flat();
+
+    const resolvedAmen = rawAmenIds
+        .map(id => _amenityMap.get(Number(id)))
+        .filter(Boolean);
+
+    // Regroup by category for the "Show all" modal
+    const amenGroups = ["appliances", "activities", "safety"].reduce((acc, cat) => {
+        const items = resolvedAmen.filter(a => a.category === cat);
+        if (items.length) acc.push({ label: cat.charAt(0).toUpperCase() + cat.slice(1), items });
+        return acc;
+    }, []);
+
+    // Also handle any already-grouped object shape from the API (fallback)
+    if (!resolvedAmen.length && typeof l.amenities === "object" && !Array.isArray(l.amenities)) {
+        const amen = l.amenities || {};
+        const groups = [
+            { label: "Appliances", items: amen.appliances || [] },
+            { label: "Activities & common areas", items: amen.activities || [] },
+            { label: "Safety", items: amen.safety || [] },
+        ].filter(g => g.items.length);
+        if (groups.length) {
+            $("ldAmenSec").hidden = false;
+            const flatAmen = groups.flatMap(g => g.items);
+            const preview = flatAmen.slice(0, 6);
+            $("ldAmenGrid").innerHTML = preview.map(a =>
+                `<div class="ld-amen"><i data-lucide="${amenIcon(a)}"></i>${esc(niceLabel(a))}</div>`
+            ).join("");
+            const showAllAmen = $("ldShowAllAmen");
+            if (showAllAmen) {
+                showAllAmen.hidden = false;
+                showAllAmen.innerHTML = `Show all ${flatAmen.length} amenities`;
+                showAllAmen.onclick = () => {
+                    const body = $("amenModalBody");
+                    if (body) {
+                        body.innerHTML = groups.map(g =>
+                            `<div class="amen-group-hd">${esc(g.label)}</div>
+             <div class="amen-full-grid">
+               ${g.items.map(a => `<div class="amen-full-item"><i data-lucide="${amenIcon(a)}"></i>${esc(niceLabel(a))}</div>`).join("")}
+             </div>`
+                        ).join("");
+                    }
+                    $("amenOv").hidden = false;
+                    $("amenModal").hidden = false;
+                    document.body.style.overflow = "hidden";
+                    lucide.createIcons();
+                };
+            }
+        }
+    } else if (resolvedAmen.length) {
         $("ldAmenSec").hidden = false;
-        // Flatten all items, show first 6 in preview grid
-        const flatAmen = groups.flatMap(g => g.items);
-        const preview = flatAmen.slice(0, 6);
+        const preview = resolvedAmen.slice(0, 6);
         $("ldAmenGrid").innerHTML = preview.map(a =>
-            `<div class="ld-amen"><i data-lucide="${amenIcon(a)}"></i>${esc(niceLabel(a))}</div>`
+            `<div class="ld-amen"><i data-lucide="${a.icon || amenIcon(a.label)}"></i>${esc(a.label)}</div>`
         ).join("");
 
-        // Show all button
         const showAllAmen = $("ldShowAllAmen");
         if (showAllAmen) {
             showAllAmen.hidden = false;
-            showAllAmen.innerHTML = `Show all ${flatAmen.length} amenities`;
-            showAllAmen.addEventListener("click", () => {
+            showAllAmen.innerHTML = `Show all ${resolvedAmen.length} amenities`;
+            showAllAmen.onclick = () => {
                 const body = $("amenModalBody");
                 if (body) {
-                    body.innerHTML = groups.map(g =>
+                    body.innerHTML = amenGroups.map(g =>
                         `<div class="amen-group-hd">${esc(g.label)}</div>
              <div class="amen-full-grid">
-               ${g.items.map(a => `<div class="amen-full-item"><i data-lucide="${amenIcon(a)}"></i>${esc(niceLabel(a))}</div>`).join("")}
+               ${g.items.map(a => `<div class="amen-full-item"><i data-lucide="${a.icon || amenIcon(a.label)}"></i>${esc(a.label)}</div>`).join("")}
              </div>`
                     ).join("");
                 }
@@ -244,12 +374,17 @@ function render(l) {
                 $("amenModal").hidden = false;
                 document.body.style.overflow = "hidden";
                 lucide.createIcons();
-            });
+            };
         }
-        const closeAmen = () => { $("amenOv").hidden = true; $("amenModal").hidden = true; document.body.style.overflow = ""; };
-        on("amenClose", "click", closeAmen);
-        on("amenOv", "click", closeAmen);
     }
+
+    const closeAmen = () => {
+        $("amenOv").hidden = true;
+        $("amenModal").hidden = true;
+        document.body.style.overflow = "";
+    };
+    on("amenClose", "click", closeAmen);
+    on("amenOv", "click", closeAmen);
 
     // Map
     if (loc.lat && loc.lng) {
@@ -261,25 +396,38 @@ function render(l) {
     const dirBtn = $("ldDirBtn");
     if (dirBtn) {
         dirBtn.hidden = false;
-        dirBtn.addEventListener("click", () => {
+        dirBtn.onclick = () => {
             const dest = (loc.lat && loc.lng) ? `${loc.lat},${loc.lng}` : encodeURIComponent(locParts.join(", "));
             window.open(`https://maps.google.com/maps?daddr=${dest}`, "_blank");
-        });
+        };
     }
 
-    // Booking card price
+    // Booking card price — apply student discount if resident is student-verified
     const rent = cap.monthly_rent || cap.price;
-    const priceHtml = rent
-        ? `₱${Number(rent).toLocaleString()}<span>/mo</span>` : `Price on request`;
-    $("ldBookPrice").innerHTML = priceHtml;
-    $("ldMobPrice").innerHTML = rent ? `₱${Number(rent).toLocaleString()}<span style="font-size:12px;font-weight:400;color:rgba(26,26,26,.6)">/mo</span>` : "";
+    const isStudentVerified = currentUser?.student_status === "APPROVED";
+    const discPct2 = cap.student_discount_pct || 0;
+    const discountedRent = (isStudentVerified && discPct2 > 0)
+        ? Math.round(rent * (1 - discPct2 / 100))
+        : null;
+
+    if (rent) {
+        $("ldBookPrice").innerHTML = discountedRent
+            ? `<span style="text-decoration:line-through;color:#999;font-size:0.85em">₱${Number(rent).toLocaleString()}</span> ₱${Number(discountedRent).toLocaleString()}<span>/mo</span> <span class="ld-badge disc" style="font-size:11px">${discPct2}% off</span>`
+            : `₱${Number(rent).toLocaleString()}<span>/mo</span>`;
+        $("ldMobPrice").innerHTML = discountedRent
+            ? `₱${Number(discountedRent).toLocaleString()}<span style="font-size:12px;font-weight:400;color:rgba(26,26,26,.6)">/mo</span>`
+            : `₱${Number(rent).toLocaleString()}<span style="font-size:12px;font-weight:400;color:rgba(26,26,26,.6)">/mo</span>`;
+    } else {
+        $("ldBookPrice").innerHTML = `Price on request`;
+        $("ldMobPrice").innerHTML = "";
+    }
 
     // Booking card rating
     if (l.avg_rating && l.review_count > 0) {
         const ratEl = $("ldBookRating");
         if (ratEl) {
             ratEl.hidden = false;
-            ratEl.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="${"#F59E0B"}" stroke="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg> ${l.avg_rating.toFixed(1)} · ${l.review_count} review${l.review_count !== 1 ? "s" : ""}`;
+            ratEl.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="#F59E0B" stroke="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg> ${l.avg_rating.toFixed(1)} · ${l.review_count} review${l.review_count !== 1 ? "s" : ""}`;
         }
     }
 
@@ -299,46 +447,109 @@ function render(l) {
 }
 
 // ── Photo grid ────────────────────────────────────────────
-function buildPhotoGrid(photos, title) {
+function buildPhotoGrid(items, title, tourUrl = "") {
     const slots = ["ldPhotoMain", "ldPhotoSide1", "ldPhotoSide2", "ldPhotoSide3", "ldPhotoSide4"];
+
     slots.forEach((id, i) => {
         const el = $(id);
         if (!el) return;
-        const url = photos[i];
-        if (url) {
-            const keep = i === 4 ? el.querySelector(".ld-showall") : null;
-            el.innerHTML = `<img src="${esc(url)}" alt="${esc(title)} ${i + 1}" loading="${i === 0 ? "eager" : "lazy"}">`;
-            if (keep) el.appendChild(keep);
-            el.querySelector("img")?.addEventListener("click", () => openLightbox(i));
+
+        const item = items[i];
+        if (!item?.url) return;
+
+        const keep = i === 4 ? el.querySelector(".ld-showall") : null;
+        const badge = item.is360
+            ? `<div class="ld-360-badge"><i data-lucide="rotate-3d"></i><span>360° Tour</span></div>`
+            : "";
+
+        el.innerHTML = `
+            <div class="ld-photo-tile${item.is360 ? " is-360" : ""}">
+                <img src="${esc(item.url)}" alt="${esc(title)} ${i + 1}" loading="${i === 0 ? "eager" : "lazy"}">
+                ${badge}
+            </div>
+        `;
+
+        if (keep) el.appendChild(keep);
+
+        const tile = el.querySelector(".ld-photo-tile");
+        if (!tile) return;
+
+        if (item.is360) {
+            tile.addEventListener("click", () => {
+                if (!tourUrl) return;
+                const sec = $("ldTourSec");
+                if (sec?.hidden) {
+                    sec.hidden = false;
+                    if ($("ldTourHr")) $("ldTourHr").hidden = false;
+                }
+                launchTour(tourUrl, `${title} 360° Tour`);
+                sec?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+        } else {
+            const normalIdx = allPhotos.indexOf(item.url);
+            tile.addEventListener("click", () => openLightbox(normalIdx >= 0 ? normalIdx : 0));
         }
     });
+
     const showAll = $("ldShowAll");
-    if (showAll && photos.length > 0) {
+    if (showAll && allPhotos.length > 0) {
         showAll.hidden = false;
-        showAll.textContent = `Show all ${photos.length} photos`;
-        showAll.innerHTML = `<i data-lucide="grid-2x2"></i> Show all ${photos.length} photos`;
-        showAll.addEventListener("click", () => openLightbox(0));
+        showAll.innerHTML = `<i data-lucide="grid-2x2"></i> Show all ${allPhotos.length} photos`;
+        showAll.onclick = () => openLightbox(0);
     }
+
+    lucide.createIcons();
 }
 
 // ── Mobile slideshow ──────────────────────────────────────
-function buildMobileSlides(photos) {
+function buildMobileSlides(items, tourUrl = "", title = "Listing") {
     const track = $("ldSlidesTrack");
     const ctr = $("ldSlideCounter");
-    if (!track || !photos.length) return;
-    track.innerHTML = photos.map((url, i) =>
-        `<img src="${esc(url)}" alt="Photo ${i + 1}" loading="${i === 0 ? "eager" : "lazy"}" style="flex-shrink:0;width:100%;height:100%;object-fit:cover;">`
-    ).join("");
-    if (ctr) ctr.textContent = `1 / ${photos.length}`;
+    if (!track || !items.length) return;
+
+    track.innerHTML = items.map((item, i) => `
+        <div class="ld-slide-item${item.is360 ? " is-360" : ""}" data-i="${i}" style="position:relative;flex-shrink:0;width:100%;height:100%;">
+            <img
+                src="${esc(item.url)}"
+                alt="Photo ${i + 1}"
+                loading="${i === 0 ? "eager" : "lazy"}"
+                style="width:100%;height:100%;object-fit:cover;"
+            >
+            ${item.is360 ? `<div class="ld-360-badge mob"><i data-lucide="rotate-3d"></i><span>360° Tour</span></div>` : ""}
+        </div>
+    `).join("");
+
+    if (ctr) ctr.textContent = `1 / ${items.length}`;
 
     function goSlide(idx) {
-        slideIdx = (idx + photos.length) % photos.length;
+        slideIdx = (idx + items.length) % items.length;
         track.style.transform = `translateX(-${slideIdx * 100}%)`;
-        if (ctr) ctr.textContent = `${slideIdx + 1} / ${photos.length}`;
+        if (ctr) ctr.textContent = `${slideIdx + 1} / ${items.length}`;
     }
 
     on("ldSlidePrev", "click", () => goSlide(slideIdx - 1));
     on("ldSlideNext", "click", () => goSlide(slideIdx + 1));
+
+    track.querySelectorAll(".ld-slide-item").forEach((slide, i) => {
+        slide.addEventListener("click", () => {
+            const item = items[i];
+            if (!item) return;
+
+            if (item.is360) {
+                if (!tourUrl) return;
+                const sec = $("ldTourSec");
+                if (sec?.hidden) {
+                    sec.hidden = false;
+                    if ($("ldTourHr")) $("ldTourHr").hidden = false;
+                }
+                launchTour(tourUrl, `${title} 360° Tour`);
+                sec?.scrollIntoView({ behavior: "smooth", block: "start" });
+            } else {
+                const normalIdx = allPhotos.indexOf(item.url);
+                openLightbox(normalIdx >= 0 ? normalIdx : 0);
+            }
+        });
+    });
 
     let tx = 0;
     const mob = $("ldMobSlides");
@@ -349,6 +560,8 @@ function buildMobileSlides(photos) {
             if (Math.abs(dx) > 40) goSlide(slideIdx + (dx > 0 ? 1 : -1));
         });
     }
+
+    lucide.createIcons();
 }
 
 // ── Lightbox ──────────────────────────────────────────────
@@ -359,14 +572,13 @@ function openLightbox(startIdx) {
     lb.hidden = false;
     document.body.style.overflow = "hidden";
 
-    // Strip
     const strip = $("ldLbStrip");
     if (strip) {
         strip.innerHTML = allPhotos.map((url, i) =>
             `<div class="ld-lb-thumb${i === lbIdx ? " active" : ""}" data-i="${i}"><img src="${esc(url)}" loading="lazy"></div>`
         ).join("");
         strip.querySelectorAll(".ld-lb-thumb").forEach(t => {
-            t.addEventListener("click", () => updateLb(parseInt(t.dataset.i)));
+            t.addEventListener("click", () => updateLb(parseInt(t.dataset.i, 10)));
         });
     }
     updateLb(lbIdx);
@@ -386,7 +598,10 @@ function openLightbox(startIdx) {
 function updateLb(idx) {
     lbIdx = (idx + allPhotos.length) % allPhotos.length;
     const img = $("ldLbImg");
-    if (img) { img.src = allPhotos[lbIdx]; img.alt = `Photo ${lbIdx + 1}`; }
+    if (img) {
+        img.src = allPhotos[lbIdx];
+        img.alt = `Photo ${lbIdx + 1}`;
+    }
     const ctr = $("ldLbCtr");
     if (ctr) ctr.textContent = `${lbIdx + 1} / ${allPhotos.length}`;
     document.querySelectorAll(".ld-lb-thumb").forEach((t, i) => t.classList.toggle("active", i === lbIdx));
@@ -403,30 +618,32 @@ function closeLightbox() {
 function launchTour(url, title) {
     const cover = $("ldTourCover");
     const pann = $("ldPannellum");
-    if (!cover || !pann) return;
+
+    if (!cover || !pann || !url) return;
+
     cover.hidden = true;
     pann.hidden = false;
 
-    if (window.pannellum) {
-        initPann(url, title);
-    } else {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js";
-        s.onload = () => initPann(url, title);
-        document.head.appendChild(s);
-        const c = document.createElement("link");
-        c.rel = "stylesheet";
-        c.href = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css";
-        document.head.appendChild(c);
+    if (!window.pannellum) {
+        console.error("Pannellum not loaded on listing detail page.");
+        return;
     }
+
+    initPann(url, title);
 }
 
 function initPann(url, title) {
     if (pannellumViewer) return;
     pannellumViewer = window.pannellum.viewer("ldPannellum", {
-        type: "equirectangular", panorama: url,
-        title: title, autoLoad: true, autoRotate: -2,
-        compass: false, showZoomCtrl: true, showFullscreenCtrl: true, hfov: 100,
+        type: "equirectangular",
+        panorama: url,
+        title: title,
+        autoLoad: true,
+        autoRotate: -2,
+        compass: false,
+        showZoomCtrl: true,
+        showFullscreenCtrl: true,
+        hfov: 100,
     });
 }
 
@@ -434,11 +651,16 @@ function initPann(url, title) {
 function initMap(lat, lng, title, addr) {
     try {
         const map = L.map("ldMap", { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 16);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 }).addTo(map);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap",
+            maxZoom: 19
+        }).addTo(map);
+
         const icon = L.divIcon({
             className: "",
             html: `<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:#123458;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);transform:rotate(-45deg)"></div>`,
-            iconSize: [34, 34], iconAnchor: [17, 34],
+            iconSize: [34, 34],
+            iconAnchor: [17, 34],
         });
         L.marker([lat, lng], { icon }).addTo(map).bindPopup(title || "Listing");
 
@@ -448,15 +670,21 @@ function initMap(lat, lng, title, addr) {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 const dist = haversine(pos.coords.latitude, pos.coords.longitude, lat, lng);
-                if (note) note.textContent = `${addr} · ${dist < 1 ? Math.round(dist * 1000) + "m" : dist.toFixed(1) + "km"} from you`;
+                if (note) {
+                    note.textContent = `${addr} · ${dist < 1 ? Math.round(dist * 1000) + "m" : dist.toFixed(1) + "km"} from you`;
+                }
             }, () => { });
         }
-    } catch { /* leaflet not loaded */ }
+    } catch { }
 }
 
 function haversine(la1, lo1, la2, lo2) {
-    const R = 6371, dL = (la2 - la1) * Math.PI / 180, dO = (lo2 - lo1) * Math.PI / 180;
-    const a = Math.sin(dL / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dO / 2) ** 2;
+    const R = 6371;
+    const dL = (la2 - la1) * Math.PI / 180;
+    const dO = (lo2 - lo1) * Math.PI / 180;
+    const a = Math.sin(dL / 2) ** 2 +
+        Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) *
+        Math.sin(dO / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -476,7 +704,7 @@ async function loadReviews(lid, reset = false) {
             lm.hidden = allRevs.length >= revTotal;
             lm.onclick = async () => { rvPage++; await loadReviews(lid, false); };
         }
-    } catch { /* silent */ }
+    } catch { }
 }
 
 function miniStars(rating) {
@@ -513,7 +741,10 @@ function renderRevSummary(avg, total, breakdown) {
 function renderRevList(revs) {
     const grid = $("ldRevGrid");
     if (!grid) return;
-    if (!revs.length) { grid.innerHTML = `<p class="ld-no-rev">No reviews yet. Be the first!</p>`; return; }
+    if (!revs.length) {
+        grid.innerHTML = `<p class="ld-no-rev">No reviews yet. Be the first!</p>`;
+        return;
+    }
     grid.innerHTML = revs.map(rv => {
         const date = rv.created_at
             ? new Date(rv.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" })
@@ -538,13 +769,14 @@ async function checkEligibility(lid) {
         const r = await fetch(`${API}/bookings/mine`, { credentials: "include" });
         if (!r.ok) return;
         const d = await r.json();
-        const eligible = (d.bookings || []).some(b => b.listing_id === lid && ["ACTIVE", "COMPLETED"].includes(b.status));
+        // Only COMPLETED bookings qualify — matches backend rule in reviews.py
+        const eligible = (d.bookings || []).some(b => b.listing_id === lid && b.status === "COMPLETED");
         const reviewed = allRevs.some(rv => rv.resident_id === session.id);
         if (eligible && !reviewed) {
             const btn = $("ldWriteRev");
             if (btn) btn.hidden = false;
         }
-    } catch { /* silent */ }
+    } catch { }
 }
 
 // ── Similar listings ──────────────────────────────────────
@@ -575,10 +807,12 @@ async function loadSimilar(lid) {
       </div>`;
         }).join("");
         $("ldSimilarRow").querySelectorAll(".ld-sim-card").forEach(card => {
-            card.addEventListener("click", () => { location.href = `/Resident/listing_detail.html?id=${card.dataset.id}`; });
+            card.addEventListener("click", () => {
+                location.href = `/Resident/listing_detail.html?id=${card.dataset.id}`;
+            });
         });
         lucide.createIcons();
-    } catch { /* silent */ }
+    } catch { }
 }
 
 // ── Share ─────────────────────────────────────────────────
@@ -587,9 +821,9 @@ function setupShare(lid) {
         const url = `${location.origin}/Resident/listing_detail.html?id=${lid}`;
         const title = listing?.title || "VISTA-HR Listing";
         if (navigator.share) {
-            try { await navigator.share({ title, url }); return; } catch { /* fallback */ }
+            try { await navigator.share({ title, url }); return; } catch { }
         }
-        try { await navigator.clipboard.writeText(url); } catch { /* fallback */ }
+        try { await navigator.clipboard.writeText(url); } catch { }
         showToast("Link copied!");
     });
 }
@@ -624,14 +858,17 @@ function setupSave(lid) {
 function updateSaveBtn(btn, saved) {
     btn.classList.toggle("saved", saved);
     const sv = btn.querySelector("svg");
-    if (sv) { sv.style.fill = saved ? "#DC2626" : "none"; sv.style.stroke = saved ? "#DC2626" : "currentColor"; }
+    if (sv) {
+        sv.style.fill = saved ? "#DC2626" : "none";
+        sv.style.stroke = saved ? "#DC2626" : "currentColor";
+    }
 }
 
 // ── Reservation status guard ──────────────────────────────
 async function checkReservationStatus(lid) {
     try {
         const session = window.AuthGuard?.getSession?.()?.user;
-        if (!session) return; // not logged in — skip, button stays enabled
+        if (!session) return;
 
         const r = await fetch(`${API}/bookings/me/status`, { credentials: "include" });
         if (!r.ok) return;
@@ -643,8 +880,10 @@ async function checkReservationStatus(lid) {
         const isThisListing = liveBooking.listing_id === lid;
 
         const statusLabels = {
-            PENDING: "Pending", APPROVED: "Reserved",
-            ACTIVE: "Occupied", COMPLETED: "Moved Out",
+            PENDING: "Pending",
+            APPROVED: "Reserved",
+            ACTIVE: "Occupied",
+            COMPLETED: "Moved Out",
         };
         const statusLabel = statusLabels[liveBooking.status] || liveBooking.status;
 
@@ -652,18 +891,16 @@ async function checkReservationStatus(lid) {
             ? "You already have a reservation for this listing"
             : "You already have an active reservation";
 
-        // Disable both desktop and mobile reserve buttons
         ["ldReserveBtn", "ldMobReserveBtn"].forEach(id => {
             const btn = $(id);
             if (!btn) return;
             btn.disabled = true;
             btn.classList.add("btn--disabled");
             btn.title = `Status: ${statusLabel}`;
-            // Update button text — find the text node or span
             const span = btn.querySelector("span") || btn;
             span.textContent = msg;
         });
-    } catch { /* silent — button stays enabled */ }
+    } catch { }
 }
 
 // ── Booking ───────────────────────────────────────────────
@@ -678,21 +915,27 @@ function setupBooking(lid) {
 }
 
 function openBookingModal(lid) {
-    // Sync date from card input
     const dateVal = $("ldMoveIn")?.value || "";
     if (dateVal && $("bmDate")) $("bmDate").value = dateVal;
     const today = new Date().toISOString().split("T")[0];
     if ($("bmDate")) $("bmDate").min = today;
 
-    // Snapshot
     const cap = listing?.capacity || {};
     const rent = cap.monthly_rent || cap.price;
+    const isStudentV = currentUser?.student_status === "APPROVED";
+    const bDiscPct = cap.student_discount_pct || 0;
+    const bDiscRent = (isStudentV && bDiscPct > 0 && rent) ? Math.round(rent * (1 - bDiscPct / 100)) : null;
     const cover = allPhotos[0];
     const locParts = [listing?.location?.barangay, listing?.location?.city || listing?.city].filter(Boolean);
+    const priceSnap = rent
+        ? (bDiscRent
+            ? `<div class="bm-snap-price"><span style="text-decoration:line-through;color:#999;font-size:0.85em">₱${Number(rent).toLocaleString()}</span> ₱${Number(bDiscRent).toLocaleString()}<span>/mo</span></div>`
+            : `<div class="bm-snap-price">₱${Number(rent).toLocaleString()}<span>/mo</span></div>`)
+        : "";
     $("bmSnap").innerHTML = `
     ${cover ? `<img class="bm-snap-img" src="${esc(cover)}" alt="">` : `<div class="bm-snap-ph"><i data-lucide="home"></i></div>`}
     <div><div class="bm-snap-title">${esc(listing?.title || "")}</div><div class="bm-snap-sub">${esc(listing?.place_type || "")} · ${esc(locParts.join(", "))}</div></div>
-    ${rent ? `<div class="bm-snap-price">₱${Number(rent).toLocaleString()}<span>/mo</span></div>` : ""}`;
+    ${priceSnap}`;
 
     $("bmBd").hidden = false;
     $("bmOk").hidden = true;
@@ -726,18 +969,28 @@ async function sendBooking(lid) {
     $("bmErr").hidden = true;
     try {
         const res = await fetch(`${API}/bookings`, {
-            method: "POST", credentials: "include",
+            method: "POST",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ listing_id: lid, move_in_date: $("bmDate")?.value || null, message: $("bmNote")?.value.trim() || null }),
+            body: JSON.stringify({
+                listing_id: lid,
+                move_in_date: $("bmDate")?.value || null,
+                message: $("bmNote")?.value.trim() || null
+            }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed.");
-        $("bmBd").hidden = true; $("bmFt").hidden = true; $("bmOk").hidden = false;
+        $("bmBd").hidden = true;
+        $("bmFt").hidden = true;
+        $("bmOk").hidden = false;
         lucide.createIcons();
         setTimeout(closeBm, 3000);
     } catch (err) {
-        $("bmErr").textContent = err.message; $("bmErr").hidden = false;
-        $("bmSend").disabled = false; $("bmLbl").hidden = false; $("bmSpin").hidden = true;
+        $("bmErr").textContent = err.message;
+        $("bmErr").hidden = false;
+        $("bmSend").disabled = false;
+        $("bmLbl").hidden = false;
+        $("bmSpin").hidden = true;
     }
 }
 
@@ -745,16 +998,23 @@ async function sendBooking(lid) {
 function setupMessage() {
     const openMsg = () => {
         if (!ownerId) return;
-        $("msgText").value = ""; $("msgCt").textContent = "0";
-        $("msgErr").hidden = true; $("msgSend").disabled = false;
-        $("msgLbl").hidden = false; $("msgSpin").hidden = true;
-        $("msgOv").hidden = false; $("msgModal").hidden = false;
+        $("msgText").value = "";
+        $("msgCt").textContent = "0";
+        $("msgErr").hidden = true;
+        $("msgSend").disabled = false;
+        $("msgLbl").hidden = false;
+        $("msgSpin").hidden = true;
+        $("msgOv").hidden = false;
+        $("msgModal").hidden = false;
         document.body.style.overflow = "hidden";
         $("msgText")?.focus();
     };
-    const closeMsg = () => { $("msgOv").hidden = true; $("msgModal").hidden = true; document.body.style.overflow = ""; };
+    const closeMsg = () => {
+        $("msgOv").hidden = true;
+        $("msgModal").hidden = true;
+        document.body.style.overflow = "";
+    };
 
-    // ldMsgOwnerBtn removed — message via card button only
     on("ldCardMsgBtn", "click", openMsg);
     on("ldMobMsgBtn", "click", openMsg);
     on("msgClose", "click", closeMsg);
@@ -769,40 +1029,67 @@ function setupMessage() {
 
 async function sendMessage() {
     const text = $("msgText")?.value.trim();
-    if (!text) { $("msgErr").textContent = "Please write a message."; $("msgErr").hidden = false; return; }
-    if (!ownerId || !listing?.id) { $("msgErr").textContent = "Cannot find owner."; $("msgErr").hidden = false; return; }
-    $("msgSend").disabled = true; $("msgLbl").hidden = true; $("msgSpin").hidden = false; $("msgErr").hidden = true;
+    if (!text) {
+        $("msgErr").textContent = "Please write a message.";
+        $("msgErr").hidden = false;
+        return;
+    }
+    if (!ownerId || !listing?.id) {
+        $("msgErr").textContent = "Cannot find owner.";
+        $("msgErr").hidden = false;
+        return;
+    }
+    $("msgSend").disabled = true;
+    $("msgLbl").hidden = true;
+    $("msgSpin").hidden = false;
+    $("msgErr").hidden = true;
     try {
         const res = await fetch(`${API}/messages`, {
-            method: "POST", credentials: "include",
+            method: "POST",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ receiver_id: ownerId, listing_id: listing.id, text }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to send.");
-        $("msgOv").hidden = true; $("msgModal").hidden = true; document.body.style.overflow = "";
-        // Show toast then redirect to messages inbox for the conversation
+        $("msgOv").hidden = true;
+        $("msgModal").hidden = true;
+        document.body.style.overflow = "";
         showToast("Message sent! Opening your inbox…");
         setTimeout(() => {
             location.href = `/Resident/resident_messages.html?listing=${listing.id}&owner=${ownerId}`;
         }, 1200);
     } catch (err) {
-        $("msgErr").textContent = err.message; $("msgErr").hidden = false;
-        $("msgSend").disabled = false; $("msgLbl").hidden = false; $("msgSpin").hidden = true;
+        $("msgErr").textContent = err.message;
+        $("msgErr").hidden = false;
+        $("msgSend").disabled = false;
+        $("msgLbl").hidden = false;
+        $("msgSpin").hidden = true;
     }
 }
 
 // ── Review modal ──────────────────────────────────────────
 function setupReviewModal(lid) {
     const open = () => {
-        selRating = 0; $("rvText").value = ""; $("rvCt").textContent = "0";
-        $("rvErr").hidden = true; $("rvSend").disabled = true;
-        $("rvLbl2").hidden = false; $("rvSpin").hidden = true;
-        updateStars(0); $("rvLbl").textContent = "Tap a star to rate";
-        $("rvOv").hidden = false; $("rvModal").hidden = false;
-        document.body.style.overflow = "hidden"; lucide.createIcons();
+        selRating = 0;
+        $("rvText").value = "";
+        $("rvCt").textContent = "0";
+        $("rvErr").hidden = true;
+        $("rvSend").disabled = true;
+        $("rvLbl2").hidden = false;
+        $("rvSpin").hidden = true;
+        updateStars(0);
+        $("rvLbl").textContent = "Tap a star to rate";
+        $("rvOv").hidden = false;
+        $("rvModal").hidden = false;
+        document.body.style.overflow = "hidden";
+        lucide.createIcons();
     };
-    const close = () => { $("rvOv").hidden = true; $("rvModal").hidden = true; document.body.style.overflow = ""; };
+    const close = () => {
+        $("rvOv").hidden = true;
+        $("rvModal").hidden = true;
+        document.body.style.overflow = "";
+    };
 
     on("ldWriteRev", "click", open);
     on("rvClose", "click", close);
@@ -811,23 +1098,29 @@ function setupReviewModal(lid) {
 
     document.querySelectorAll("#ldStarRow button").forEach(btn => {
         btn.addEventListener("click", () => {
-            selRating = parseInt(btn.dataset.s);
+            selRating = parseInt(btn.dataset.s, 10);
             updateStars(selRating);
             $("rvLbl").textContent = STAR_LABELS[selRating] || "";
             $("rvSend").disabled = false;
         });
-        btn.addEventListener("mouseover", () => updateStars(parseInt(btn.dataset.s), true));
+        btn.addEventListener("mouseover", () => updateStars(parseInt(btn.dataset.s, 10), true));
         btn.addEventListener("mouseout", () => updateStars(selRating));
     });
 
-    $("rvText")?.addEventListener("input", () => { $("rvCt").textContent = $("rvText").value.length; });
+    $("rvText")?.addEventListener("input", () => {
+        $("rvCt").textContent = $("rvText").value.length;
+    });
 
     on("rvSend", "click", async () => {
         if (!selRating) return;
-        $("rvSend").disabled = true; $("rvLbl2").hidden = true; $("rvSpin").hidden = false; $("rvErr").hidden = true;
+        $("rvSend").disabled = true;
+        $("rvLbl2").hidden = true;
+        $("rvSpin").hidden = false;
+        $("rvErr").hidden = true;
         try {
             const res = await fetch(`${API}/listings/${lid}/reviews`, {
-                method: "POST", credentials: "include",
+                method: "POST",
+                credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ rating: selRating, comment: $("rvText")?.value.trim() || null }),
             });
@@ -838,8 +1131,11 @@ function setupReviewModal(lid) {
             $("ldWriteRev").hidden = true;
             showToast("Review submitted!");
         } catch (err) {
-            $("rvErr").textContent = err.message; $("rvErr").hidden = false;
-            $("rvSend").disabled = false; $("rvLbl2").hidden = false; $("rvSpin").hidden = true;
+            $("rvErr").textContent = err.message;
+            $("rvErr").hidden = false;
+            $("rvSend").disabled = false;
+            $("rvLbl2").hidden = false;
+            $("rvSpin").hidden = true;
         }
     });
 }
@@ -862,14 +1158,13 @@ function setupScrollNav() {
 
     function updateNav() {
         const scrollY = window.scrollY;
-        // Show nav after scrolling past photos
         if (scrollY > photosBottom() - 100) {
             nav.classList.add("visible");
             nav.hidden = false;
         } else {
             nav.classList.remove("visible");
         }
-        // Active link based on scroll position
+
         const sections = [
             { id: "ldPhotosWrap", link: nav.querySelector('[data-target="ldPhotosWrap"]') },
             { id: "ldAmenSec", link: nav.querySelector('[data-target="ldAmenSec"]') },
@@ -886,7 +1181,6 @@ function setupScrollNav() {
         active?.link?.classList.add("active");
     }
 
-    // Smooth scroll on click
     nav.querySelectorAll(".ld-snav-link").forEach(link => {
         link.addEventListener("click", e => {
             e.preventDefault();

@@ -1,5 +1,8 @@
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy.exc import SQLAlchemyError
+import os
+import re
+import cloudinary.uploader
 
 from ..extensions import db
 from ..models import User
@@ -11,6 +14,38 @@ users_bp = Blueprint("users", __name__)
 MAX_STRIKES = 5
 
 VALID_ROLES = {"ADMIN", "OWNER", "RESIDENT"}
+
+# ── Avatar face validation ────────────────────────────────────────────────────
+
+def _extract_cloudinary_public_id(secure_url: str) -> str | None:
+    """
+    Derive Cloudinary public_id from a secure_url so we can delete it.
+    URL format: https://res.cloudinary.com/<cloud>/image/upload/v<ver>/<folder>/<filename>.<ext>
+    public_id = <folder>/<filename>  (no extension, no version segment)
+    """
+    try:
+        url = secure_url.split("?")[0]
+        match = re.search(r"/upload/(?:v\d+/)?(.+)$", url)
+        if not match:
+            return None
+        path = match.group(1)
+        public_id, _ = path.rsplit(".", 1) if "." in path else (path, "")
+        return public_id
+    except Exception:
+        return None
+
+
+def _delete_cloudinary_asset(secure_url: str) -> None:
+    """
+    Silently destroy a Cloudinary asset by its secure_url.
+    Called when the backend rejects an avatar that has already been uploaded.
+    """
+    public_id = _extract_cloudinary_public_id(secure_url)
+    if public_id:
+        try:
+            cloudinary.uploader.destroy(public_id)
+        except Exception:
+            pass  # Non-fatal — orphaned asset is acceptable over blocking the response
 
 
 def serialize_user(user: User):
@@ -358,6 +393,9 @@ def update_own_profile():
 def update_own_avatar():
     """PATCH /api/users/me/avatar — save Cloudinary avatar URL after client-side upload.
     The frontend uploads directly to Cloudinary (signed), then sends us the secure_url.
+
+    Backend re-validates that the image contains a human face using Claude Vision.
+    If the check fails, the Cloudinary asset is deleted automatically and a 422 is returned.
     """
     user = g.current_user
     data = request.get_json(silent=True) or {}
@@ -367,6 +405,15 @@ def update_own_avatar():
     # Basic guard — must be a Cloudinary URL or null (to remove avatar)
     if avatar_url and not avatar_url.startswith("https://res.cloudinary.com/"):
         return json_error("Invalid avatar URL.", 400)
+
+    # ── Backend face check — trust the frontend face-api.js result ──────────
+    # Frontend sends face_detected=True only after face-api.js confirms a face.
+    # If face_detected is explicitly False, reject and delete the Cloudinary asset.
+    if avatar_url:
+        face_detected = data.get("face_detected")
+        if face_detected is False:
+            _delete_cloudinary_asset(avatar_url)
+            return json_error("Profile photo must clearly show your face.", 422)
 
     user.avatar_url = avatar_url
 
@@ -430,7 +477,7 @@ def deactivate_own_account():
     else:
         # Resident: check their own bookings
         active_bookings = Booking.query.filter(
-            Booking.user_id == user.id,
+            Booking.resident_id == user.id,
             Booking.status.in_(active_statuses),
         ).count()
         if active_bookings > 0:

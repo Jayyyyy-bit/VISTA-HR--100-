@@ -21,8 +21,8 @@ def create_ticket():
     data = request.get_json(silent=True) or {}
     user = g.current_user
 
-    subject = (data.get("subject") or "").strip()
-    body = (data.get("body") or "").strip()
+    subject  = (data.get("subject")  or "").strip()
+    body     = (data.get("body")     or "").strip()
     category = (data.get("category") or "OTHER").strip().upper()
 
     if not subject or not body:
@@ -36,8 +36,12 @@ def create_ticket():
     if category not in valid_categories:
         category = "OTHER"
 
+    # Store submitter's role so admin can filter by OWNER vs RESIDENT
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+
     ticket = Ticket(
         user_id=user.id,
+        role=role_val,
         subject=subject,
         body=body,
         category=category,
@@ -55,7 +59,7 @@ def create_ticket():
 @tickets_bp.get("/tickets")
 @require_auth
 def list_own_tickets():
-    """List the current user's tickets."""
+    """List the current user's own tickets, newest first."""
     user = g.current_user
     tickets = (
         Ticket.query
@@ -69,15 +73,16 @@ def list_own_tickets():
 @tickets_bp.get("/tickets/<int:ticket_id>")
 @require_auth
 def get_ticket(ticket_id):
-    """Get a single ticket — user can only see their own."""
+    """Get a single ticket — user can only see their own; admin can see all."""
     user = g.current_user
     ticket = db.session.get(Ticket, ticket_id)
     if not ticket:
         return json_error("Ticket not found.", 404)
-    if ticket.user_id != user.id:
-        role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
-        if role_val != "ADMIN":
-            return json_error("Forbidden.", 403)
+
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if ticket.user_id != user.id and role_val != "ADMIN":
+        return json_error("Forbidden.", 403)
+
     return jsonify({"ticket": ticket.to_dict()}), 200
 
 
@@ -86,30 +91,33 @@ def get_ticket(ticket_id):
 @tickets_bp.get("/admin/tickets")
 @require_role("ADMIN")
 def admin_list_tickets():
-    """Admin sees all tickets with optional filters."""
+    """Admin sees all tickets with optional ?status=, ?category=, ?role= filters."""
     query = Ticket.query
 
-    status = request.args.get("status", "").strip().upper()
+    status   = request.args.get("status",   "").strip().upper()
     category = request.args.get("category", "").strip().upper()
+    role     = request.args.get("role",     "").strip().upper()
 
     if status and status in ("OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"):
         query = query.filter(Ticket.status == status)
     if category and category in ("TECHNICAL", "BILLING", "LISTING", "ACCOUNT", "OTHER"):
         query = query.filter(Ticket.category == category)
+    if role and role in ("OWNER", "RESIDENT"):
+        query = query.filter(Ticket.role == role)
 
     tickets = query.order_by(Ticket.created_at.desc()).all()
 
-    # Attach user info to each ticket
     result = []
     for t in tickets:
         td = t.to_dict()
-        user = db.session.get(User, t.user_id)
-        if user:
-            first = (user.first_name or "").strip()
-            last = (user.last_name or "").strip()
-            td["user_name"] = f"{first} {last}".strip() or user.email
-            td["user_email"] = user.email
-            td["user_role"] = user.role.value if hasattr(user.role, "value") else str(user.role)
+        submitter = db.session.get(User, t.user_id)
+        if submitter:
+            first = (submitter.first_name or "").strip()
+            last  = (submitter.last_name  or "").strip()
+            td["user_name"]   = f"{first} {last}".strip() or submitter.email
+            td["user_email"]  = submitter.email
+            td["user_role"]   = submitter.role.value if hasattr(submitter.role, "value") else str(submitter.role)
+            td["user_avatar"] = getattr(submitter, "avatar_url", None)
         result.append(td)
 
     return jsonify({"tickets": result}), 200
@@ -118,36 +126,47 @@ def admin_list_tickets():
 @tickets_bp.patch("/admin/tickets/<int:ticket_id>")
 @require_role("ADMIN")
 def admin_update_ticket(ticket_id):
-    """Admin replies and/or changes status."""
+    """Admin replies and/or changes ticket status."""
     ticket = db.session.get(Ticket, ticket_id)
     if not ticket:
         return json_error("Ticket not found.", 404)
 
     data = request.get_json(silent=True) or {}
 
-    reply = (data.get("admin_reply") or "").strip()
-    new_status = (data.get("status") or "").strip().upper()
+    reply      = (data.get("admin_reply") or "").strip()
+    new_status = (data.get("status")      or "").strip().upper()
+
+    if not reply and not new_status:
+        return json_error("Provide admin_reply and/or status.", 400)
+
+    valid_statuses = ("OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED")
+    if new_status and new_status not in valid_statuses:
+        return json_error(f"Invalid status. Must be one of: {', '.join(valid_statuses)}", 400)
 
     if reply:
         ticket.admin_reply = reply
-        ticket.replied_at = datetime.now(timezone.utc)
+        ticket.replied_at  = datetime.now(timezone.utc)
 
-    if new_status and new_status in ("OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"):
+    if new_status:
         ticket.status = new_status
 
     try:
         db.session.commit()
-
-        # Notify the ticket author
-        status_label = new_status or (ticket.status.value if hasattr(ticket.status, "value") else str(ticket.status))
-        create_notification(
-            ticket.user_id,
-            "TICKET",
-            f"Ticket #{ticket.id} updated",
-            f"Status: {status_label}" + (f" — {reply[:100]}" if reply else ""),
-        )
-
-        return jsonify({"message": "Ticket updated.", "ticket": ticket.to_dict()}), 200
     except SQLAlchemyError:
         db.session.rollback()
         return json_error("Database error.", 500)
+
+    # Notify AFTER commit — read status from committed state
+    status_val = ticket.status.value if hasattr(ticket.status, "value") else str(ticket.status)
+    notif_body = f"Status: {status_val}"
+    if reply:
+        notif_body += f" — {reply[:100]}"
+
+    create_notification(
+        user_id=ticket.user_id,
+        notif_type="TICKET",
+        title=f"Update on your ticket: {ticket.subject[:60]}",
+        body=notif_body,
+    )
+
+    return jsonify({"message": "Ticket updated.", "ticket": ticket.to_dict()}), 200

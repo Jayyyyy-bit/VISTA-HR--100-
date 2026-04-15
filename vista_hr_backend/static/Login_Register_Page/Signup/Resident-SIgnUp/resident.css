@@ -76,23 +76,27 @@ body {
 .mini-brand {
     display: flex;
     align-items: center;
-    gap: 10px
+    gap: 10px cursor pointer;
+    transition: opacity 0.2s ease;
 }
 
-.mini-logo {
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-sm);
-    background: var(--amber-light);
-    border: 1px solid var(--amber-border);
-    display: grid;
-    place-items: center;
-    color: var(--amber);
+.brand-mark {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--amber);
+    flex-shrink: 0;
+    transition: background 350ms;
 }
 
 .mini-logo svg {
     width: 16px;
     height: 16px
+}
+
+.mini-brand:hover {
+    opacity: 0.8;
+    /* Konting fade effect pag tinapat ang mouse */
 }
 
 .mini-text {
@@ -207,7 +211,7 @@ body {
 /* ── Form ── */
 .form {
     display: grid;
-    gap: 14px;
+    gap: 2px;
     margin-top: 18px
 }
 

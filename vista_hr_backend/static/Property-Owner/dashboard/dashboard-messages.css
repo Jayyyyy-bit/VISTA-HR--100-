@@ -956,3 +956,82 @@
         border-bottom: 1px solid var(--line, rgba(3, 3, 3, 0.08));
     }
 }
+
+.msgDeleteOverlay[hidden] {
+    display: none !important;
+}
+
+.msgTabBar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.msgTab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(18, 52, 88, 0.5);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.msgTab:hover {
+    background: #f1f5f9;
+    color: #1B3F6E;
+}
+
+.msgTab.active {
+    background: #1B3F6E;
+    color: #fff;
+}
+
+/* Thread action buttons */
+.msgThreadActions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.msgThread:hover .msgThreadActions {
+    opacity: 1;
+}
+
+.msgThreadActionBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: rgba(18, 52, 88, 0.4);
+    transition: background 0.12s, color 0.12s;
+}
+
+.msgThreadActionBtn:hover {
+    background: #f1f5f9;
+    color: #1B3F6E;
+}
+
+.msgDeleteBtn:hover {
+    color: #dc2626 !important;
+}
+
+.msgThreadActionBtn i {
+    width: 13px;
+    height: 13px;
+}

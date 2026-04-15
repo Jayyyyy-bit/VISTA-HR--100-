@@ -54,10 +54,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Set avatar initials
-    const initials = ((me.first_name || me.name || "A")[0] || "A").toUpperCase();
-    const avatarEl = document.getElementById("adminAvatar");
-    if (avatarEl) avatarEl.textContent = initials;
+    // Propagate avatar photo or initials
+    if (me && window.UserAvatar) {
+        UserAvatar.apply(me);
+    } else {
+        const initials = ((me.first_name || me.name || "A")[0] || "A").toUpperCase();
+        const avatarEl = document.getElementById("adminAvatar");
+        if (avatarEl) avatarEl.textContent = initials;
+    }
 
     // ── Shared fetch helper ─────────────────────────────────
     async function apiFetch(path, options = {}) {
@@ -279,16 +283,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         el.querySelectorAll("[data-ov-kyc-reject]").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const reason = prompt("Enter rejection reason (shown to the user):");
-                if (reason === null) return;
-                try {
-                    await apiFetch(`/admin/kyc/${btn.dataset.ovKycReject}/reject`, {
-                        method: "POST",
-                        body: JSON.stringify({ reason: reason.trim() || "Documents were unclear." }),
-                    });
-                    await loadOverview();
-                } catch (err) { showError(err.message); }
+            btn.addEventListener("click", () => {
+                openRejectModal("Reject KYC Application", async (reason) => {
+                    try {
+                        await apiFetch(`/admin/kyc/${btn.dataset.ovKycReject}/reject`, {
+                            method: "POST",
+                            body: JSON.stringify({ reason }),
+                        });
+                        await loadOverview();
+                    } catch (err) { showError(err.message); }
+                });
             });
         });
     }
@@ -371,12 +375,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <i data-lucide="users"></i>
                 <p>No users found.</p>
             </div>`;
+            document.getElementById("userPagination")?.remove();
             if (window.lucide?.createIcons) lucide.createIcons();
             renderStats();
             return;
         }
 
-        grid.innerHTML = filtered.map(u => {
+        // Pagination slice
+        const totalPages = Math.ceil(filtered.length / USERS_PER_PAGE);
+        if (currentUserPage > totalPages) currentUserPage = 1;
+        const pageSlice = filtered.slice((currentUserPage - 1) * USERS_PER_PAGE, currentUserPage * USERS_PER_PAGE);
+
+        grid.innerHTML = pageSlice.map(u => {
             const initials = (u.name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
             const statusCls = u.status === "Active" ? "active" : u.status === "Suspended" ? "suspended" : "pending";
             const suspUntil = u.is_suspended && u.suspended_until
@@ -406,30 +416,62 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </div>
 
                 <div class="um-card-actions">
-                    <button class="um-btn" data-action="edit" data-id="${u.id}">
-                        <i data-lucide="edit-3"></i> Edit
-                    </button>
-                    ${u.is_suspended
-                    ? `<button class="um-btn um-btn--green" data-action="uplift" data-id="${u.id}">
-                            <i data-lucide="check-circle-2"></i> Uplift
-                           </button>`
-                    : `<button class="um-btn um-btn--warn" data-action="suspend" data-id="${u.id}">
-                            <i data-lucide="ban"></i> Suspend
-                           </button>`}
-                    ${u.strike_count > 0
-                    ? `<button class="um-btn um-btn--ghost" data-action="reset-strikes" data-id="${u.id}" title="Reset strikes">
-                            <i data-lucide="rotate-ccw"></i>
-                           </button>`
-                    : ""}
-                    <button class="um-btn um-btn--danger" data-action="delete" data-id="${u.id}">
-                        <i data-lucide="trash-2"></i>
-                    </button>
-                </div>
+    ${u.role === 'Admin'
+                    ? `<span style="font-size: 12px; color: var(--muted); width: 100%; text-align: center; border: 1px dashed #ccc; padding: 5px; border-radius: 4px;">
+            <i data-lucide="lock" style="width:12px; height:12px; vertical-align:middle;"></i> System Protected
+           </span>`
+                    : `
+            <button class="um-btn" data-action="edit" data-id="${u.id}">
+                <i data-lucide="edit-3"></i> Edit
+            </button>
+            ${u.is_suspended
+                        ? `<button class="um-btn um-btn--green" data-action="uplift" data-id="${u.id}">
+                        <i data-lucide="check-circle-2"></i> Uplift
+                   </button>`
+                        : `<button class="um-btn um-btn--warn" data-action="suspend" data-id="${u.id}">
+                        <i data-lucide="ban"></i> Suspend
+                   </button>`
+                    }
+            ${u.strike_count > 0
+                        ? `<button class="um-btn um-btn--ghost" data-action="reset-strikes" data-id="${u.id}" title="Reset strikes">
+                        <i data-lucide="rotate-ccw"></i>
+                   </button>`
+                        : ""
+                    }
+            <button class="um-btn um-btn--danger" data-action="delete" data-id="${u.id}">
+                <i data-lucide="trash-2"></i>
+            </button>
+        `
+                }
+</div>
             </div>`;
         }).join("");
 
         if (window.lucide?.createIcons) lucide.createIcons();
         renderStats();
+
+        // Render user pagination controls
+        let pagEl = document.getElementById("userPagination");
+        if (!pagEl) {
+            pagEl = document.createElement("div");
+            pagEl.id = "userPagination";
+            pagEl.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;";
+            grid.parentNode.insertBefore(pagEl, grid.nextSibling);
+        }
+        if (totalPages <= 1) { pagEl.hidden = true; }
+        else {
+            pagEl.hidden = false;
+            pagEl.innerHTML = `
+                <button id="uPagPrev" style="padding:6px 14px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;" ${currentUserPage <= 1 ? "disabled" : ""}>
+                    &larr; Prev
+                </button>
+                <span style="font-size:13px;color:#6b7280;font-weight:500;">Page ${currentUserPage} of ${totalPages}</span>
+                <button id="uPagNext" style="padding:6px 14px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;" ${currentUserPage >= totalPages ? "disabled" : ""}>
+                    Next &rarr;
+                </button>`;
+            document.getElementById("uPagPrev")?.addEventListener("click", () => { if (currentUserPage > 1) { currentUserPage--; renderUsers(); } });
+            document.getElementById("uPagNext")?.addEventListener("click", () => { if (currentUserPage < totalPages) { currentUserPage++; renderUsers(); } });
+        }
     }
 
     async function loadUsers() {
@@ -463,6 +505,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const action = btn.dataset.action;
         const user = users.find(u => u.id === id);
         if (!user) return;
+
+        if (user.role === 'Admin') {
+            alert("This is a system administrator account and cannot be modified.");
+            return;
+        }
 
         if (action === "edit") { openModal("edit", user); return; }
 
@@ -511,7 +558,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             modalTitle.textContent = "Edit user";
             nameInput.value = user.name;
             emailInput.value = user.email;
+            emailInput.readOnly = true;
+            emailInput.style.opacity = "0.6";
+            emailInput.style.cursor = "not-allowed";
             passwordInput.value = "";
+            // Hide password field on edit — admin cannot change passwords
+            const pwField = passwordInput.closest(".form-field, .field, div") || passwordInput.parentElement;
+            if (pwField) pwField.hidden = true;
             roleInput.value = user.role;
             statusInput.value = user.status;
             if (passwordHint) passwordHint.textContent = "leave blank to keep current";
@@ -520,7 +573,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             modalTitle.textContent = "Add user";
             nameInput.value = "";
             emailInput.value = "";
+            emailInput.readOnly = false;
+            emailInput.style.opacity = "";
+            emailInput.style.cursor = "";
             passwordInput.value = "";
+            // Show password field on add
+            const pwField = passwordInput.closest(".form-field, .field, div") || passwordInput.parentElement;
+            if (pwField) pwField.hidden = false;
             roleInput.value = "Resident";
             statusInput.value = "Active";
             if (passwordHint) passwordHint.textContent = "required";
@@ -565,9 +624,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeModalBtn?.addEventListener("click", closeModal);
     cancelBtn?.addEventListener("click", closeModal);
     modalOverlay?.addEventListener("click", e => { if (e.target === modalOverlay) closeModal(); });
-    searchInput?.addEventListener("input", renderUsers);
-    roleFilter?.addEventListener("change", renderUsers);
-    statusFilter?.addEventListener("change", renderUsers);
+    searchInput?.addEventListener("input", () => { currentUserPage = 1; renderUsers(); });
+    roleFilter?.addEventListener("change", () => { currentUserPage = 1; renderUsers(); });
+    statusFilter?.addEventListener("change", () => { currentUserPage = 1; renderUsers(); });
 
     // ══════════════════════════════════════════════════════════
     // KYC VIEW
@@ -1039,23 +1098,109 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
 
                 if (action.endsWith("-reject")) {
-                    const reason = prompt("Enter a reason for rejection (shown to the user):");
-                    if (reason === null) return;
-                    const endpoint = type === "kyc"
-                        ? `/admin/kyc/${id}/reject`
-                        : `/admin/student/${id}/reject`;
-                    try {
-                        await apiFetch(endpoint, {
-                            method: "POST",
-                            body: JSON.stringify({ reason: reason.trim() || "Documents were unclear." }),
-                        });
-                        if (type === "kyc") loadKyc(); else loadStudent();
-                        refreshBadges();
-                    } catch (err) { showError(err.message); }
+                    const modalTitle = type === "kyc" ? "Reject KYC Application" : "Reject Student Verification";
+                    openRejectModal(modalTitle, async (reason) => {
+                        const endpoint = type === "kyc"
+                            ? `/admin/kyc/${id}/reject`
+                            : `/admin/student/${id}/reject`;
+                        try {
+                            await apiFetch(endpoint, {
+                                method: "POST",
+                                body: JSON.stringify({ reason }),
+                            });
+                            if (type === "kyc") loadKyc(); else loadStudent();
+                            refreshBadges();
+                        } catch (err) { showError(err.message); }
+                    });
                 }
             });
         });
     }
+
+
+    // ── Reject modal ──────────────────────────────────────────
+    let _rejectCallback = null;
+
+    function openRejectModal(title, onConfirm) {
+        _rejectCallback = onConfirm;
+        const overlay = document.getElementById("rejectOverlay");
+        const titleEl = document.getElementById("rejectModalTitle");
+        const textarea = document.getElementById("rejectReasonInput");
+        const errEl = document.getElementById("rejectModalErr");
+        const countEl = document.getElementById("rejectCharCount");
+        const lbl = document.getElementById("rejectModalLbl");
+        const spin = document.getElementById("rejectModalSpin");
+        const confirm = document.getElementById("rejectModalConfirm");
+
+        if (titleEl) titleEl.textContent = title || "Reject Application";
+        if (textarea) textarea.value = "";
+        if (errEl) errEl.style.display = "none";
+        if (countEl) countEl.textContent = "0";
+        if (lbl) lbl.hidden = false;
+        if (spin) spin.hidden = true;
+        if (confirm) confirm.disabled = false;
+
+        // Deselect all chips
+        document.querySelectorAll(".reject-chip").forEach(c => c.classList.remove("selected"));
+
+        if (overlay) overlay.style.display = "flex";
+        if (window.lucide?.createIcons) lucide.createIcons();
+        textarea?.focus();
+    }
+
+    function closeRejectModal() {
+        const overlay = document.getElementById("rejectOverlay");
+        if (overlay) overlay.style.display = "none";
+        _rejectCallback = null;
+    }
+
+    // Wire modal controls — runs inside main DOMContentLoaded, no nested listener needed
+    (function initRejectModal() {
+        const textarea = document.getElementById("rejectReasonInput");
+        const countEl = document.getElementById("rejectCharCount");
+        const confirm = document.getElementById("rejectModalConfirm");
+        const errEl = document.getElementById("rejectModalErr");
+        const lbl = document.getElementById("rejectModalLbl");
+        const spin = document.getElementById("rejectModalSpin");
+
+        textarea?.addEventListener("input", () => {
+            if (countEl) countEl.textContent = textarea.value.length;
+        });
+
+        document.querySelectorAll(".reject-chip").forEach(chip => {
+            chip.addEventListener("click", () => {
+                document.querySelectorAll(".reject-chip").forEach(c => c.classList.remove("selected"));
+                chip.classList.add("selected");
+                if (textarea) {
+                    textarea.value = chip.dataset.reason;
+                    if (countEl) countEl.textContent = textarea.value.length;
+                }
+            });
+        });
+
+        document.getElementById("rejectModalClose")?.addEventListener("click", closeRejectModal);
+        document.getElementById("rejectModalCancel")?.addEventListener("click", closeRejectModal);
+        document.getElementById("rejectOverlay")?.addEventListener("click", e => {
+            if (e.target === document.getElementById("rejectOverlay")) closeRejectModal();
+        });
+
+        confirm?.addEventListener("click", async () => {
+            const reason = textarea?.value.trim();
+            if (!reason) {
+                if (errEl) { errEl.textContent = "Please provide a rejection reason."; errEl.style.display = "block"; }
+                return;
+            }
+            if (errEl) errEl.style.display = "none";
+            confirm.disabled = true;
+            if (lbl) lbl.hidden = true;
+            if (spin) spin.hidden = false;
+            if (_rejectCallback) await _rejectCallback(reason);
+            if (lbl) lbl.hidden = false;
+            if (spin) spin.hidden = true;
+            confirm.disabled = false;
+            closeRejectModal();
+        });
+    })();
 
     // ── Badge refresh ────────────────────────────────────────
     async function refreshBadges() {
@@ -1123,8 +1268,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ══════════════════════════════════════════════════════════
     let listingsStatusFilter = "";
     let listingsPage = 1;
+    const USERS_PER_PAGE = 10;
+    let currentUserPage = 1;
     let listingsTotal = 0;
-    const LISTINGS_PER_PAGE = 20;
+    const LISTINGS_PER_PAGE = 5;
     let listingsSearchTimer = null;
 
     document.querySelectorAll("#listingsFilterBar .filter-pill").forEach(btn => {
@@ -1529,27 +1676,35 @@ document.addEventListener("DOMContentLoaded", async () => {
                 container.innerHTML = `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px">No ${type}s yet.</div>`;
                 return;
             }
+            container.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:4px 0;";
             container.innerHTML = rows.map(r => `
-            <div class="amenity-row" data-id="${r.id}">
-                <div class="amenity-row-left">
-                    <div class="amenity-icon-wrap">
-                        <i data-lucide="${escHtml(r.icon || "sparkles")}"></i>
-                    </div>
-                    <div>
-                        <div class="amenity-label">${escHtml(r.label)}</div>
-                        <div class="amenity-meta">
-                            ${type === "highlight" ? "Highlight" : `${r.category || "amenity"}`}
-                            · <span style="color:${r.is_active ? "#16a34a" : "#9ca3af"}">${r.is_active ? "Active" : "Hidden"}</span>
-                        </div>
+            <div class="amenity-card" data-id="${r.id}" style="
+                background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:14px;
+                padding:16px;display:flex;flex-direction:column;align-items:center;
+                gap:10px;text-align:center;transition:box-shadow 0.15s;">
+                <div style="
+                    width:44px;height:44px;border-radius:12px;
+                    background:${r.is_active ? "#eff6ff" : "#f3f4f6"};
+                    display:flex;align-items:center;justify-content:center;
+                    color:${r.is_active ? "#2563eb" : "#9ca3af"};">
+                    <i data-lucide="${escHtml(r.icon || "sparkles")}" style="width:22px;height:22px;"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.label)}</div>
+                    <div style="font-size:11px;color:#9ca3af;margin-top:2px;">
+                        ${type === "highlight" ? "Highlight" : escHtml(r.category || "amenity")}
+                        · <span style="color:${r.is_active ? "#16a34a" : "#9ca3af"};font-weight:600;">${r.is_active ? "Active" : "Hidden"}</span>
                     </div>
                 </div>
-                <div class="amenity-row-actions">
+                <div style="display:flex;gap:6px;width:100%;">
                     <button class="btn ghost" data-action="toggle" data-id="${r.id}"
-                        data-active="${r.is_active}" type="button">
+                        data-active="${r.is_active}" type="button"
+                        style="flex:1;font-size:11px;padding:5px 0;">
                         ${r.is_active ? "Hide" : "Show"}
                     </button>
-                    <button class="btn danger-outline" data-action="delete" data-id="${r.id}" type="button">
-                        <i data-lucide="trash-2"></i>
+                    <button class="btn danger-outline" data-action="delete" data-id="${r.id}" type="button"
+                        style="padding:5px 8px;">
+                        <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
                     </button>
                 </div>
             </div>`).join("");

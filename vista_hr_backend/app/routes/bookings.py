@@ -203,6 +203,50 @@ def cancel_booking(booking_id: int):
 
 
 # ══════════════════════════════════════════════════════════
+# OWNER: Cancel a booking
+# ══════════════════════════════════════════════════════════
+
+@bookings_bp.post("/bookings/<int:booking_id>/owner-cancel")
+@require_role("OWNER")
+def owner_cancel_booking(booking_id: int):
+    """Owner cancels a PENDING or APPROVED booking on their listing."""
+    user = g.current_user
+    data = request.get_json(silent=True) or {}
+    note = (data.get("note") or "").strip() or None
+
+    booking = db.session.get(Booking, booking_id)
+    if not booking:
+        return json_error("Booking not found", 404)
+
+    listing = db.session.get(Listing, booking.listing_id)
+    if not listing or listing.owner_id != user.id:
+        return json_error("Forbidden", 403)
+
+    if booking.status not in ("PENDING", "APPROVED"):
+        return json_error("Only pending or approved reservations can be cancelled.", 400)
+
+    booking.status = "CANCELLED"
+    if note:
+        booking.owner_note = note
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+    resident = db.session.get(User, booking.resident_id)
+    if resident:
+        create_notification(
+            user_id=resident.id,
+            notif_type="BOOKING",
+            title="Reservation cancelled by owner",
+            body=f'Your reservation was cancelled by the property owner.{" Reason: " + note if note else ""}',
+        )
+    return jsonify({"message": "Reservation cancelled", "booking": booking.to_dict()}), 200
+
+
+# ══════════════════════════════════════════════════════════
 # RECEIPT — accessible by resident OR owner
 # ══════════════════════════════════════════════════════════
 
@@ -343,7 +387,7 @@ def update_booking_status(booking_id: int):
     ALLOWED_TRANSITIONS = {
         "PENDING":   ["APPROVED", "REJECTED", "CANCELLED"],
         "APPROVED":  ["ACTIVE",   "CANCELLED"],
-        "ACTIVE":    ["COMPLETED","CANCELLED"],
+        "ACTIVE":    ["COMPLETED", "CANCELLED"],
     }
 
     booking = db.session.get(Booking, booking_id)
@@ -372,10 +416,121 @@ def update_booking_status(booking_id: int):
 
     try:
         db.session.commit()
-        return jsonify({"message": f"Booking marked as {new_status}", "booking": booking.to_dict()}), 200
     except SQLAlchemyError:
         db.session.rollback()
         return json_error("Database error", 500)
+
+    # Notify resident of status change
+    resident = db.session.get(User, booking.resident_id)
+    listing_title = listing.title or f"Listing #{booking.listing_id}"
+    notif_map = {
+        "ACTIVE":    ("You've been moved in!", f"Your booking for '{listing_title}' is now active."),
+        "COMPLETED": ("Booking completed",     f"Your stay at '{listing_title}' has been marked complete."),
+        "CANCELLED": ("Booking cancelled",     f"Your booking for '{listing_title}' was cancelled by the owner."),
+    }
+    if resident and new_status in notif_map:
+        title, body = notif_map[new_status]
+        create_notification(user_id=resident.id, notif_type="BOOKING", title=title, body=body)
+
+    return jsonify({"message": f"Booking marked as {new_status}", "booking": booking.to_dict()}), 200
+
+
+# ══════════════════════════════════════════════════════════
+# RESIDENT: Move-out (self-initiated)
+# ══════════════════════════════════════════════════════════
+
+@bookings_bp.patch("/bookings/<int:booking_id>/move-out")
+@require_role("RESIDENT")
+def resident_move_out(booking_id: int):
+    """Resident initiates move-out from an ACTIVE booking.
+    Sets status → CANCELLED, records move_out_date = now().
+    """
+    user = g.current_user
+    booking = db.session.get(Booking, booking_id)
+
+    if not booking or booking.resident_id != user.id:
+        return json_error("Booking not found", 404)
+
+    if booking.status != "ACTIVE":
+        return json_error("Move-out is only available for active bookings.", 400)
+
+    booking.status = "CANCELLED"
+    booking.move_out_date = datetime.now(timezone.utc)
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+    # Notify owner
+    listing = db.session.get(Listing, booking.listing_id)
+    if listing:
+        owner = db.session.get(User, listing.owner_id)
+        resident_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+        listing_title = listing.title or f"Listing #{booking.listing_id}"
+        if owner:
+            create_notification(
+                user_id=owner.id,
+                notif_type="BOOKING",
+                title="Resident has moved out",
+                body=f"{resident_name} has moved out of '{listing_title}'.",
+            )
+
+    return jsonify({"message": "Move-out recorded.", "booking": booking.to_dict()}), 200
+
+
+# ══════════════════════════════════════════════════════════
+# RESIDENT: Upload payment proof
+# ══════════════════════════════════════════════════════════
+
+@bookings_bp.patch("/bookings/<int:booking_id>/payment-proof")
+@require_role("RESIDENT")
+def upload_payment_proof(booking_id: int):
+    """Resident submits Cloudinary payment proof URL after direct upload.
+    Booking must be APPROVED before payment proof can be submitted.
+    """
+    user = g.current_user
+    data = request.get_json(silent=True) or {}
+
+    booking = db.session.get(Booking, booking_id)
+    if not booking or booking.resident_id != user.id:
+        return json_error("Booking not found", 404)
+
+    if booking.status != "APPROVED":
+        return json_error("Payment proof can only be submitted for approved bookings.", 400)
+
+    proof_url = (data.get("payment_proof_url") or "").strip() or None
+    if not proof_url:
+        return json_error("payment_proof_url is required.", 400)
+
+    if not proof_url.startswith("https://res.cloudinary.com/"):
+        return json_error("Invalid payment proof URL.", 400)
+
+    booking.payment_proof_url = proof_url
+    booking.payment_verified = False  # Reset verification on new upload
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+    # Notify owner that proof has been submitted
+    listing = db.session.get(Listing, booking.listing_id)
+    if listing:
+        owner = db.session.get(User, listing.owner_id)
+        resident_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+        listing_title = listing.title or f"Listing #{booking.listing_id}"
+        if owner:
+            create_notification(
+                user_id=owner.id,
+                notif_type="BOOKING",
+                title="Payment proof submitted",
+                body=f"{resident_name} uploaded proof of payment for '{listing_title}'.",
+            )
+
+    return jsonify({"message": "Payment proof submitted.", "booking": booking.to_dict()}), 200
 
 
 # ══════════════════════════════════════════════════════════

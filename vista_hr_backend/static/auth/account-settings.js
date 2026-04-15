@@ -1,4 +1,189 @@
 /* auth/account-settings.js */
+
+/* ── Inline face validator — loads face-api lazily on demand ── */
+const _FaceValidator = (() => {
+    const CDN = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js";
+    const MODEL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model";
+    let _state = "idle"; // idle | loading | ready | failed
+    let _promise = null;
+
+    function _loadScript() {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${CDN}"]`)) {
+                // Already in DOM — wait for faceapi global
+                const check = setInterval(() => {
+                    if (window.faceapi) { clearInterval(check); resolve(); }
+                }, 100);
+                setTimeout(() => { clearInterval(check); reject(new Error("Timeout")); }, 10000);
+                return;
+            }
+            const s = document.createElement("script");
+            s.src = CDN;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error("face-api.js failed to load"));
+            document.head.appendChild(s);
+        });
+    }
+
+    async function _init() {
+        if (_state === "ready") return;
+        if (_state === "loading") return _promise;
+        _state = "loading";
+        _promise = (async () => {
+            await _loadScript();
+            await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL);
+            _state = "ready";
+        })();
+        try { await _promise; }
+        catch (e) { _state = "failed"; throw e; }
+    }
+
+    function _fileToImg(file) {
+        return new Promise((res, rej) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => { URL.revokeObjectURL(url); res(img); };
+            img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("Cannot read image")); };
+            img.src = url;
+        });
+    }
+
+    function _brightness(data) {
+        let t = 0;
+        for (let i = 0; i < data.length; i += 4)
+            t += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        return t / (data.length / 4);
+    }
+
+    function _blur(data, w, h) {
+        const g = new Float32Array(w * h);
+        for (let i = 0; i < g.length; i++)
+            g[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+        const l = new Float32Array(w * h);
+        for (let y = 1; y < h - 1; y++)
+            for (let x = 1; x < w - 1; x++) {
+                const i = y * w + x;
+                l[i] = g[(y - 1) * w + x] + g[(y + 1) * w + x] + g[y * w + (x - 1)] + g[y * w + (x + 1)] - 4 * g[i];
+            }
+        let m = 0; for (const v of l) m += v; m /= l.length;
+        let v = 0; for (const val of l) v += (val - m) ** 2;
+        return v / l.length;
+    }
+
+    async function validate(file) {
+        // Canvas heuristics first (no network needed)
+        const img = await _fileToImg(file);
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 200;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, 200, 200);
+        const px = ctx.getImageData(0, 0, 200, 200);
+
+        const bright = _brightness(px.data);
+        if (bright < 40) return { valid: false, reason: "Photo is too dark. Please use a well-lit photo." };
+        if (bright > 230) return { valid: false, reason: "Photo is overexposed. Please use a clearer photo." };
+
+        const blur = _blur(px.data, 200, 200);
+        if (blur < 60) return { valid: false, reason: "Photo is too blurry. Please use a sharper photo." };
+
+        // Load face-api (lazy — only if heuristics pass)
+        try { await _init(); }
+        catch { return { valid: false, reason: "Face check unavailable. Check your connection and retry." }; }
+
+        const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.4 });
+        const dets = await window.faceapi.detectAllFaces(img, opts);
+
+        if (!dets || dets.length === 0)
+            return { valid: false, reason: "No face detected. Please upload a clear photo of yourself." };
+
+        if (dets.length > 1)
+            return { valid: false, reason: "Multiple faces detected. Please upload a photo of only yourself." };
+
+        const faceRatio = dets[0].box.width / (img.naturalWidth || img.width);
+        if (faceRatio < 0.10)
+            return { valid: false, reason: "Face is too small or far away. Please take a closer selfie-style photo." };
+
+        return { valid: true, reason: "" };
+    }
+
+    // Expose warm() so boot can pre-load model silently
+    async function warm() {
+        try { await _init(); } catch { /* silent */ }
+    }
+
+    return { validate, warm };
+})();
+
+/* ── Document image validator (brightness + blur only, no face check) ── */
+const _DocValidator = (() => {
+    const BRIGHTNESS_MIN = 40;
+    const BRIGHTNESS_MAX = 230;
+    const BLUR_MIN = 40;  // slightly looser than avatar — docs can be flatter
+
+    function _fileToImg(file) {
+        return new Promise((res, rej) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => { URL.revokeObjectURL(url); res(img); };
+            img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("Cannot read image")); };
+            img.src = url;
+        });
+    }
+
+    function _pixelData(img, size = 200) {
+        const c = document.createElement("canvas");
+        c.width = c.height = size;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0, size, size);
+        return ctx.getImageData(0, 0, size, size);
+    }
+
+    function _brightness(data) {
+        let t = 0;
+        for (let i = 0; i < data.length; i += 4)
+            t += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        return t / (data.length / 4);
+    }
+
+    function _blur(data, w, h) {
+        const g = new Float32Array(w * h);
+        for (let i = 0; i < g.length; i++)
+            g[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+        const l = new Float32Array(w * h);
+        for (let y = 1; y < h - 1; y++)
+            for (let x = 1; x < w - 1; x++) {
+                const i = y * w + x;
+                l[i] = g[(y - 1) * w + x] + g[(y + 1) * w + x] + g[y * w + (x - 1)] + g[y * w + (x + 1)] - 4 * g[i];
+            }
+        let m = 0; for (const v of l) m += v; m /= l.length;
+        let v = 0; for (const val of l) v += (val - m) ** 2;
+        return v / l.length;
+    }
+
+    async function validate(file, label) {
+        let img;
+        try { img = await _fileToImg(file); }
+        catch { return { valid: false, reason: `Could not read the ${label} image.` }; }
+
+        const px = _pixelData(img);
+        const bright = _brightness(px.data);
+        if (bright < BRIGHTNESS_MIN)
+            return { valid: false, reason: `${label}: Photo is too dark. Please use a well-lit photo.` };
+        if (bright > BRIGHTNESS_MAX)
+            return { valid: false, reason: `${label}: Photo is overexposed. Please retake in better lighting.` };
+
+        const blur = _blur(px.data, 200, 200);
+        if (blur < BLUR_MIN)
+            return { valid: false, reason: `${label}: Photo is too blurry. Please upload a sharper, clearer image.` };
+
+        return { valid: true, reason: "" };
+    }
+
+    return { validate };
+})();
+
+function _warmFaceApi() { _FaceValidator.warm(); }
+
 (() => {
     const API = "/api";
     const MAX_FILE = 5 * 1024 * 1024;
@@ -131,31 +316,45 @@
         const roleLabel = { OWNER: "Property Owner", RESIDENT: "Resident", ADMIN: "Admin" };
 
         if (el("emailChangeSection")) el("emailChangeSection").hidden = true;
-        // Topbar + sidebar
-        if (el("sidebarAvatar")) el("sidebarAvatar").textContent = init;
+
+        // ── Text fields (name, role labels) ──────────────────────────
         if (el("sidebarUserName")) el("sidebarUserName").textContent = name;
         if (el("sidebarUserRole")) el("sidebarUserRole").textContent = roleLabel[user.role] || user.role;
-
-        // Profile panel
-        if (el("avatarCircle")) el("avatarCircle").textContent = init;
         if (el("avatarName")) el("avatarName").textContent = name;
         if (el("avatarRole")) el("avatarRole").textContent = roleLabel[user.role] || user.role;
 
-        // Avatar image — show photo if set, otherwise show initials circle
+        // ── Avatar rendering — single source of truth ─────────────────
+        // Always set initials text on both elements (hidden or not)
+        if (el("avatarCircle")) el("avatarCircle").textContent = init;
+        if (el("sidebarAvatar")) el("sidebarAvatar").textContent = init;
+
+        // Now decide photo vs initials
         const avatarImg = el("avatarImg");
         const avatarCircle = el("avatarCircle");
+        const sidebarImg = el("sidebarAvatarImg");
+        const sidebarCircle = el("sidebarAvatar");
         const avatarRemoveBtn = el("avatarRemoveBtn");
-        if (avatarImg && avatarCircle) {
-            if (user.avatar_url) {
-                avatarImg.src = user.avatar_url;
-                avatarImg.hidden = false;
-                avatarCircle.hidden = true;
-                if (avatarRemoveBtn) avatarRemoveBtn.hidden = false;
-            } else {
-                avatarImg.hidden = true;
-                avatarCircle.hidden = false;
-                if (avatarRemoveBtn) avatarRemoveBtn.hidden = true;
-            }
+
+        const uploadBtn = el("avatarUploadBtn");
+        if (user.avatar_url) {
+            // Main profile circle
+            if (avatarImg) { avatarImg.src = user.avatar_url; avatarImg.hidden = false; }
+            if (avatarCircle) { avatarCircle.hidden = true; }
+            // Sidebar circle
+            if (sidebarImg) { sidebarImg.src = user.avatar_url; sidebarImg.hidden = false; }
+            if (sidebarCircle) { sidebarCircle.hidden = true; }
+            if (avatarRemoveBtn) avatarRemoveBtn.hidden = false;
+            // Update button label
+            if (uploadBtn) uploadBtn.innerHTML = `<i data-lucide="camera"></i> Change photo`;
+        } else {
+            // Show initials, hide photos
+            if (avatarImg) { avatarImg.hidden = true; avatarImg.src = ""; }
+            if (avatarCircle) { avatarCircle.hidden = false; }
+            if (sidebarImg) { sidebarImg.hidden = true; sidebarImg.src = ""; }
+            if (sidebarCircle) { sidebarCircle.hidden = false; }
+            if (avatarRemoveBtn) avatarRemoveBtn.hidden = true;
+            // Reset button label
+            if (uploadBtn) uploadBtn.innerHTML = `<i data-lucide="camera"></i> Upload photo`;
         }
 
         // Status badges in avatar row
@@ -359,6 +558,216 @@
     // ── Avatar upload ───────────────────────────────────────────
     el("avatarUploadBtn")?.addEventListener("click", () => el("avatarFileInput")?.click());
 
+    // Pre-load face-api models lazily in background after page settles
+    setTimeout(() => _warmFaceApi(), 1500);
+
+    // ── Crop modal engine ───────────────────────────────────────
+    const cropState = {
+        img: null,          // HTMLImageElement of the raw file
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        dragStart: null,    // { x, y, ox, oy }
+        lastPinchDist: null,
+        canvasSize: 320,    // logical size — canvas is square
+        outputSize: 400,    // exported px (square, cropped to circle)
+    };
+
+    function openCropModal(file) {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            cropState.img = img;
+
+            // Reset to fit
+            const cs = cropState.canvasSize;
+            const scale = Math.max(cs / img.naturalWidth, cs / img.naturalHeight);
+            cropState.scale = scale;
+            cropState.offsetX = (cs - img.naturalWidth * scale) / 2;
+            cropState.offsetY = (cs - img.naturalHeight * scale) / 2;
+
+            const slider = el("cropZoomSlider");
+            if (slider) { slider.min = scale; slider.max = scale * 4; slider.value = scale; }
+
+            drawCrop();
+            el("cropOverlay").hidden = false;
+            if (window.lucide?.createIcons) lucide.createIcons();
+        };
+        img.onerror = () => { showToast?.("Could not load image.", "error"); };
+        img.src = url;
+    }
+
+    function drawCrop() {
+        const canvas = el("cropCanvas");
+        if (!canvas || !cropState.img) return;
+        const cs = cropState.canvasSize;
+        canvas.width = cs;
+        canvas.height = cs;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, cs, cs);
+        ctx.drawImage(
+            cropState.img,
+            cropState.offsetX,
+            cropState.offsetY,
+            cropState.img.naturalWidth * cropState.scale,
+            cropState.img.naturalHeight * cropState.scale,
+        );
+    }
+
+    function clampOffset() {
+        const { img, scale, canvasSize: cs } = cropState;
+        if (!img) return;
+        const iw = img.naturalWidth * scale;
+        const ih = img.naturalHeight * scale;
+        // Ensure image always covers the stage
+        cropState.offsetX = Math.min(0, Math.max(cs - iw, cropState.offsetX));
+        cropState.offsetY = Math.min(0, Math.max(cs - ih, cropState.offsetY));
+    }
+
+    // ── Drag ────────────────────────────────────────────────
+    const stage = el("cropStage");
+
+    stage?.addEventListener("mousedown", e => {
+        e.preventDefault();
+        cropState.dragStart = { x: e.clientX, y: e.clientY, ox: cropState.offsetX, oy: cropState.offsetY };
+    });
+    window.addEventListener("mousemove", e => {
+        if (!cropState.dragStart) return;
+        const dx = e.clientX - cropState.dragStart.x;
+        const dy = e.clientY - cropState.dragStart.y;
+        const rect = stage.getBoundingClientRect();
+        const ratio = cropState.canvasSize / rect.width;
+        cropState.offsetX = cropState.dragStart.ox + dx * ratio;
+        cropState.offsetY = cropState.dragStart.oy + dy * ratio;
+        clampOffset();
+        drawCrop();
+    });
+    window.addEventListener("mouseup", () => { cropState.dragStart = null; });
+
+    // ── Touch drag + pinch ──────────────────────────────────
+    stage?.addEventListener("touchstart", e => {
+        if (e.touches.length === 1) {
+            const t = e.touches[0];
+            cropState.dragStart = { x: t.clientX, y: t.clientY, ox: cropState.offsetX, oy: cropState.offsetY };
+            cropState.lastPinchDist = null;
+        } else if (e.touches.length === 2) {
+            cropState.lastPinchDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY,
+            );
+        }
+    }, { passive: true });
+
+    stage?.addEventListener("touchmove", e => {
+        e.preventDefault();
+        if (e.touches.length === 1 && cropState.dragStart) {
+            const t = e.touches[0];
+            const dx = t.clientX - cropState.dragStart.x;
+            const dy = t.clientY - cropState.dragStart.y;
+            const rect = stage.getBoundingClientRect();
+            const ratio = cropState.canvasSize / rect.width;
+            cropState.offsetX = cropState.dragStart.ox + dx * ratio;
+            cropState.offsetY = cropState.dragStart.oy + dy * ratio;
+            clampOffset();
+            drawCrop();
+        } else if (e.touches.length === 2 && cropState.lastPinchDist !== null) {
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY,
+            );
+            const delta = dist - cropState.lastPinchDist;
+            cropState.lastPinchDist = dist;
+            applyZoomDelta(delta * 0.005);
+        }
+    }, { passive: false });
+
+    stage?.addEventListener("touchend", () => {
+        cropState.dragStart = null;
+        cropState.lastPinchDist = null;
+    });
+
+    // ── Scroll zoom ─────────────────────────────────────────
+    stage?.addEventListener("wheel", e => {
+        e.preventDefault();
+        applyZoomDelta(-e.deltaY * 0.001);
+    }, { passive: false });
+
+    function applyZoomDelta(delta) {
+        const slider = el("cropZoomSlider");
+        const minScale = parseFloat(slider?.min || 1);
+        const maxScale = parseFloat(slider?.max || 3);
+        const cs = cropState.canvasSize;
+        const cx = cs / 2, cy = cs / 2;
+
+        const oldScale = cropState.scale;
+        const newScale = Math.min(maxScale, Math.max(minScale, oldScale + delta * oldScale));
+        const ratio = newScale / oldScale;
+
+        // Zoom toward canvas centre
+        cropState.offsetX = cx - (cx - cropState.offsetX) * ratio;
+        cropState.offsetY = cy - (cy - cropState.offsetY) * ratio;
+        cropState.scale = newScale;
+        clampOffset();
+        drawCrop();
+
+        if (slider) slider.value = newScale;
+    }
+
+    // ── Zoom slider ─────────────────────────────────────────
+    el("cropZoomSlider")?.addEventListener("input", () => {
+        const slider = el("cropZoomSlider");
+        const newScale = parseFloat(slider.value);
+        const cs = cropState.canvasSize;
+        const cx = cs / 2, cy = cs / 2;
+        const ratio = newScale / cropState.scale;
+        cropState.offsetX = cx - (cx - cropState.offsetX) * ratio;
+        cropState.offsetY = cy - (cy - cropState.offsetY) * ratio;
+        cropState.scale = newScale;
+        clampOffset();
+        drawCrop();
+    });
+
+    // ── Close modal ─────────────────────────────────────────
+    function closeCropModal() {
+        el("cropOverlay").hidden = true;
+        cropState.img = null;
+    }
+    el("cropModalClose")?.addEventListener("click", closeCropModal);
+    el("cropCancelBtn")?.addEventListener("click", closeCropModal);
+    el("cropOverlay")?.addEventListener("click", e => {
+        if (e.target === el("cropOverlay")) closeCropModal();
+    });
+
+    // ── Export cropped circle as Blob ────────────────────────
+    function exportCroppedBlob() {
+        return new Promise(resolve => {
+            const out = cropState.outputSize;
+            const tmpCanvas = document.createElement("canvas");
+            tmpCanvas.width = out;
+            tmpCanvas.height = out;
+            const ctx = tmpCanvas.getContext("2d");
+
+            // Clip to circle
+            ctx.beginPath();
+            ctx.arc(out / 2, out / 2, out / 2, 0, Math.PI * 2);
+            ctx.clip();
+
+            // Scale cropState coords from canvasSize → outputSize
+            const ratio = out / cropState.canvasSize;
+            ctx.drawImage(
+                cropState.img,
+                cropState.offsetX * ratio,
+                cropState.offsetY * ratio,
+                cropState.img.naturalWidth * cropState.scale * ratio,
+                cropState.img.naturalHeight * cropState.scale * ratio,
+            );
+
+            tmpCanvas.toBlob(blob => resolve(blob), "image/jpeg", 0.92);
+        });
+    }
+
+    // ── File input → open crop modal ────────────────────────
     el("avatarFileInput")?.addEventListener("change", async () => {
         const file = el("avatarFileInput").files?.[0];
         if (!file) return;
@@ -373,14 +782,84 @@
             return;
         }
 
-        const btn = el("avatarUploadBtn");
-        const origLabel = btn.innerHTML;
+        openCropModal(file);
+    });
+
+    // ── Apply & Upload (from crop modal) ────────────────────
+    el("cropApplyBtn")?.addEventListener("click", async () => {
+        const btn = el("cropApplyBtn");
+        const label = btn.querySelector(".btnLabel");
+        const spinner = btn.querySelector(".btnSpinner");
+        // Capture clean state BEFORE any spinner changes
+        const resetApplyBtn = () => {
+            btn.disabled = false;
+            if (label) { label.hidden = false; }
+            if (spinner) { spinner.hidden = true; }
+        };
         btn.disabled = true;
-        btn.innerHTML = `<i data-lucide="loader"></i> Uploading…`;
-        if (window.lucide?.createIcons) lucide.createIcons();
+        if (label) label.hidden = true;
+        if (spinner) spinner.hidden = false;
 
         try {
-            // 1) Get Cloudinary signature for avatars folder
+            // 1) Export cropped blob
+            const croppedBlob = await exportCroppedBlob();
+            const croppedFile = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
+
+            // 2) Face validation — validate on original image, NOT the circular crop
+            // Circular clip makes corners black which confuses face-api
+            if (label) { label.textContent = "Checking photo…"; label.hidden = false; }
+            if (spinner) spinner.hidden = false;
+
+            // Export a RECTANGULAR version of the crop for validation
+            const rectBlob = await new Promise(res => {
+                const rc = document.createElement("canvas");
+                const out = cropState.outputSize;
+                rc.width = rc.height = out;
+                const rctx = rc.getContext("2d");
+                const ratio = out / cropState.canvasSize;
+                rctx.drawImage(
+                    cropState.img,
+                    cropState.offsetX * ratio,
+                    cropState.offsetY * ratio,
+                    cropState.img.naturalWidth * cropState.scale * ratio,
+                    cropState.img.naturalHeight * cropState.scale * ratio,
+                );
+                rc.toBlob(b => res(b), "image/jpeg", 0.92);
+            });
+            const rectFile = new File([rectBlob], "validate.jpg", { type: "image/jpeg" });
+
+            let faceDetected = false;
+            try {
+                const { valid, reason } = await _FaceValidator.validate(rectFile);
+                faceDetected = valid;
+                if (!valid) {
+                    resetApplyBtn();
+                    if (label) label.textContent = "Apply & upload";
+                    if (window.showError) showError(reason);
+                    else if (window.showToast) showToast(reason, "error");
+                    return;
+                }
+            } catch (e) {
+                resetApplyBtn();
+                if (label) label.textContent = "Apply & upload";
+                if (window.showError) showError("Photo check failed. Please retry.");
+                return;
+            }
+
+            closeCropModal();
+
+            // Show uploading state on the Upload button with step progress
+            const uploadBtn = el("avatarUploadBtn");
+            const origLabel = uploadBtn.innerHTML;
+            const setUploadStep = (msg) => {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = `<i data-lucide="loader-2" style="animation:spin 1s linear infinite"></i> ${msg}`;
+                if (window.lucide?.createIcons) lucide.createIcons();
+            };
+            setUploadStep("Preparing…");
+
+            // 3) Get Cloudinary signature
+            setUploadStep("Signing upload…");
             const sigRes = await fetch(`${API}/uploads/sign`, {
                 method: "POST", credentials: "include",
                 headers: { "Content-Type": "application/json" },
@@ -389,9 +868,10 @@
             const sig = await sigRes.json().catch(() => ({}));
             if (!sigRes.ok) throw new Error(sig.error || "Signature failed.");
 
-            // 2) Upload directly to Cloudinary
+            // 4) Upload cropped blob directly to Cloudinary
+            setUploadStep("Uploading to cloud…");
             const fd = new FormData();
-            fd.append("file", file);
+            fd.append("file", croppedFile);
             fd.append("api_key", sig.apiKey);
             fd.append("timestamp", sig.timestamp);
             fd.append("signature", sig.signature);
@@ -406,27 +886,30 @@
 
             const avatarUrl = upData.secure_url;
 
-            // 3) Save URL to backend
+            // 5) Save URL to backend
+            setUploadStep("Saving…");
             const saveRes = await fetch(`${API}/users/me/avatar`, {
                 method: "PATCH", credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ avatar_url: avatarUrl }),
+                body: JSON.stringify({ avatar_url: avatarUrl, face_detected: faceDetected }),
             });
             const saveData = await saveRes.json().catch(() => ({}));
             if (!saveRes.ok) throw new Error(saveData.error || "Failed to save avatar.");
 
-            // 4) Update local state + UI
+            // 6) Update UI
             currentUser = saveData.user || currentUser;
             if (window.AuthGuard?.saveSession) window.AuthGuard.saveSession({ user: currentUser });
             fillProfile(currentUser);
             if (window.lucide?.createIcons) lucide.createIcons();
+            showToast?.("Profile photo updated!", "success");
+
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = origLabel;
+            if (window.lucide?.createIcons) lucide.createIcons();
 
         } catch (err) {
             showMsg("saveMsg", err.message, true);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = origLabel;
-            if (window.lucide?.createIcons) lucide.createIcons();
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
         }
     });
 
@@ -597,13 +1080,70 @@
     // ── Verification section ────────────────────────────────────
     function showVerificationSection(user) {
         if (user.role === "OWNER") {
+            // Owner: KYC only — single column layout
+            const grid = el("verifCardsGrid");
+            if (grid) grid.style.gridTemplateColumns = "1fr";
             el("kycCard").hidden = false;
+            const sub = el("kycCardSub");
+            if (sub) sub.textContent = "Required to publish listings to all residents";
+            // Show owner copy in kycStateNone
+            if (el("kycNoneOwner")) el("kycNoneOwner").hidden = false;
+            if (el("kycNoneResident")) el("kycNoneResident").hidden = true;
             showKycState(user.kyc_status || "NONE", user.kyc_reject_reason);
+
         } else if (user.role === "RESIDENT") {
+            // Resident: 2-column grid — KYC left, student right
+            // Show resident copy in kycStateNone
+            if (el("kycNoneOwner")) el("kycNoneOwner").hidden = true;
+            if (el("kycNoneResident")) el("kycNoneResident").hidden = false;
+            el("kycCard").hidden = false;
+            const sub = el("kycCardSub");
+            if (sub) sub.textContent = "Required before making a booking";
+            showKycState(user.kyc_status || "NONE", user.kyc_reject_reason);
+
+            // Show student card — collapsed by default
             el("studentCard").hidden = false;
-            showStudentState(user.student_status || "NONE", user.student_reject_reason);
+            const stu = user.student_status || "NONE";
+
+            // showStudentState handles all visibility — no need to pre-set here
+            showStudentState(stu, user.student_reject_reason);
+
+            // Expand button with smooth animation
+            el("studentExpandBtn")?.addEventListener("click", () => {
+                const toggleRow = el("studentToggleRow");
+                const form = el("studentStateForm");
+                if (!form) return;
+
+                // Prepare animation
+                form.hidden = false;
+                form.style.overflow = "hidden";
+                form.style.maxHeight = "0";
+                form.style.opacity = "0";
+                form.style.transition = "max-height 0.35s ease, opacity 0.25s ease";
+
+                // Fade out toggle row
+                if (toggleRow) {
+                    toggleRow.style.transition = "opacity 0.2s ease";
+                    toggleRow.style.opacity = "0";
+                    setTimeout(() => { toggleRow.style.display = "none"; }, 200);
+                }
+
+                // Animate form open
+                requestAnimationFrame(() => {
+                    form.style.maxHeight = form.scrollHeight + 500 + "px";
+                    form.style.opacity = "1";
+                });
+
+                setTimeout(() => {
+                    form.style.maxHeight = "none";
+                    form.style.overflow = "";
+                }, 400);
+
+                setupStudentDropzones();
+                if (window.lucide?.createIcons) lucide.createIcons();
+            });
         }
-        // Admin: show placeholder, keep nav item for consistency
+        // Admin: show placeholder
         if (user.role === "ADMIN") {
             const ph = el("adminVerifPlaceholder");
             if (ph) ph.hidden = false;
@@ -638,16 +1178,34 @@
     }
 
     function showStudentState(status, reason) {
-        el("studentStateForm").hidden = status !== "NONE" && status !== "REJECTED_RESUBMIT";
+        const toggleRow = el("studentToggleRow");
+        const form = el("studentStateForm");
+
+        // Upload form: only visible when NONE (collapsed toggle) or actively resubmitting
+        // Status banners: PENDING, APPROVED, REJECTED shown separately
+        const showForm = status === "NONE" || status === "REJECTED_RESUBMIT";
+        if (toggleRow) toggleRow.style.display = (status === "NONE") ? "" : "none";
+        if (form) form.hidden = !showForm;
+
         el("studentStatePending").hidden = status !== "PENDING";
         el("studentStateApproved").hidden = status !== "APPROVED";
-        el("studentStateRejected").hidden = status !== "REJECTED";
+        el("studentStateRejected").hidden = !(status === "REJECTED" || status === "REJECTED_RESUBMIT");
 
-        if (status === "REJECTED" && reason) el("studentRejectReason").textContent = `Reason: ${reason}`;
+        if ((status === "REJECTED" || status === "REJECTED_RESUBMIT") && reason)
+            el("studentRejectReason").textContent = `Reason: ${reason}`;
 
+        // Resubmit button — with 15min cooldown check
         el("studentResubmitBtn")?.addEventListener("click", () => {
-            el("studentStateRejected").hidden = true;
-            el("studentStateForm").hidden = false;
+            const lastSubmit = localStorage.getItem("vista_student_submitted_at");
+            if (lastSubmit) {
+                const elapsed = (Date.now() - Number(lastSubmit)) / 1000 / 60;
+                if (elapsed < 15) {
+                    const remaining = Math.ceil(15 - elapsed);
+                    openStudentCooldownModal(remaining);
+                    return;
+                }
+            }
+            showStudentState("REJECTED_RESUBMIT", reason);
             setupStudentDropzones();
             if (window.lucide?.createIcons) lucide.createIcons();
         }, { once: true });
@@ -813,6 +1371,34 @@
         if (!uploads.kycFront || !uploads.kycBack) return;
         errEl.hidden = true; btn.disabled = true; label.hidden = true; spinner.hidden = false;
 
+        // Validate image quality before uploading
+        const frontCheck = await _DocValidator.validate(uploads.kycFront, "ID Front");
+        if (!frontCheck.valid) {
+            if (window.showError) showError(frontCheck.reason);
+            el("errKycFront").textContent = frontCheck.reason;
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
+            btn.addEventListener("click", handleKycSubmit, { once: true });
+            return;
+        }
+        const backCheck = await _DocValidator.validate(uploads.kycBack, "ID Back");
+        if (!backCheck.valid) {
+            if (window.showError) showError(backCheck.reason);
+            el("errKycBack").textContent = backCheck.reason;
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
+            btn.addEventListener("click", handleKycSubmit, { once: true });
+            return;
+        }
+        if (uploads.kycSelfie) {
+            const selfieCheck = await _DocValidator.validate(uploads.kycSelfie, "Selfie");
+            if (!selfieCheck.valid) {
+                if (window.showError) showError(selfieCheck.reason);
+                el("errKycSelfie").textContent = selfieCheck.reason;
+                btn.disabled = false; label.hidden = false; spinner.hidden = true;
+                btn.addEventListener("click", handleKycSubmit, { once: true });
+                return;
+            }
+        }
+
         try {
             let frontUrl, backUrl, selfieUrl = null;
 
@@ -827,7 +1413,8 @@
                 catch { el("errKycSelfie").textContent = "Selfie upload failed."; throw new Error("upload_failed"); }
             }
 
-            const res = await fetch(`${API}/kyc/submit`, {
+            const endpoint = currentUser?.role === "RESIDENT" ? "/resident/kyc/submit" : "/kyc/submit";
+            const res = await fetch(`${API}${endpoint}`, {
                 method: "POST", credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id_front_url: frontUrl, id_back_url: backUrl, selfie_url: selfieUrl }),
@@ -936,6 +1523,27 @@
         return out.secure_url;
     }
 
+    // ── Student resubmit cooldown modal ──────────────────────
+    function openStudentCooldownModal(minutesLeft) {
+        const overlay = document.createElement("div");
+        overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;";
+        overlay.innerHTML = `
+            <div style="background:#fff;border-radius:16px;padding:28px 24px 24px;max-width:340px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                <div style="width:48px;height:48px;border-radius:50%;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;">
+                    <i data-lucide="clock" style="width:22px;height:22px;"></i>
+                </div>
+                <div style="font-size:17px;font-weight:700;">Please wait</div>
+                <div style="font-size:13px;color:#6b7280;line-height:1.6;">
+                    You can resubmit your student documents in <strong>${minutesLeft} minute${minutesLeft !== 1 ? "s" : ""}</strong>.
+                </div>
+                <button style="margin-top:8px;width:100%;padding:10px 0;border-radius:10px;border:none;background:#1a1a1a;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">OK</button>
+            </div>`;
+        overlay.querySelector("button").addEventListener("click", () => document.body.removeChild(overlay));
+        overlay.addEventListener("click", e => { if (e.target === overlay) document.body.removeChild(overlay); });
+        document.body.appendChild(overlay);
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
     async function handleStudentSubmit() {
         const btn = el("submitStudentBtn");
         const label = btn.querySelector(".btnLabel");
@@ -943,15 +1551,51 @@
         const errEl = el("studentGlobalErr");
 
         if (!uploads.studentId || !uploads.cor) return;
-        errEl.hidden = true; btn.disabled = true; label.hidden = true; spinner.hidden = false;
+        errEl.hidden = true;
 
+        // Validate image quality before locking the form
+        btn.disabled = true; label.hidden = true; spinner.hidden = false;
+
+        const idCheck = await _DocValidator.validate(uploads.studentId, "School ID");
+        if (!idCheck.valid) {
+            if (window.showError) showError(idCheck.reason);
+            el("errStudentId").textContent = idCheck.reason;
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
+            btn.addEventListener("click", handleStudentSubmit, { once: true });
+            return;
+        }
+        const corCheck = await _DocValidator.validate(uploads.cor, "Certificate of Registration");
+        if (!corCheck.valid) {
+            if (window.showError) showError(corCheck.reason);
+            el("errCor").textContent = corCheck.reason;
+            btn.disabled = false; label.hidden = false; spinner.hidden = true;
+            btn.addEventListener("click", handleStudentSubmit, { once: true });
+            return;
+        }
+
+        // Lock entire form — disable dropzones + remove buttons
+        const dropzones = ["dropStudentId", "dropCor"];
+        dropzones.forEach(id => {
+            const dz = el(id);
+            if (dz) {
+                dz.style.pointerEvents = "none";
+                dz.style.opacity = "0.6";
+                const removeBtn = dz.querySelector(".removeBtn");
+                if (removeBtn) removeBtn.hidden = true;
+            }
+        });
+
+        // Show PENDING state immediately — close the form right away
+        showStudentState("PENDING");
+
+        // Upload in background
         try {
             let idUrl, corUrl;
             try { idUrl = await uploadToCloudinary(uploads.studentId, "vista_hr/student_docs"); }
-            catch { el("errStudentId").textContent = "School ID upload failed."; throw new Error("upload_failed"); }
+            catch { throw new Error("School ID upload failed. Please try again."); }
 
             try { corUrl = await uploadToCloudinary(uploads.cor, "vista_hr/student_docs"); }
-            catch { el("errCor").textContent = "CoR upload failed."; throw new Error("upload_failed"); }
+            catch { throw new Error("CoR upload failed. Please try again."); }
 
             const res = await fetch(`${API}/student/submit`, {
                 method: "POST", credentials: "include",
@@ -963,11 +1607,25 @@
 
             currentUser = data.user || currentUser;
             if (window.AuthGuard?.saveSession) window.AuthGuard.saveSession({ user: currentUser });
-            showStudentState("PENDING");
+            // Save timestamp for cooldown tracking
+            localStorage.setItem("vista_student_submitted_at", String(Date.now()));
+            // Already showing PENDING — just update currentUser
         } catch (err) {
-            if (err.message !== "upload_failed") { errEl.textContent = err.message; errEl.hidden = false; }
+            // Upload failed after form was closed — show error in pending state
+            if (window.showError) showError(err.message);
+            // Revert to form so user can retry
+            showStudentState("NONE");
+            // Re-enable dropzones
+            dropzones.forEach(id => {
+                const dz = el(id);
+                if (dz) { dz.style.pointerEvents = ""; dz.style.opacity = ""; }
+            });
+            // Re-expand form
+            const toggleRow = el("studentToggleRow");
+            const form = el("studentStateForm");
+            if (toggleRow) toggleRow.style.display = "none";
+            if (form) { form.hidden = false; }
             btn.disabled = false; label.hidden = false; spinner.hidden = true;
-            // Re-attach handler since { once: true } consumed it
             btn.addEventListener("click", handleStudentSubmit, { once: true });
         }
     }
@@ -994,7 +1652,9 @@
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || "Failed.");
-            location.href = "/auth/login.html";
+            sessionStorage.setItem("loadingDest", "/auth/login.html");
+            sessionStorage.setItem("loadingMsg", "Logging you out…");
+            location.href = "/auth/loading.html";
         } catch (err) {
             el("logoutAllOverlay").hidden = true;
             showMsg("pwSaveMsg", err.message, true);
@@ -1078,7 +1738,9 @@
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || "Failed to deactivate.");
-            location.href = "/auth/login.html";
+            sessionStorage.setItem("loadingDest", "/auth/login.html");
+            sessionStorage.setItem("loadingMsg", "Account deactivated.");
+            location.href = "/auth/loading.html";
         } catch (err) {
             errEl.textContent = err.message;
             btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true;
@@ -1094,4 +1756,5 @@
         msgEl.hidden = false;
         setTimeout(() => { msgEl.hidden = true; }, 4000);
     }
+
 })();

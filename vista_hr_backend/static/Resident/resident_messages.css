@@ -289,23 +289,16 @@ body {
     color: var(--ink-35);
 }
 
-/* ── Main / Chat area ───────────────────────────────── */
-.rm-main {
+/* ── Main / Chat area — see layout fix block below ─── */
+/* .rm-main, .rm-empty, .rm-chat defined at end of file */
+
+/* Empty state icons + text (not layout) */
+.rm-empty-placeholder {
     flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--bg);
 }
 
-/* Empty state */
 .rm-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    /* layout in fix block below */
     text-align: center;
     padding: 40px 24px;
     gap: 12px;
@@ -354,13 +347,7 @@ body {
     height: 15px;
 }
 
-/* Chat */
-.rm-chat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+/* Chat — layout defined in fix block at bottom of file */
 
 /* Chat header */
 .rm-chat-header {
@@ -722,31 +709,567 @@ body {
     }
 }
 
-/* ── BUG FIX: rm-empty should not overflow rm-main ── */
+/* ── Layout fix: rm-empty and rm-chat share the same space ── */
+/* rm-main is the container; children are absolutely positioned  */
+/* so only one is visible at a time via hidden attribute         */
 .rm-main {
     flex: 1;
     min-width: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.rm-empty,
+.rm-chat {
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
 }
 
 .rm-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 40px 24px;
     text-align: center;
-    overflow: hidden;
+    background: var(--bg);
 }
 
 .rm-chat {
-    flex: 1;
+    background: var(--bg);
+}
+
+/* hidden attribute collapses the element */
+.rm-empty[hidden],
+.rm-chat[hidden] {
+    display: none !important;
+}
+
+/* ── Avatar button fix — image overlays initials correctly ── */
+.rm-avatar-btn {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    overflow: hidden;
+    padding: 0;
+}
+
+.rm-avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* ── Bubble text — preserve line breaks ─────────────────── */
+.rm-bubble {
+    white-space: pre-wrap;
+}
+
+/* ── Thread list — smoother scroll ─────────────────────── */
+.rm-thread-list {
+    scroll-behavior: smooth;
+}
+
+/* ── Input — min height so it doesn't collapse ──────────── */
+.rm-input {
+    min-height: 42px;
+}
+
+/* ── Listing bar — hide when no listing info ────────────── */
+.rm-listing-bar[data-empty] {
+    display: none;
+}
+
+/* ── Archive tab button ──────────────────────────────── */
+.rm-archive-tab {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--ink-12);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-60);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.rm-archive-tab:hover,
+.rm-archive-tab.active {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+}
+
+/* ── Thread action buttons (archive / delete) ────────── */
+.rm-thread-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--white);
+    border-radius: 8px;
+    padding: 2px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.rm-thread:hover .rm-thread-actions {
+    opacity: 1;
+}
+
+.rm-thread-action {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 6px;
+    color: var(--ink-60);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+}
+
+.rm-thread-action i {
+    width: 14px;
+    height: 14px;
+}
+
+.rm-thread-action:hover {
+    background: var(--bg);
+}
+
+.rm-thread-delete:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.rm-thread-archive:hover,
+.rm-thread-unarchive:hover {
+    color: var(--navy);
+    background: rgba(27, 63, 110, 0.06);
+}
+
+/* ── Thread position relative for actions overlay ───── */
+.rm-thread {
+    position: relative;
+}
+
+/* ── Inbox / Archive tab bar ─────────────────────────── */
+.rm-tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 10px;
+    border-bottom: 1px solid var(--ink-06);
+}
+
+.rm-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-60);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.rm-tab:hover {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.rm-tab.active {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+}
+
+/* ── Thread action buttons (archive / delete) ────────── */
+.rm-thread-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.rm-thread:hover .rm-thread-actions {
+    opacity: 1;
+}
+
+.rm-thread-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--ink-35);
+    transition: background 0.12s, color 0.12s;
+}
+
+.rm-thread-action:hover {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.rm-thread-delete:hover {
+    color: #dc2626;
+}
+
+.rm-thread-action i {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── Deleted message bubble ──────────────────────────── */
+.rm-bubble.is-deleted {
+    font-style: italic;
+    opacity: 0.5;
+}
+
+/* ── Delete confirm modal ────────────────────────────── */
+.rm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.rm-modal-overlay[hidden] {
+    display: none !important;
+}
+
+.rm-modal-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 28px 24px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.rm-modal-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fef2f2;
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.rm-modal-icon i {
+    width: 22px;
+    height: 22px;
+}
+
+.rm-modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.rm-modal-sub {
+    font-size: 13px;
+    color: var(--ink-60);
+    line-height: 1.6;
+}
+
+.rm-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    width: 100%;
+}
+
+.rm-modal-btn {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 10px;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s;
+}
+
+.rm-modal-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.rm-modal-ghost {
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid var(--ink-12);
+}
+
+.rm-modal-ghost:hover {
+    background: #efefef;
+}
+
+.rm-modal-danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.rm-modal-danger:hover {
+    background: #b91c1c;
+}
+
+/* ════════════════════════════════════════
+   VH SHARED TOPBAR
+════════════════════════════════════════ */
+.vh-topbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: #fff;
+    border-bottom: 1px solid rgba(34, 34, 34, 0.12);
+    height: 72px;
+}
+
+.vh-topbar-inner {
+    width: 100%;
+    padding: 0 48px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.vh-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+    color: #222;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.vh-brand-mark {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: #C8872A;
+    flex-shrink: 0;
+}
+
+.vh-topbar-right {
+    display: flex;
+    align-items: center;
+}
+
+.vh-profile-wrap {
+    position: relative;
+}
+
+.vh-user-btn {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid rgba(34, 34, 34, 0.18);
+    border-radius: 999px;
+    padding: 4px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 140ms;
+}
+
+.vh-user-btn:hover {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.14);
+}
+
+.vh-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B3F6E, #C8872A);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
-    min-height: 0;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.vh-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.vh-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 220px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    z-index: 300;
+    animation: vhDdIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vh-dropdown.open {
+    display: block;
+}
+
+@keyframes vhDdIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.vh-dd-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px 12px;
+    overflow: hidden;
+}
+
+.vh-dd-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B3F6E, #C8872A);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.vh-dd-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.vh-dd-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.vh-dd-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vh-dd-email {
+    font-size: 11px;
+    color: rgba(34, 34, 34, 0.6);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vh-dd-sep {
+    height: 1px;
+    background: rgba(34, 34, 34, 0.1);
+    margin: 4px 0;
+}
+
+.vh-dd-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    color: #222;
+    text-align: left;
+    transition: background 120ms;
+}
+
+.vh-dd-item:hover {
+    background: rgba(34, 34, 34, 0.05);
+}
+
+.vh-dd-item i {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: rgba(34, 34, 34, 0.6);
+}
+
+.vh-dd-logout {
+    color: #dc2626;
+}
+
+.vh-dd-logout i {
+    color: #dc2626;
 }

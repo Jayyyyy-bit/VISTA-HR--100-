@@ -11,19 +11,50 @@
         href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <link rel="stylesheet" href="/Resident/listing_detail.css" />
 </head>
 
 <body>
 
-    <!-- TOPBAR -->
-    <header class="ld-bar">
-        <div class="ld-bar-in">
-            <a class="ld-brand" href="/Resident/resident_home.html"><span class="ld-dot"></span>VISTA<b>-HR</b></a>
-            <div class="ld-bar-right">
-                <button class="ld-topbtn" id="ldShareBtn"><i data-lucide="share-2"></i><span>Share</span></button>
-                <button class="ld-topbtn" id="ldSaveBtn"><i data-lucide="heart"></i><span>Save</span></button>
+    <!-- ══ TOPBAR ══ -->
+    <header class="vh-topbar">
+        <div class="vh-topbar-inner">
+            <a class="vh-brand" href="/Resident/resident_home.html">
+                <span class="vh-brand-mark"></span>
+                <span>VISTA<b>-HR</b></span>
+            </a>
+            <div class="vh-topbar-right">
+                <div class="vh-profile-wrap" id="vhProfileWrap">
+                    <button class="vh-user-btn" id="vhProfileBtn" aria-haspopup="true" aria-expanded="false">
+                        <span class="vh-avatar" id="vhAvatarEl"></span>
+                    </button>
+                    <div class="vh-dropdown" id="vhDropdown" aria-hidden="true">
+                        <div class="vh-dd-user">
+                            <div class="vh-dd-avatar" id="vhDdAvatar"></div>
+                            <div class="vh-dd-info">
+                                <div class="vh-dd-name" id="vhDdName">Resident</div>
+                                <div class="vh-dd-email" id="vhDdEmail"></div>
+                            </div>
+                        </div>
+                        <div class="vh-dd-sep"></div>
+                        <button class="vh-dd-item" onclick="location.href='/Resident/my-bookings.html'"><i
+                                data-lucide="calendar-check"></i>My bookings</button>
+                        <button class="vh-dd-item" onclick="location.href='/Resident/resident_messages.html'"><i
+                                data-lucide="message-square"></i>Messages</button>
+                        <button class="vh-dd-item" onclick="location.href='/Resident/saved_listings.html'"><i
+                                data-lucide="heart"></i>Saved listings</button>
+                        <button class="vh-dd-item" onclick="location.href='../shared/my_tickets.html'"><i
+                                data-lucide="ticket"></i>My tickets</button>
+                        <button class="vh-dd-item" onclick="location.href='/auth/account-settings.html'"><i
+                                data-lucide="user"></i>Profile</button>
+                        <div class="vh-dd-sep"></div>
+                        <button class="vh-dd-item vh-dd-logout" id="vhLogout"><i data-lucide="log-out"></i>Log
+                            out</button>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -328,6 +359,61 @@
     <script src="/auth/sessionGuard.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/Resident/listing_detail.js"></script>
+    <script>
+        /* ── VH Shared Topbar ── */
+        (function () {
+            const API = "/api";
+            async function initVhTopbar() {
+                let user = null;
+                try {
+                    const res = await fetch(API + "/auth/me", { credentials: "include" });
+                    if (res.ok) { const d = await res.json(); user = d?.user || null; }
+                } catch { }
+                const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "Resident";
+                const init = (name[0] || "R").toUpperCase();
+                const avatarEl = document.getElementById("vhAvatarEl");
+                const ddAvatar = document.getElementById("vhDdAvatar");
+                if (avatarEl) avatarEl.textContent = init;
+                if (ddAvatar) ddAvatar.textContent = init;
+                const nameEl = document.getElementById("vhDdName");
+                const emailEl = document.getElementById("vhDdEmail");
+                if (nameEl) nameEl.textContent = name;
+                if (emailEl) emailEl.textContent = user?.email || "";
+                if (user?.avatar_url) {
+                    [avatarEl, ddAvatar].forEach(el => {
+                        if (!el) return;
+                        el.textContent = "";
+                        let img = el.querySelector("img");
+                        if (!img) { img = document.createElement("img"); img.alt = "Avatar"; el.appendChild(img); }
+                        img.src = user.avatar_url;
+                    });
+                }
+                if (window.lucide?.createIcons) lucide.createIcons();
+                const btn = document.getElementById("vhProfileBtn");
+                const menu = document.getElementById("vhDropdown");
+                btn?.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    menu?.classList.toggle("open");
+                    btn.setAttribute("aria-expanded", menu?.classList.contains("open"));
+                });
+                document.addEventListener("click", () => menu?.classList.remove("open"));
+                menu?.addEventListener("click", e => e.stopPropagation());
+                document.getElementById("vhLogout")?.addEventListener("click", async () => {
+                    try { await fetch(API + "/auth/logout", { method: "POST", credentials: "include" }); } catch { }
+                    try { window.AuthGuard?.clearSession?.(); } catch { }
+                    localStorage.removeItem("vista_session_user");
+                    sessionStorage.setItem("loadingDest", "/auth/login.html");
+                    sessionStorage.setItem("loadingMsg", "Logging you out…");
+                    window.location.href = "/auth/loading.html";
+                });
+            }
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", initVhTopbar);
+            } else {
+                initVhTopbar();
+            }
+        })();
+    </script>
 </body>
 
 </html>

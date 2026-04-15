@@ -185,6 +185,12 @@ body {
     cursor: pointer;
     padding: 0;
     transition: transform 160ms ease;
+    position: relative;
+    border-radius: 999px;
+    overflow: hidden;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
 }
 
 .avatarBtn:hover {
@@ -201,6 +207,15 @@ body {
     place-items: center;
     font-weight: 900;
     box-shadow: 0 10px 22px rgba(18, 52, 88, 0.18);
+}
+
+.avatarImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 999px;
 }
 
 .profileMenu {
@@ -1565,4 +1580,32 @@ button.disabled {
 .notif-delete i {
     width: 16px;
     height: 16px;
+}
+
+/* ── Sidebar owner avatar photo support ─────────────────────── */
+.td-owner-avatar-wrap {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto 8px;
+    flex-shrink: 0;
+}
+
+.td-owner-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+}
+
+.td-owner-avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }

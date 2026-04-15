@@ -32,24 +32,24 @@
 
     function redirectByRole(user) {
         const role = String(user?.role || "").toUpperCase();
+        let dest = ROUTE_ROLES;
+        let msg = "Welcome back!";
 
         if (role === "ADMIN") {
-            window.location.replace(ROUTE_ADMIN_USERS);
-            return;
-        }
-
-        if (role === "OWNER") {
+            dest = ROUTE_ADMIN_USERS;
+            msg = "Loading admin panel…";
+        } else if (role === "OWNER") {
             const done = Number(user?.has_completed_onboarding) === 1;
-            window.location.replace(done ? ROUTE_OWNER_DASHBOARD : ROUTE_OWNER_WELCOME);
-            return;
+            dest = done ? ROUTE_OWNER_DASHBOARD : ROUTE_OWNER_WELCOME;
+            msg = "Welcome back, Owner!";
+        } else if (role === "RESIDENT") {
+            dest = ROUTE_RESIDENT_HOME;
+            msg = "Welcome back!";
         }
 
-        if (role === "RESIDENT") {
-            window.location.replace(ROUTE_RESIDENT_HOME);
-            return;
-        }
-
-        window.location.replace(ROUTE_ROLES);
+        sessionStorage.setItem("loadingDest", dest);
+        sessionStorage.setItem("loadingMsg", msg);
+        window.location.replace("/auth/loading.html");
     }
 
     function clearWizardDraftCache() {

@@ -4,7 +4,7 @@
 ============================================================ */
 
 (() => {
-    const API = "http://127.0.0.1:5000/api";
+    const API = "/api";
 
     const state = {
         conversations: [],
@@ -12,6 +12,7 @@
         messages: [],
         searchQuery: "",
         meId: null,
+        showArchived: false,  // toggle between inbox and archived
     };
 
     let pollTimer = null;
@@ -64,9 +65,10 @@
         return data;
     }
 
-    async function loadConversations() {
+    async function loadConversations(archived = false) {
         try {
-            const data = await apiFetch("/messages/conversations");
+            const url = archived ? "/messages/conversations?archived=true" : "/messages/conversations";
+            const data = await apiFetch(url);
             state.conversations = data.conversations || [];
         } catch (e) {
             console.warn("[Messages] loadConversations failed", e);
@@ -91,14 +93,16 @@
                 method: "POST",
                 body: JSON.stringify({ receiver_id: other_user_id, listing_id, text: text.trim() }),
             });
-            state.messages.push(data.data);
+            const sent = data.data || data.message_obj || data;
+            if (sent && (sent.id || sent.text || sent.body)) state.messages.push(sent);
             renderBubbles();
             scrollToBottom();
             await loadConversations();
             renderThreadList();
         } catch (e) {
             console.error("[Messages] sendMessage failed", e);
-            alert("Failed to send. Please try again.");
+            if (window.showError) showError("Failed to send. Please try again.");
+            else console.error("[Messages] sendMessage failed", e);
         }
     }
 
@@ -143,13 +147,73 @@
                     <div class="rm-thread-preview">${esc(t.last_message || "")}</div>
                 </div>
                 ${t.unread ? '<span class="rm-unread-dot"></span>' : ""}
+                <div class="rm-thread-actions">
+                    ${t.is_archived
+                    ? `<button class="rm-thread-action rm-thread-unarchive" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Unarchive">
+                            <i data-lucide="inbox"></i>
+                           </button>`
+                    : `<button class="rm-thread-action rm-thread-archive" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Archive">
+                            <i data-lucide="archive"></i>
+                           </button>`
+                }
+                    <button class="rm-thread-action rm-thread-delete" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Delete conversation">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
             </div>`;
         }).join("");
 
         listEl.querySelectorAll(".rm-thread[data-listing]").forEach(row => {
-            row.addEventListener("click", () =>
-                openThread(Number(row.dataset.listing), Number(row.dataset.other))
-            );
+            row.addEventListener("click", e => {
+                // Don't open thread if clicking action buttons
+                if (e.target.closest(".rm-thread-actions")) return;
+                openThread(Number(row.dataset.listing), Number(row.dataset.other));
+            });
+        });
+
+        // Archive buttons
+        listEl.querySelectorAll(".rm-thread-archive").forEach(btn => {
+            btn.addEventListener("click", async e => {
+                e.stopPropagation();
+                const lid = Number(btn.dataset.listing);
+                const oid = Number(btn.dataset.other);
+                try {
+                    await apiFetch(`/messages/conversations/${lid}/${oid}/archive`, { method: "POST" });
+                    await loadConversations(state.showArchived);
+                    renderThreadList();
+                    if (state.activeThread?.listing_id === lid && state.activeThread?.other_user_id === oid) {
+                        el("rmEmpty").hidden = false;
+                        el("rmChat").hidden = true;
+                        state.activeThread = null;
+                    }
+                    if (window.showSuccess) showSuccess("Conversation archived.");
+                } catch (err) { if (window.showError) showError(err.error || "Failed."); }
+            });
+        });
+
+        // Unarchive buttons
+        listEl.querySelectorAll(".rm-thread-unarchive").forEach(btn => {
+            btn.addEventListener("click", async e => {
+                e.stopPropagation();
+                const lid = Number(btn.dataset.listing);
+                const oid = Number(btn.dataset.other);
+                try {
+                    await apiFetch(`/messages/conversations/${lid}/${oid}/archive`, { method: "DELETE" });
+                    await loadConversations(state.showArchived);
+                    renderThreadList();
+                    if (window.showSuccess) showSuccess("Moved back to inbox.");
+                } catch (err) { if (window.showError) showError(err.error || "Failed."); }
+            });
+        });
+
+        // Delete buttons
+        listEl.querySelectorAll(".rm-thread-delete").forEach(btn => {
+            btn.addEventListener("click", async e => {
+                e.stopPropagation();
+                const lid = Number(btn.dataset.listing);
+                const oid = Number(btn.dataset.other);
+                openDeleteModal(lid, oid);
+            });
         });
 
         if (window.lucide?.createIcons) lucide.createIcons();
@@ -169,7 +233,7 @@
 
         let lastDate = null;
         bubblesEl.innerHTML = state.messages.map(m => {
-            const isOwn = m.from === "me";
+            const isOwn = m.sender_id === state.meId || m.from === "me";  // support both field shapes
             const msgDateStr = m.created_at ? new Date(
                 m.created_at.includes("+") || m.created_at.endsWith("Z") ? m.created_at : m.created_at + "Z"
             ).toDateString() : null;
@@ -186,7 +250,7 @@
 
             return `${divider}
             <div class="rm-bubble-group ${isOwn ? "is-own" : "is-other"}">
-                <div class="rm-bubble">${esc(m.text)}</div>
+                <div class="rm-bubble">${esc(m.text || m.body || "")}</div>
                 <div class="rm-bubble-meta">
                     ${receipt}
                     <span>${esc(fmtTime(m.created_at))}</span>
@@ -262,7 +326,7 @@
                 await loadConversations();
                 renderThreadList();
             }
-        }, 1500);
+        }, 8000);  // 8s — avoid hammering the server
 
         if (window.lucide?.createIcons) lucide.createIcons();
         el("rmInput")?.focus();
@@ -312,6 +376,50 @@
         await sendMessage(text);
     }
 
+    // ── Delete confirmation modal ────────────────────────────
+    let _deleteTarget = null; // { lid, oid }
+
+    function openDeleteModal(lid, oid) {
+        _deleteTarget = { lid, oid };
+        el("rmDeleteOverlay").hidden = false;
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function closeDeleteModal() {
+        _deleteTarget = null;
+        el("rmDeleteOverlay").hidden = true;
+    }
+
+    el("rmDeleteCancel")?.addEventListener("click", closeDeleteModal);
+    el("rmDeleteOverlay")?.addEventListener("click", e => {
+        if (e.target === el("rmDeleteOverlay")) closeDeleteModal();
+    });
+    el("rmDeleteConfirm")?.addEventListener("click", async () => {
+        if (!_deleteTarget) return;
+        const { lid, oid } = _deleteTarget;
+        const btn = el("rmDeleteConfirm");
+        btn.textContent = "Deleting…";
+        btn.disabled = true;
+        try {
+            await apiFetch(`/messages/conversations/${lid}/${oid}`, { method: "DELETE" });
+            await loadConversations(state.showArchived);
+            renderThreadList();
+            if (state.activeThread?.listing_id === lid && state.activeThread?.other_user_id === oid) {
+                el("rmEmpty").hidden = false;
+                el("rmChat").hidden = true;
+                state.activeThread = null;
+                clearInterval(pollTimer);
+            }
+            closeDeleteModal();
+            if (window.showSuccess) showSuccess("Conversation deleted.");
+        } catch (err) {
+            if (window.showError) showError(err.error || "Failed to delete.");
+        } finally {
+            btn.textContent = "Delete";
+            btn.disabled = false;
+        }
+    });
+
     // ── Boot ───────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
         // Auth guard
@@ -324,13 +432,43 @@
 
         state.meId = user.id;
 
-        // Set avatar
-        const init = (user.first_name?.[0] || user.email?.[0] || "R").toUpperCase();
-        if (el("rmAvatar")) el("rmAvatar").textContent = init;
+        // Propagate avatar photo or initials
+        if (window.UserAvatar) {
+            UserAvatar.apply(user);
+        } else {
+            const init = (user.first_name?.[0] || user.email?.[0] || "R").toUpperCase();
+            if (el("rmAvatar")) el("rmAvatar").textContent = init;
+        }
 
         // Load conversations
-        await loadConversations();
+        await loadConversations(state.showArchived);
         renderThreadList();
+
+        // Inbox / Archived tab toggle
+        const archiveTab = el("rmArchiveTab");
+        const inboxTab = el("rmInboxTab");
+        archiveTab?.addEventListener("click", async () => {
+            state.showArchived = true;
+            archiveTab.classList.add("active");
+            inboxTab?.classList.remove("active");
+            state.activeThread = null;
+            el("rmEmpty").hidden = false;
+            el("rmChat").hidden = true;
+            clearInterval(pollTimer);
+            await loadConversations(true);
+            renderThreadList();
+        });
+        inboxTab?.addEventListener("click", async () => {
+            state.showArchived = false;
+            inboxTab.classList.add("active");
+            archiveTab?.classList.remove("active");
+            state.activeThread = null;
+            el("rmEmpty").hidden = false;
+            el("rmChat").hidden = true;
+            clearInterval(pollTimer);
+            await loadConversations(false);
+            renderThreadList();
+        });
 
         // Check for ?listing=X&owner=Y in URL (open thread directly from listing detail)
         const params = new URLSearchParams(location.search);

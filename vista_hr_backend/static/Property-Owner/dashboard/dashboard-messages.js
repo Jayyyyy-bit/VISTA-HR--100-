@@ -11,6 +11,7 @@
 
     const state = {
         conversations: [],
+        showArchived: false,
         activeThread: null,
         messages: [],
         searchQuery: "",
@@ -61,7 +62,10 @@
 
     async function loadConversations() {
         try {
-            const data = await apiFetch("/messages/conversations");
+            const url = state.showArchived
+                ? "/messages/conversations?archived=true"
+                : "/messages/conversations";
+            const data = await apiFetch(url);
             state.conversations = data.conversations || [];
         } catch (e) {
             console.error("[messages] loadConversations failed", e);
@@ -149,13 +153,62 @@
                     <span class="msgThreadTag tag-listing">${esc(t.listing_title)}</span>
                 </div>
                 ${t.unread ? '<span class="msgUnreadDot"></span>' : ""}
+                <div class="msgThreadActions">
+                    <button class="msgThreadActionBtn msgArchiveBtn"
+                        data-listing="${t.listing_id}" data-other="${t.other_user_id}"
+                        data-archived="${t.is_archived ? 'true' : 'false'}"
+                        title="${t.is_archived ? 'Unarchive' : 'Archive'}">
+                        <i data-lucide="${t.is_archived ? 'inbox' : 'archive'}"></i>
+                    </button>
+                    <button class="msgThreadActionBtn msgDeleteBtn"
+                        data-listing="${t.listing_id}" data-other="${t.other_user_id}"
+                        title="Delete conversation">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
             </div>`;
         }).join("");
 
         el.querySelectorAll(".msgThread[data-listing]").forEach(row => {
-            row.addEventListener("click", () =>
-                openThread(Number(row.dataset.listing), Number(row.dataset.other))
-            );
+            row.addEventListener("click", e => {
+                if (e.target.closest(".msgThreadActions")) return;
+                openThread(Number(row.dataset.listing), Number(row.dataset.other));
+            });
+        });
+
+        // Archive buttons
+        el.querySelectorAll(".msgArchiveBtn").forEach(btn => {
+            btn.addEventListener("click", async e => {
+                e.stopPropagation();
+                const lid = Number(btn.dataset.listing);
+                const oid = Number(btn.dataset.other);
+                const isArchived = btn.dataset.archived === "true";
+                try {
+                    await apiFetch(`/messages/conversations/${lid}/${oid}/archive`,
+                        { method: isArchived ? "DELETE" : "POST" });
+                    if (state.activeThread?.listing_id === lid && state.activeThread?.other_user_id === oid) {
+                        state.activeThread = null;
+                        clearInterval(pollTimer);
+                        const panel = document.getElementById("msgChatPanel");
+                        const empty = document.getElementById("msgEmptyState");
+                        if (panel) panel.hidden = true;
+                        if (empty) empty.hidden = false;
+                    }
+                    await loadConversations();
+                    renderThreadList();
+                } catch (err) { console.error("Archive failed", err); }
+            });
+        });
+
+        // Delete buttons
+        el.querySelectorAll(".msgDeleteBtn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                openDashDeleteModal(
+                    Number(btn.dataset.listing),
+                    Number(btn.dataset.other)
+                );
+            });
         });
 
         const pill = document.getElementById("msgUnreadPill");
@@ -194,7 +247,7 @@
                 renderThreadList();
                 loadUnreadBadge();
             }
-        }, 1500);
+        }, 8000);  // 8s — avoid hammering the server
     }
 
     function renderChatHeader() {
@@ -418,6 +471,64 @@
     function bindSearch() {
         document.getElementById("msgSearchInput")?.addEventListener("input", e => { state.searchQuery = e.target.value; renderThreadList(); });
     }
+
+    // ── Delete modal ─────────────────────────────────────
+    let _dashDeleteTarget = null;
+
+    function openDashDeleteModal(lid, oid) {
+        _dashDeleteTarget = { lid, oid };
+        const overlay = document.getElementById("msgDeleteOverlay");
+        if (overlay) overlay.hidden = false;
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function closeDashDeleteModal() {
+        _dashDeleteTarget = null;
+        const overlay = document.getElementById("msgDeleteOverlay");
+        if (overlay) overlay.hidden = true;
+    }
+
+    document.getElementById("msgDeleteCancel")?.addEventListener("click", closeDashDeleteModal);
+    document.getElementById("msgDeleteOverlay")?.addEventListener("click", e => {
+        if (e.target === document.getElementById("msgDeleteOverlay")) closeDashDeleteModal();
+    });
+    document.getElementById("msgDeleteConfirm")?.addEventListener("click", async () => {
+        if (!_dashDeleteTarget) return;
+        const { lid, oid } = _dashDeleteTarget;
+        const btn = document.getElementById("msgDeleteConfirm");
+        btn.textContent = "Deleting…"; btn.disabled = true;
+        try {
+            await apiFetch(`/messages/conversations/${lid}/${oid}`, { method: "DELETE" });
+            if (state.activeThread?.listing_id === lid && state.activeThread?.other_user_id === oid) {
+                state.activeThread = null;
+                clearInterval(pollTimer);
+                const panel = document.getElementById("msgChatPanel");
+                const empty = document.getElementById("msgEmptyState");
+                if (panel) panel.hidden = true;
+                if (empty) empty.hidden = false;
+            }
+            closeDashDeleteModal();
+            await loadConversations();
+            renderThreadList();
+        } catch (err) { console.error("Delete failed", err); }
+        finally { btn.textContent = "Delete"; btn.disabled = false; }
+    });
+
+    // ── Inbox / Archive tab toggle ───────────────────────
+    document.getElementById("msgInboxTab")?.addEventListener("click", async () => {
+        state.showArchived = false;
+        document.getElementById("msgInboxTab")?.classList.add("active");
+        document.getElementById("msgArchiveTab")?.classList.remove("active");
+        await loadConversations();
+        renderThreadList();
+    });
+    document.getElementById("msgArchiveTab")?.addEventListener("click", async () => {
+        state.showArchived = true;
+        document.getElementById("msgArchiveTab")?.classList.add("active");
+        document.getElementById("msgInboxTab")?.classList.remove("active");
+        await loadConversations();
+        renderThreadList();
+    });
 
     async function initMessages() {
         if (!initMessages._bound) {

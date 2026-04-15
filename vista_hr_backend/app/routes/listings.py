@@ -544,12 +544,24 @@ def update_step7(listing_id: int):
     if len(photos) < 5:
         return json_error("Validation failed", 400, fields={"photos": "Minimum 5 photos required."})
 
+    virtual_tour = data.get("virtualTour") or {}
+    if not isinstance(virtual_tour, dict):
+        return json_error("Validation failed", 400, fields={"virtualTour": "Must be an object."})
+
+    pano_url = str(virtual_tour.get("panoUrl") or "").strip()
+    pano_public_id = str(virtual_tour.get("panoPublicId") or "").strip()
+    enabled = bool(pano_url)
+
     listing.photos = photos
+    listing.virtual_tour = {
+        "enabled": enabled,
+        "panoUrl": pano_url,
+        "panoPublicId": pano_public_id,
+    }
     listing.current_step = max(listing.current_step or 1, 7)
     listing.status = "DRAFT"
 
     return _commit_or_500({"message": "Step 7 saved", "listing": listing.to_dict()}, 200)
-
 
 # =========================
 # Step 8 (title + description) -> mark READY if complete and unverified

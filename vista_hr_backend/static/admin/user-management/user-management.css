@@ -2673,3 +2673,49 @@ tbody tr:hover {
 .sidebar.collapsed~.main-wrap {
     margin-left: var(--sidebar-collapsed);
 }
+
+/* ── Reject modal chips ─────────────────────────────────── */
+.reject-chip {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: #f9fafb;
+    font-family: var(--font, 'DM Sans', sans-serif);
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.reject-chip:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.reject-chip.selected {
+    background: #fef2f2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+#rejectReasonInput:focus {
+    border-color: #dc2626;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
+}
+
+.btn.danger {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+}
+
+.btn.danger:hover {
+    background: #b91c1c;
+}
+
+.btn.danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

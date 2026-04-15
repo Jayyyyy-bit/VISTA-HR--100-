@@ -20,6 +20,40 @@
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-calendar.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-messages.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-today.css">
+    <style>
+        /* ── PO Dashboard avatar photo support ── */
+        .avatarBtn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .avatarImg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: inherit;
+        }
+
+        .td-owner-avatar-wrap {
+            position: relative;
+            overflow: hidden;
+            border-radius: 50%;
+            /* match existing td-owner-avatar sizing */
+            width: var(--avatar-size, 40px);
+            height: var(--avatar-size, 40px);
+        }
+
+        .td-owner-avatar-img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+    </style>
 </head>
 
 <body>
@@ -44,7 +78,7 @@
 
 
             <div class="rightTools">
-                <button class="btn ghost" id="switchResidentBtn" type="button">Switch to Resident</button>
+
 
                 <div class="notif-wrap" id="notifWrap">
                     <button class="notif-btn" id="notifBtn" aria-label="Notifications">
@@ -61,7 +95,8 @@
                 </div>
 
                 <button class="avatarBtn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
-                    <span class="avatarCircle" id="avatarCircle">O</span>
+                    <span class="avatarCircle" id="avatarCircle" data-user-initials>O</span>
+                    <img class="avatarImg" id="avatarImg" data-user-avatar alt="Avatar" hidden />
                 </button>
 
                 <div class="profileMenu" id="profileMenu" aria-hidden="true">
@@ -69,7 +104,7 @@
                         <i data-lucide="user"></i><span>Account</span>
                     </button>
                     <button class="menuItem" id="menuHelp" type="button">
-                        <i data-lucide="help-circle"></i><span>Help</span>
+
                     </button>
                     <div class="menuSep"></div>
                     <button class="menuItem danger" id="menuLogout" type="button">
@@ -175,7 +210,11 @@
                 <div class="td-sidebar">
 
                     <div class="td-owner-card">
-                        <div class="td-owner-avatar" id="sidebarAvatar">O</div>
+                        <div class="td-owner-avatar-wrap">
+                            <div class="td-owner-avatar" id="sidebarAvatar" data-user-initials>O</div>
+                            <img class="td-owner-avatar-img" id="sidebarAvatarImg" data-user-avatar alt="Avatar"
+                                hidden />
+                        </div>
                         <div class="td-owner-name" id="sidebarOwnerName">—</div>
                         <div class="td-owner-role">Property Owner</div>
                         <div class="td-owner-badges" id="sidebarBadges"></div>
@@ -416,6 +455,12 @@
                         <input class="msgSearchInput" id="msgSearchInput" type="text"
                             placeholder="Search conversations&#8230;" autocomplete="off">
                     </div>
+                    <div class="msgTabBar">
+                        <button class="msgTab active" id="msgInboxTab" type="button">Inbox</button>
+                        <button class="msgTab" id="msgArchiveTab" type="button">
+                            <i data-lucide="archive" style="width:12px;height:12px;"></i> Archived
+                        </button>
+                    </div>
                     <div class="msgThreadList" id="msgThreadList"></div>
                 </div>
 
@@ -444,6 +489,36 @@
                 <!-- RIGHT: tenant info panel -->
                 <div class="msgInfoPanel" id="msgInfoPanel" hidden>
                     <div class="msgInfoInner" id="msgInfoInner"></div>
+                </div>
+
+                <!-- Delete confirm modal — add anywhere inside the messages panel or body -->
+                <div class="msgDeleteOverlay" id="msgDeleteOverlay" hidden style="
+    position:fixed;inset:0;background:rgba(0,0,0,0.45);
+    z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:28px 24px 24px;
+        max-width:340px;width:100%;text-align:center;display:flex;
+        flex-direction:column;align-items:center;gap:10px;">
+                        <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;
+            color:#dc2626;display:flex;align-items:center;justify-content:center;margin-bottom:4px;">
+                            <i data-lucide="trash-2" style="width:22px;height:22px;"></i>
+                        </div>
+                        <div style="font-size:17px;font-weight:700;">Delete conversation?</div>
+                        <div style="font-size:13px;color:#6b7280;line-height:1.6;">
+                            This removes the conversation from your inbox only. The resident is unaffected.
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:8px;width:100%;">
+                            <button id="msgDeleteCancel" type="button" style="
+                flex:1;padding:10px 0;border-radius:10px;font-size:14px;font-weight:700;
+                cursor:pointer;background:#f3f4f6;color:#374151;border:none;">
+                                Cancel
+                            </button>
+                            <button id="msgDeleteConfirm" type="button" style="
+                flex:1;padding:10px 0;border-radius:10px;font-size:14px;font-weight:700;
+                cursor:pointer;background:#dc2626;color:#fff;border:none;">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -686,6 +761,7 @@
 
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/auth/user-avatar.js"></script>
     <script src="/auth/sessionGuard.js" defer></script>
     <script src="/PO-after-signup/listing-wizard/core/store.js" defer></script>
     <script src="/Property-Owner/dashboard/property-owner-dashboard.js" defer></script>
@@ -693,6 +769,103 @@
     <script src="/Property-Owner/dashboard/dashboard-messages.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-today.js" defer></script>
 
+
+
+    <!-- Moved In Confirm Modal -->
+    <div class="modalOverlay" id="movedInOverlay" hidden>
+        <div class="modalCard">
+            <div class="modalHead" style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">
+                <div
+                    style="width:40px;height:40px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="door-open" style="width:20px;height:20px;color:#16a34a;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Mark as Moved In?</div>
+                    <div style="font-size:13px;color:var(--muted,#6b7280);line-height:1.5;">
+                        This will set the booking status to <strong>Occupied</strong>.
+                        The resident will be notified. This cannot be undone.
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button class="btn ghost" id="movedInCancelBtn" type="button">Cancel</button>
+                <button class="btn solid" id="movedInConfirmBtn" type="button"
+                    style="background:#16a34a;border-color:#16a34a;">
+                    <span class="btnLabel">Confirm Move In</span>
+                    <span class="btnSpinner" hidden
+                        style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Owner Cancel Reservation Modal -->
+    <div class="modalOverlay" id="ownerCancelOverlay" hidden>
+        <div class="modalCard">
+            <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">
+                <div
+                    style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="x-circle" style="width:20px;height:20px;color:#dc2626;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Cancel this reservation?</div>
+                    <div style="font-size:13px;color:var(--muted,#6b7280);line-height:1.5;">
+                        The resident will be notified. This cannot be undone.
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:14px;">
+                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;">Reason <span
+                        style="font-weight:400;opacity:.6;">(optional)</span></label>
+                <textarea id="ownerCancelNote" rows="3" placeholder="Let the resident know why you're cancelling…"
+                    style="width:100%;border:1.5px solid rgba(3,3,3,0.12);border-radius:10px;padding:10px 12px;font-size:13px;font-family:inherit;resize:none;outline:none;box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                <button class="btn ghost" id="ownerCancelDismissBtn" type="button">Keep it</button>
+                <button class="btn solid" id="ownerCancelConfirmBtn" type="button"
+                    style="background:#dc2626;border-color:#dc2626;">
+                    <span class="btnLabel">Cancel reservation</span>
+                    <span class="btnSpinner" hidden
+                        style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Reject Booking Modal -->
+    <div class="modalOverlay" id="rejectOverlay" hidden>
+        <div class="modalCard">
+            <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">
+                <div
+                    style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="x-circle" style="width:20px;height:20px;color:#dc2626;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Reject this booking?</div>
+                    <div style="font-size:13px;color:var(--muted,#6b7280);line-height:1.5;">
+                        The resident will be notified. You can include a reason below.
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:14px;">
+                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;">Reason <span
+                        style="font-weight:400;opacity:.6;">(optional)</span></label>
+                <textarea id="rejectNote" rows="3" placeholder="e.g. Unit is no longer available…"
+                    style="width:100%;border:1.5px solid rgba(3,3,3,0.12);border-radius:10px;padding:10px 12px;font-size:13px;font-family:inherit;resize:none;outline:none;box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                <button class="btn ghost" id="rejectDismissBtn" type="button">Go back</button>
+                <button class="btn solid" id="rejectConfirmBtn" type="button"
+                    style="background:#dc2626;border-color:#dc2626;">
+                    <span class="btnLabel">Reject booking</span>
+                    <span class="btnSpinner" hidden
+                        style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 
 </body>
 

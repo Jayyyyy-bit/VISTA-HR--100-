@@ -12,6 +12,7 @@
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/Resident/resident_home.css" />
+
 </head>
 
 <body>
@@ -68,13 +69,12 @@
                 <!-- Avatar + dropdown (separate from bell) -->
                 <div class="profile-wrap" id="profileWrap">
                     <button class="user-menu-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
-                        <i data-lucide="menu" class="umenu-icon"></i>
-                        <span class="avatar" id="avatarEl">R</span>
+                        <span class="avatar" id="avatarEl" data-user-initials></span>
                     </button>
                     <div class="user-dropdown" id="userDropdown" aria-hidden="true">
                         <div class="ud-user">
-                            <div class="ud-avatar" id="udAvatar">R</div>
-                            <div>
+                            <div class="ud-avatar" id="udAvatar" data-user-initials>R</div>
+                            <div class="ud-info">
                                 <div class="ud-name" id="udName">Resident</div>
                                 <div class="ud-email" id="udEmail"></div>
                             </div>
@@ -95,23 +95,16 @@
         </div>
     </header>
 
-    <!-- ══ CATEGORY ICON BAR (like Airbnb) ══ -->
-    <div class="cat-bar" id="catBar">
+    <!-- ══ CATEGORY ICON BAR — hidden, redundant with search pill type filter ══ -->
+    <div class="cat-bar" id="catBar" style="display:none;">
         <button class="cat-item active" data-type="">
             <i data-lucide="grid-2x2"></i>
             <span>All</span>
         </button>
         <!-- Populated dynamically from API -->
     </div>
-    
-    <!-- Filter toggle -->
-    <div class="cat-bar-right">
-        <button class="filter-btn" id="filterToggle">
-            <i data-lucide="sliders-horizontal"></i>
-            <span>Filters</span>
-        </button>
-    </div>
-    </div>
+
+
 
     <!-- ══ MAIN ══ -->
     <main class="main" id="mainContent">
@@ -198,7 +191,16 @@
     <div class="search-drop" id="searchDrop" hidden>
         <div class="sdrop-section" id="sdWhere">
             <p class="sdrop-label">Search by city</p>
+            <div class="sdrop-city-search-wrap">
+                <i data-lucide="search" class="sdcs-icon"></i>
+                <input type="text" id="sdCitySearch" class="sdrop-city-input" placeholder="Type a city or barangay…"
+                    autocomplete="off">
+                <button class="sdcs-clear" id="sdCitySearchClear" hidden aria-label="Clear">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
             <div class="sdrop-chips" id="sdCityChips"></div>
+            <p class="sdrop-no-cities" id="sdNoCities" hidden>No matching cities.</p>
         </div>
         <div class="sdrop-sep"></div>
         <div class="sdrop-section" id="sdBudgetSec" hidden>
@@ -227,62 +229,53 @@
         </div>
     </div>
 
-    <!-- ══ FILTER PANEL (slide from right) ══ -->
-    <div class="filter-overlay" id="filterOverlay"></div>
-    <aside class="filter-panel" id="filterPanel">
-        <div class="fp-head">
-            <h3>Filters</h3>
-            <button class="fp-close" id="fpClose"><i data-lucide="x"></i></button>
+    <!-- ══ TYPE BUBBLE POPUP ══ -->
+    <div class="type-bubble" id="typeBubble" hidden>
+        <div class="tb-arrow"></div>
+        <p class="tb-label">Property type</p>
+        <div class="tb-grid" id="tbGrid">
+            <button class="tb-item" data-type="">
+                <span class="tb-icon"><i data-lucide="grid-2x2"></i></span>
+                <span class="tb-name">All</span>
+            </button>
+            <button class="tb-item" data-type="Condominium">
+                <span class="tb-icon"><i data-lucide="building-2"></i></span>
+                <span class="tb-name">Condominium</span>
+            </button>
+            <button class="tb-item" data-type="Apartment">
+                <span class="tb-icon"><i data-lucide="building"></i></span>
+                <span class="tb-name">Apartment</span>
+            </button>
+            <button class="tb-item" data-type="Dormitory">
+                <span class="tb-icon"><i data-lucide="bed-double"></i></span>
+                <span class="tb-name">Dormitory</span>
+            </button>
+            <button class="tb-item" data-type="Bedspace">
+                <span class="tb-icon"><i data-lucide="bed-single"></i></span>
+                <span class="tb-name">Bedspace</span>
+            </button>
+            <button class="tb-item" data-type="Studio Unit">
+                <span class="tb-icon"><i data-lucide="layout-panel-left"></i></span>
+                <span class="tb-name">Studio Unit</span>
+            </button>
+            <button class="tb-item" data-type="House">
+                <span class="tb-icon"><i data-lucide="home"></i></span>
+                <span class="tb-name">House</span>
+            </button>
+            <button class="tb-item" data-type="Townhouse">
+                <span class="tb-icon"><i data-lucide="layers"></i></span>
+                <span class="tb-name">Townhouse</span>
+            </button>
+            <button class="tb-item" data-type="Private Room">
+                <span class="tb-icon"><i data-lucide="door-closed"></i></span>
+                <span class="tb-name">Private Room</span>
+            </button>
+            <button class="tb-item" data-type="Guesthouse">
+                <span class="tb-icon"><i data-lucide="hotel"></i></span>
+                <span class="tb-name">Guesthouse</span>
+            </button>
         </div>
-        <div class="fp-body">
-            <div class="fp-section">
-                <label class="fp-label">Property type</label>
-                <div class="fp-type-grid">
-                    <button class="fp-type-btn active" data-type="">All</button>
-                    <button class="fp-type-btn" data-type="Room">Room</button>
-                    <button class="fp-type-btn" data-type="Boarding House">Boarding House</button>
-                    <button class="fp-type-btn" data-type="Apartment">Apartment</button>
-                    <button class="fp-type-btn" data-type="Condo">Condo</button>
-                    <button class="fp-type-btn" data-type="Bedspace">Bedspace</button>
-                </div>
-            </div>
-            <div class="fp-sep"></div>
-            <div class="fp-section">
-                <label class="fp-label">Price range (monthly)</label>
-                <div class="fp-price-row">
-                    <div class="fp-price-field"><label>Min</label><input type="number" id="fpMin" placeholder="₱0">
-                    </div>
-                    <span>–</span>
-                    <div class="fp-price-field"><label>Max</label><input type="number" id="fpMax" placeholder="Any">
-                    </div>
-                </div>
-            </div>
-            <div class="fp-sep"></div>
-            <div class="fp-section">
-                <label class="fp-label">Availability</label>
-                <div class="fp-toggle-row">
-                    <span>Available now only</span>
-                    <button class="fp-toggle" id="fpAvailToggle" role="switch" aria-checked="false">
-                        <span class="fp-toggle-thumb"></span>
-                    </button>
-                </div>
-            </div>
-            <div class="fp-sep"></div>
-            <div class="fp-section">
-                <label class="fp-label">Features</label>
-                <div class="fp-toggle-row">
-                    <span>360° Virtual tour</span>
-                    <button class="fp-toggle" id="fpTourToggle" role="switch" aria-checked="false">
-                        <span class="fp-toggle-thumb"></span>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="fp-foot">
-            <button class="fp-reset" id="fpReset">Clear all</button>
-            <button class="fp-apply" id="fpApply">Show results</button>
-        </div>
-    </aside>
+    </div>
 
     <!-- ══ BOOKING MODAL ══ -->
     <div class="bm-overlay" id="bmOverlay" hidden></div>
@@ -326,8 +319,69 @@
         </div>
     </div>
 
+    <script src="/auth/user-avatar.js"></script>
     <script src="/auth/sessionGuard.js"></script>
     <script src="/Resident/resident_home.js"></script>
 </body>
+<!-- ══ FOOTER ══ -->
+<footer class="site-footer">
+    <div class="ft-inner">
+        <div class="ft-top">
+
+            <div class="ft-brand-col">
+                <a class="ft-brand" href="#">
+                    <span class="brand-mark"></span>
+                    VISTA<b>-HR</b>
+                </a>
+                <p class="ft-tagline">Find your home near campus — rooms, boarding houses, and apartments made easy.</p>
+                <div class="ft-badge">
+                    <span class="ft-badge-dot"></span> Live listings updated daily
+                </div>
+            </div>
+
+            <div class="ft-col">
+                <p class="ft-col-title">Explore</p>
+                <ul class="ft-links">
+                    <li><a href="#">All listings</a></li>
+                    <li><a href="#">Near UE Caloocan</a></li>
+                    <li><a href="#">Budget picks</a></li>
+                    <li><a href="#">With virtual tour</a></li>
+                    <li><a href="#">Available now</a></li>
+                </ul>
+            </div>
+
+            <div class="ft-col">
+                <p class="ft-col-title">Renters</p>
+                <ul class="ft-links">
+                    <li><a href="#">How it works</a></li>
+                    <li><a href="#">My bookings</a></li>
+                    <li><a href="#">Saved listings</a></li>
+                    <li><a href="#">Submit a ticket</a></li>
+                    <li><a href="#">FAQs</a></li>
+                </ul>
+            </div>
+
+            <div class="ft-col">
+                <p class="ft-col-title">Landlords</p>
+                <ul class="ft-links">
+                    <li><a href="#">List your property</a></li>
+                    <li><a href="#">Owner dashboard</a></li>
+                    <li><a href="#">Pricing</a></li>
+                    <li><a href="#">Contact us</a></li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="ft-bottom">
+            <span class="ft-copy">© 2025 VISTA-HR. All rights reserved.</span>
+            <div class="ft-bottom-links">
+                <a href="#">Privacy policy</a>
+                <a href="#">Terms of service</a>
+                <a href="#">Cookie settings</a>
+            </div>
+        </div>
+    </div>
+</footer>
 
 </html>

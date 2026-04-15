@@ -28,8 +28,12 @@ class Message(db.Model):
         index=True,
     )
 
-    text = db.Column(db.String(MESSAGE_MAX_LENGTH), nullable=False)
-    is_read = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    text     = db.Column(db.String(MESSAGE_MAX_LENGTH), nullable=False)
+    is_read  = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+
+    # Soft-delete per participant (delete for me only)
+    deleted_by_sender   = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    deleted_by_receiver = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     created_at = db.Column(
         db.DateTime(timezone=True),
@@ -49,14 +53,38 @@ class Message(db.Model):
             last  = (sender.last_name  or "").strip()
             sender_name = f"{first} {last}".strip() or sender.email
 
+        is_own = bool(me_id and self.sender_id == me_id)
+        deleted = (is_own and bool(self.deleted_by_sender)) or \
+                  (not is_own and bool(self.deleted_by_receiver))
+
         return {
             "id":          self.id,
             "sender_id":   self.sender_id,
             "receiver_id": self.receiver_id,
             "listing_id":  self.listing_id,
-            "text":        self.text,
+            "text":        "[Message deleted]" if deleted else self.text,
             "is_read":     bool(self.is_read),
-            "from":        "me" if me_id and self.sender_id == me_id else "them",
+            "from":        "me" if is_own else "them",
             "sender_name": sender_name,
+            "deleted":     deleted,
             "created_at":  self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class ArchivedConversation(db.Model):
+    """Tracks which threads a user has archived — one row per user+thread."""
+    __tablename__ = "archived_conversations"
+
+    id            = db.Column(db.Integer, primary_key=True)
+    user_id       = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    listing_id    = db.Column(db.Integer, db.ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    other_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    archived_at   = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "listing_id", "other_user_id", name="uq_archive"),
+    )

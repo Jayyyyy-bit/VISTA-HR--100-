@@ -657,11 +657,22 @@ async function syncStep7() {
     const photos = Array.isArray(d.photos) ? d.photos : [];
     if (photos.length < 5) throw { error: "Add at least 5 photos." };
 
-    const virtualTour = d.virtualTour || { enabled: false, panoUrl: "" };
+    const vt = d.virtualTour || {};
+
+    const virtualTour = {
+        enabled: !!vt.panoUrl,   // auto-enable pag may pano
+        panoUrl: vt.panoUrl || "",
+        panoPublicId: vt.panoPublicId || "",
+    };
+
+    console.log("STEP7 PAYLOAD:", { photos, virtualTour }); // debug
 
     return apiFetch(`/listings/${listingId}/step-7`, {
         method: "PATCH",
-        body: JSON.stringify({ photos, virtualTour }),
+        body: JSON.stringify({
+            photos,
+            virtualTour,
+        }),
     });
 }
 
@@ -767,6 +778,7 @@ window.ListingStore = {
     syncStep6,
     syncStep7,
     syncStep8,
+    syncStep9,
 
     // submit
     submitForVerification,

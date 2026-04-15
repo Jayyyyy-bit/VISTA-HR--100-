@@ -33,6 +33,19 @@ def mark_all_read():
     db.session.commit()
     return jsonify({"message": "All marked as read"}), 200
 
+@notifications_bp.patch("/notifications/<int:notif_id>/read")
+@require_role("RESIDENT", "OWNER", "ADMIN")
+def mark_one_read(notif_id: int):
+    """Mark a single notification as read. Safe even if already read."""
+    notif = db.session.get(Notification, notif_id)
+    if not notif:
+        return json_error("Not found", 404)
+    if notif.user_id != g.current_user.id:
+        return json_error("Forbidden", 403)
+    if not notif.is_read:
+        notif.is_read = True
+        db.session.commit()
+    return jsonify({"message": "Marked as read"}), 200
 
 @notifications_bp.delete("/notifications/<int:notif_id>")
 @require_role("RESIDENT", "OWNER", "ADMIN")
@@ -46,6 +59,6 @@ def delete_notification(notif_id):
         db.session.delete(notif)
         db.session.commit()
         return jsonify({"message": "Deleted"}), 200
-    except:
+    except Exception:
         db.session.rollback()
         return json_error("Database error", 500)

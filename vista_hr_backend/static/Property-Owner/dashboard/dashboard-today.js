@@ -6,6 +6,9 @@
 window.DashToday = (() => {
     const API = "/api";
     let _bookings = [], _listings = [], _bkStatus = "ALL", _chart = null;
+    let _movedInTarget = null;    // booking id pending moved-in confirm
+    let _ownerCancelTarget = null; // booking id pending owner cancel
+    let _rejectTarget = null;       // booking id pending rejection
 
     // ── Utilities ────────────────────────────────────────────
     async function apiFetch(path, opts = {}) {
@@ -159,10 +162,21 @@ window.DashToday = (() => {
         const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || "Owner";
 
         const avatarEl = el("sidebarAvatar");
+        const avatarImg = el("sidebarAvatarImg");
         const nameEl = el("sidebarOwnerName");
         const badgesEl = el("sidebarBadges");
 
+        // Always set initials text as fallback
         if (avatarEl) avatarEl.textContent = (name[0] || "O").toUpperCase();
+
+        // Show photo if avatar_url is set, otherwise show initials
+        if (u.avatar_url) {
+            if (avatarImg) { avatarImg.src = u.avatar_url; avatarImg.hidden = false; }
+            if (avatarEl) { avatarEl.hidden = true; }
+        } else {
+            if (avatarImg) { avatarImg.hidden = true; avatarImg.src = ""; }
+            if (avatarEl) { avatarEl.hidden = false; }
+        }
         if (nameEl) nameEl.textContent = name;
 
         if (badgesEl) {
@@ -471,8 +485,22 @@ window.DashToday = (() => {
 
         const RECEIPT_STATUSES = ["APPROVED", "ACTIVE", "COMPLETED"];
         const receiptBtn = RECEIPT_STATUSES.includes(b.status)
-            ? `<button class="bk-action-btn bk-action-btn--receipt" data-receipt-id="${b.id}" type="button">
+            ? `<button class="bk-action-btn bk-action-btn--receipt" data-receipt-id="${b.id}" data-booking='${JSON.stringify({ id: b.id, resident_name: b.resident_name || b.resident_email, listing_title: (b.listing || {}).title, move_in_date: b.move_in_date, move_out_date: b.move_out_date, monthly_rent: (b.listing || {}).price, status: b.status, created_at: b.created_at }).replace(/'/g, "")}' type="button">
                     <i data-lucide="file-text"></i> Receipt
+               </button>`
+            : "";
+
+        // "Moved In" button — for APPROVED bookings
+        const movedInBtn = b.status === "APPROVED"
+            ? `<button class="bk-action-btn bk-action-btn--movedin" data-id="${b.id}" type="button">
+                    <i data-lucide="door-open"></i> Moved In
+               </button>`
+            : "";
+
+        // Cancel button — owner can cancel PENDING or APPROVED
+        const ownerCancelBtn = ["PENDING", "APPROVED"].includes(b.status)
+            ? `<button class="bk-action-btn bk-action-btn--owner-cancel" data-id="${b.id}" type="button">
+                    <i data-lucide="x"></i> Cancel
                </button>`
             : "";
 
@@ -506,8 +534,12 @@ window.DashToday = (() => {
                         </div>
                     </div>
                 </div>
-                ${actions ? `<div class="bk-card-actions">${actions.replace('<div class="bk-task-actions">', '').replace('</div>', '')}</div>` : ""}
-                ${receiptBtn ? `<div class="bk-card-actions">${receiptBtn}</div>` : ""}
+                ${(actions || receiptBtn || movedInBtn || ownerCancelBtn) ? `<div class="bk-card-actions">
+                    ${actions ? actions.replace('<div class="bk-task-actions">', '').replace('</div>', '') : ""}
+                    ${movedInBtn}
+                    ${ownerCancelBtn}
+                    ${receiptBtn}
+                </div>` : ""}
             </div>`;
     }
 
@@ -521,19 +553,17 @@ window.DashToday = (() => {
                         method: "PATCH", body: JSON.stringify({ status: "APPROVED" }),
                     });
                     render();
-                } catch (e) { alert(e?.error || "Failed."); btn.disabled = false; }
+                    if (window.showToast) showToast("Booking approved!", "success");
+                } catch (e) {
+                    if (window.showToast) showToast(e?.error || "Failed.", "error");
+                    btn.disabled = false;
+                }
             });
         });
         container.querySelectorAll(".bk-action-btn--reject").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const note = window.prompt("Reason for rejection (optional):", "") ?? "";
-                btn.disabled = true;
-                try {
-                    await apiFetch(`/bookings/${btn.dataset.id}/status`, {
-                        method: "PATCH", body: JSON.stringify({ status: "REJECTED", note }),
-                    });
-                    render();
-                } catch (e) { alert(e?.error || "Failed."); btn.disabled = false; }
+            btn.addEventListener("click", () => {
+                _rejectTarget = Number(btn.dataset.id);
+                _openRejectModal();
             });
         });
 
@@ -541,7 +571,176 @@ window.DashToday = (() => {
         container.querySelectorAll(".bk-action-btn--receipt").forEach(btn => {
             btn.addEventListener("click", () => _openReceipt(Number(btn.dataset.receiptId)));
         });
+
+        // Owner Cancel buttons
+        container.querySelectorAll(".bk-action-btn--owner-cancel").forEach(btn => {
+            btn.addEventListener("click", () => {
+                _ownerCancelTarget = Number(btn.dataset.id);
+                _openOwnerCancelModal();
+            });
+        });
+
+        // Moved In buttons (APPROVED → ACTIVE)
+        container.querySelectorAll(".bk-action-btn--movedin").forEach(btn => {
+            btn.addEventListener("click", () => {
+                _movedInTarget = Number(btn.dataset.id);
+                _openMovedInModal();
+            });
+        });
     }
+
+    // ── Reject confirm modal ────────────────────────────────
+    function _openRejectModal() {
+        const overlay = document.getElementById("rejectOverlay");
+        if (!overlay) return;
+        document.getElementById("rejectNote").value = "";
+        overlay.hidden = false;
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+        document.getElementById("rejectNote")?.focus();
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function _closeRejectModal() {
+        const overlay = document.getElementById("rejectOverlay");
+        if (overlay) { overlay.classList.remove("open"); overlay.hidden = true; }
+        document.body.style.overflow = "";
+        _rejectTarget = null;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("rejectDismissBtn")?.addEventListener("click", _closeRejectModal);
+        document.getElementById("rejectOverlay")?.addEventListener("click", e => {
+            if (e.target.id === "rejectOverlay") _closeRejectModal();
+        });
+        document.getElementById("rejectConfirmBtn")?.addEventListener("click", async () => {
+            if (!_rejectTarget) return;
+            const note = document.getElementById("rejectNote")?.value.trim() || null;
+            const btn = document.getElementById("rejectConfirmBtn");
+            const label = btn.querySelector(".btnLabel");
+            const spinner = btn.querySelector(".btnSpinner");
+            btn.disabled = true;
+            if (label) label.hidden = true;
+            if (spinner) spinner.hidden = false;
+            try {
+                await apiFetch(`/bookings/${_rejectTarget}/status`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ status: "REJECTED", note }),
+                });
+                _closeRejectModal();
+                render();
+                if (window.showToast) showToast("Booking rejected.", "success");
+            } catch (e) {
+                _closeRejectModal();
+                if (window.showToast) showToast(e?.error || "Failed to reject.", "error");
+            } finally {
+                btn.disabled = false;
+                if (label) label.hidden = false;
+                if (spinner) spinner.hidden = true;
+            }
+        });
+    });
+
+    // ── Owner Cancel confirm modal ──────────────────────────
+    function _openOwnerCancelModal() {
+        const overlay = document.getElementById("ownerCancelOverlay");
+        if (!overlay) return;
+        document.getElementById("ownerCancelNote").value = "";
+        overlay.hidden = false;
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+        document.getElementById("ownerCancelNote")?.focus();
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function _closeOwnerCancelModal() {
+        const overlay = document.getElementById("ownerCancelOverlay");
+        if (overlay) { overlay.classList.remove("open"); overlay.hidden = true; }
+        document.body.style.overflow = "";
+        _ownerCancelTarget = null;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("ownerCancelDismissBtn")?.addEventListener("click", _closeOwnerCancelModal);
+        document.getElementById("ownerCancelOverlay")?.addEventListener("click", e => {
+            if (e.target.id === "ownerCancelOverlay") _closeOwnerCancelModal();
+        });
+        document.getElementById("ownerCancelConfirmBtn")?.addEventListener("click", async () => {
+            if (!_ownerCancelTarget) return;
+            const note = document.getElementById("ownerCancelNote")?.value.trim() || null;
+            const btn = document.getElementById("ownerCancelConfirmBtn");
+            const label = btn.querySelector(".btnLabel");
+            const spinner = btn.querySelector(".btnSpinner");
+            btn.disabled = true;
+            if (label) label.hidden = true;
+            if (spinner) spinner.hidden = false;
+            try {
+                await apiFetch(`/bookings/${_ownerCancelTarget}/owner-cancel`, {
+                    method: "POST",
+                    body: JSON.stringify({ note }),
+                });
+                _closeOwnerCancelModal();
+                render();
+                if (window.showToast) showToast("Reservation cancelled.", "success");
+            } catch (e) {
+                _closeOwnerCancelModal();
+                if (window.showToast) showToast(e?.error || "Failed to cancel.", "error");
+            } finally {
+                btn.disabled = false;
+                if (label) label.hidden = false;
+                if (spinner) spinner.hidden = true;
+            }
+        });
+    });
+
+    // ── Moved In confirm modal ───────────────────────────────
+    function _openMovedInModal() {
+        const overlay = document.getElementById("movedInOverlay");
+        if (!overlay) return;
+        overlay.hidden = false;
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function _closeMovedInModal() {
+        const overlay = document.getElementById("movedInOverlay");
+        if (overlay) { overlay.classList.remove("open"); overlay.hidden = true; }
+        document.body.style.overflow = "";
+        _movedInTarget = null;
+    }
+
+    // Bind movedIn modal buttons (early — safe on all tabs)
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("movedInCancelBtn")?.addEventListener("click", _closeMovedInModal);
+        document.getElementById("movedInOverlay")?.addEventListener("click", e => {
+            if (e.target.id === "movedInOverlay") _closeMovedInModal();
+        });
+        document.getElementById("movedInConfirmBtn")?.addEventListener("click", async () => {
+            if (!_movedInTarget) return;
+            const btn = document.getElementById("movedInConfirmBtn");
+            const label = btn.querySelector(".btnLabel");
+            const spinner = btn.querySelector(".btnSpinner");
+            btn.disabled = true;
+            if (label) label.hidden = true;
+            if (spinner) spinner.hidden = false;
+            try {
+                await apiFetch(`/bookings/${_movedInTarget}/status`, {
+                    method: "PATCH", body: JSON.stringify({ status: "ACTIVE" }),
+                });
+                _closeMovedInModal();
+                render();
+                if (window.showToast) showToast("Resident marked as moved in!", "success");
+            } catch (e) {
+                _closeMovedInModal();
+                if (window.showToast) showToast(e?.error || "Failed to update status.", "error");
+            } finally {
+                btn.disabled = false;
+                if (label) label.hidden = false;
+                if (spinner) spinner.hidden = true;
+            }
+        });
+    });
 
     // ── Receipt modal ────────────────────────────────────────
     async function _openReceipt(bookingId) {
@@ -550,7 +749,8 @@ window.DashToday = (() => {
         if (!overlay || !content) return;
 
         content.innerHTML = `<div class="receiptLoading">Loading receipt…</div>`;
-        overlay.hidden = false;
+        overlay.hidden = false;          // clear html hidden attr
+        overlay.classList.add("open");   // CSS uses .open not hidden
         document.body.style.overflow = "hidden";
 
         try {
@@ -614,7 +814,7 @@ window.DashToday = (() => {
 
     function _closeReceipt() {
         const overlay = document.getElementById("receiptOverlay");
-        if (overlay) overlay.hidden = true;
+        if (overlay) { overlay.classList.remove("open"); overlay.hidden = true; }
         document.body.style.overflow = "";
     }
 

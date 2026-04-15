@@ -1,4 +1,4 @@
-const API = "http://127.0.0.1:5000/api";
+const API = "api";
 
 lucide.createIcons();
 
@@ -9,13 +9,13 @@ function safeGoTo(url) {
 }
 
 document.getElementById("btnOwner")?.addEventListener("click", () => {
-    safeGoTo("./property-owner/owner_signup.html");
+    safeGoTo("/Login_Register_Page/Signup/property-owner/owner_signup.html");
 });
 document.getElementById("btnResident")?.addEventListener("click", () => {
-    safeGoTo("./Resident-SIgnUp/resident.html");
+    safeGoTo("/Login_Register_Page/Signup/Resident-SIgnUp/resident.html");
 });
 document.getElementById("backBtn")?.addEventListener("click", () => {
-    safeGoTo("../../Landing_Page/ASSETS/front_index.html");
+    safeGoTo("/Landing_Page/ASSETS/front_index.html");
 });
 
 /* ── Hover blur effect ── */

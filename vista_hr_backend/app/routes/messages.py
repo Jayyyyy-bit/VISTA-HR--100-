@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import Message, Listing, User
-from ..models.message import MESSAGE_MAX_LENGTH
+from ..models.message import MESSAGE_MAX_LENGTH, ArchivedConversation
 from ..auth.jwt import require_role
 from ..routes.notifications import create_notification
 from ..utils.errors import json_error
@@ -42,9 +42,20 @@ def list_conversations():
         .all()
     )
 
+    show_archived = request.args.get("archived", "").lower() == "true"
+
+    # Load archived thread keys for this user
+    archived_rows = ArchivedConversation.query.filter_by(user_id=me.id).all()
+    archived_keys = {(r.listing_id, r.other_user_id) for r in archived_rows}
+
     # Group into unique (listing_id, other_user_id) threads
     seen = {}
     for msg in all_msgs:
+        # Skip messages deleted by this user
+        is_sender = msg.sender_id == me.id
+        if is_sender and bool(msg.deleted_by_sender): continue
+        if not is_sender and bool(msg.deleted_by_receiver): continue
+
         other_id = _other_user_id(msg, me.id)
         key = (msg.listing_id, other_id)
         if key not in seen:
@@ -102,6 +113,15 @@ def list_conversations():
             "listing_status":  listing_status,
             "listing_cover":   cover,
         })
+
+    # Filter by archived status
+    threads = [
+        t for t in threads
+        if show_archived == ((t["listing_id"], t["other_user_id"]) in archived_keys)
+    ]
+    # Add archived flag to each thread
+    for t in threads:
+        t["is_archived"] = (t["listing_id"], t["other_user_id"]) in archived_keys
 
     # Sort by last message time descending
     threads.sort(key=lambda t: t["last_time"] or "", reverse=True)
@@ -224,3 +244,112 @@ def unread_count():
     me = g.current_user
     count = Message.query.filter_by(receiver_id=me.id, is_read=False).count()
     return jsonify({"unread": count}), 200
+
+# ══════════════════════════════════════════════
+# DELETE /messages/conversations/<lid>/<oid>
+# Delete conversation for me only (soft delete)
+# ══════════════════════════════════════════════
+@messages_bp.delete("/messages/conversations/<int:listing_id>/<int:other_user_id>")
+@require_role("OWNER", "RESIDENT")
+def delete_conversation(listing_id: int, other_user_id: int):
+    """Soft-delete all messages in this thread for the current user only.
+    The other participant's view is unaffected.
+    """
+    me = g.current_user
+
+    messages = (
+        Message.query
+        .filter(
+            Message.listing_id == listing_id,
+            or_(
+                and_(Message.sender_id == me.id,         Message.receiver_id == other_user_id),
+                and_(Message.sender_id == other_user_id, Message.receiver_id == me.id),
+            )
+        )
+        .all()
+    )
+
+    if not messages:
+        return json_error("Conversation not found.", 404)
+
+    for msg in messages:
+        if msg.sender_id == me.id:
+            msg.deleted_by_sender = True
+        else:
+            msg.deleted_by_receiver = True
+
+    # Also remove archive entry if it exists
+    ArchivedConversation.query.filter_by(
+        user_id=me.id,
+        listing_id=listing_id,
+        other_user_id=other_user_id,
+    ).delete()
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Conversation deleted."}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+
+# ══════════════════════════════════════════════
+# POST /messages/conversations/<lid>/<oid>/archive
+# Archive a conversation thread
+# ══════════════════════════════════════════════
+@messages_bp.post("/messages/conversations/<int:listing_id>/<int:other_user_id>/archive")
+@require_role("OWNER", "RESIDENT")
+def archive_conversation(listing_id: int, other_user_id: int):
+    """Archive a thread for the current user. Hides it from main inbox."""
+    me = g.current_user
+
+    existing = ArchivedConversation.query.filter_by(
+        user_id=me.id,
+        listing_id=listing_id,
+        other_user_id=other_user_id,
+    ).first()
+
+    if existing:
+        return json_error("Conversation already archived.", 400)
+
+    archive = ArchivedConversation(
+        user_id=me.id,
+        listing_id=listing_id,
+        other_user_id=other_user_id,
+    )
+
+    try:
+        db.session.add(archive)
+        db.session.commit()
+        return jsonify({"message": "Conversation archived."}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+
+# ══════════════════════════════════════════════
+# DELETE /messages/conversations/<lid>/<oid>/archive
+# Unarchive a conversation thread
+# ══════════════════════════════════════════════
+@messages_bp.delete("/messages/conversations/<int:listing_id>/<int:other_user_id>/archive")
+@require_role("OWNER", "RESIDENT")
+def unarchive_conversation(listing_id: int, other_user_id: int):
+    """Move a conversation back to the main inbox."""
+    me = g.current_user
+
+    row = ArchivedConversation.query.filter_by(
+        user_id=me.id,
+        listing_id=listing_id,
+        other_user_id=other_user_id,
+    ).first()
+
+    if not row:
+        return json_error("Conversation is not archived.", 404)
+
+    try:
+        db.session.delete(row)
+        db.session.commit()
+        return jsonify({"message": "Conversation unarchived."}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)

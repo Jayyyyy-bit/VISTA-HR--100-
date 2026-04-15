@@ -1465,6 +1465,7 @@ select option {
     font-weight: 800;
     color: #111;
     background: transparent;
+    appearance: none;
     -moz-appearance: textfield;
 }
 
@@ -2631,7 +2632,8 @@ select option {
 
 @media (max-width: 980px) {
     .thumbGrid {
-        /* horizontal scroll — no change needed on mobile */
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 }
 
@@ -2995,6 +2997,7 @@ select option {
     color: #111827;
     padding: 14px 6px;
     min-width: 0;
+    appearance: none;
     -moz-appearance: textfield;
 }
 
@@ -3232,288 +3235,417 @@ select option {
 
 
 /* ============================================================
-   STEP 10
+   STEP 10 — POLISHED PREVIEW
+============================================================ */
 
+/* ============================================================
+   STEP 10 — FINAL TWO-COLUMN PREVIEW LAYOUT
+   Inspired by Step 7 media + side summary
+============================================================ */
 
-    .prevShell {
-        max-width: 680px;
-        margin: 0 auto;
-    }
+.prevShell {
+    max-width: 1180px !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr) !important;
+    gap: 24px !important;
+    align-items: start !important;
+}
 
-    /* Photos */
+.prevMediaCard {
+    display: grid !important;
+    gap: 16px !important;
+    position: sticky;
+    top: 96px;
+}
+
+.prev-status {
+    grid-column: 1 / -1 !important;
+    margin-top: 4px !important;
+}
+
+/* ===== Photos ===== */
 .prev-photos {
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 18px;
-    background: #f3f4f6;
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    border: 1px solid rgba(12, 19, 34, .08) !important;
+    box-shadow: 0 14px 34px rgba(12, 19, 34, .06) !important;
 }
 
 .prev-cover {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 16 / 10 !important;
+    overflow: hidden !important;
+    background: #f3f4f6 !important;
 }
 
 .prev-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
 }
 
 .prev-cover-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.65);
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 6px;
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    background: rgba(12, 19, 34, .82) !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    padding: 7px 12px !important;
+    border-radius: 999px !important;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .18) !important;
 }
 
 .prev-thumbStrip {
-    display: flex;
-    gap: 4px;
-    padding: 6px;
-    overflow-x: auto;
+    display: flex !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    overflow-x: auto !important;
+    background: #fff !important;
+    scrollbar-width: thin;
+}
+
+.prev-thumbStrip::-webkit-scrollbar {
+    height: 6px;
+}
+
+.prev-thumbStrip::-webkit-scrollbar-thumb {
+    background: rgba(12, 19, 34, .16);
+    border-radius: 999px;
 }
 
 .prev-thumbStrip img {
-    width: 64px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 6px;
-    flex-shrink: 0;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-    cursor: pointer;
+    width: 88px !important;
+    height: 66px !important;
+    object-fit: cover !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+    opacity: 0.72 !important;
+    border: 2px solid transparent !important;
+    cursor: pointer !important;
+    transition: opacity .18s ease, transform .18s ease, border-color .18s ease !important;
 }
 
 .prev-thumbStrip img:hover,
 .prev-thumbStrip img.active {
-    opacity: 1;
-    outline: 2px solid #2563eb;
-    outline-offset: 1px;
+    opacity: 1 !important;
+    transform: translateY(-1px) !important;
+    border-color: #C8882A !important;
 }
 
-/* 360 */
+/* ===== 360 viewer ===== */
 .prev-pano-wrap {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 18px;
+    border: 1px solid rgba(12, 19, 34, .08) !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    box-shadow: 0 14px 34px rgba(12, 19, 34, .06) !important;
+}
+
+.prev-pano-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 16px !important;
+    background: #fbfbfb !important;
+    border-bottom: 1px solid rgba(12, 19, 34, .08) !important;
 }
 
 .prev-pano-label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: rgba(12, 19, 34, .78) !important;
+}
+
+#prevPanoViewer,
+.prev-pano-viewer,
+#prevPanoViewer.pnlm-container {
+    display: block !important;
+    width: 100% !important;
+    height: 360px !important;
+    min-height: 360px !important;
+    background: #111 !important;
+}
+
+#prevPanoViewer .pnlm-render-container,
+#prevPanoViewer .pnlm-ui,
+#prevPanoViewer canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.prev-pano-fallback {
+    width: 100%;
+    height: 360px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #374151;
-}
-
-.prev-pano-viewer {
-    width: 100%;
-    height: 300px;
+    justify-content: center;
     background: #111;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
 }
 
-/* Card */
+/* ===== Right info card ===== */
 .prev-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 24px;
+    background: #fff !important;
+    border: 1px solid rgba(12, 19, 34, .08) !important;
+    border-radius: 22px !important;
+    padding: 24px !important;
+    box-shadow: 0 14px 34px rgba(12, 19, 34, .06) !important;
+    min-width: 0 !important;
 }
 
 .prev-section {
-    padding: 2px 0;
+    padding: 2px 0 !important;
 }
 
 .prev-section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+    margin-bottom: 12px !important;
 }
 
 .prev-section-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    color: #1f2937 !important;
+    margin: 0 !important;
 }
 
 .prev-edit {
-    background: none;
-    border: 1px solid #d1d5db;
-    color: #2563eb;
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 4px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
+    background: #fff !important;
+    border: 1px solid rgba(12, 19, 34, .14) !important;
+    color: rgb(27, 63, 110) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    padding: 7px 14px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: all .18s ease !important;
+    white-space: nowrap !important;
 }
 
 .prev-edit:hover {
-    background: #eff6ff;
-    border-color: #2563eb;
+    background: rgba(27, 63, 110, .05) !important;
+    border-color: rgba(27, 63, 110, .30) !important;
 }
 
 .prev-hr {
-    border: none;
-    border-top: 1px solid #f3f4f6;
-    margin: 16px 0;
+    border: none !important;
+    border-top: 1px solid rgba(12, 19, 34, .08) !important;
+    margin: 18px 0 !important;
 }
 
-/* Title */
 .prev-title {
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: #111827;
-    margin: 0;
+    font-size: 2rem !important;
+    font-weight: 850 !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.03em !important;
 }
 
 .prev-badges {
-    display: flex;
-    gap: 8px;
-    margin: 8px 0 12px;
-    flex-wrap: wrap;
+    display: flex !important;
+    gap: 8px !important;
+    margin: 12px 0 0 !important;
+    flex-wrap: wrap !important;
 }
 
 .prev-badge {
-    background: #f3f4f6;
-    color: #374151;
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 4px 12px;
-    border-radius: 20px;
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    padding: 6px 12px !important;
+    border-radius: 999px !important;
+}
+
+.prev-badge--tour {
+    background: rgba(200, 136, 42, .10) !important;
+    color: rgb(27, 63, 110) !important;
 }
 
 .prev-desc {
-    font-size: 0.9rem;
-    color: #4b5563;
-    line-height: 1.6;
-    margin: 0;
-    white-space: pre-wrap;
+    font-size: 15px !important;
+    color: #4b5563 !important;
+    line-height: 1.7 !important;
+    margin: 0 !important;
+    white-space: pre-wrap !important;
 }
 
-/* Location */
 .prev-location {
-    font-size: 0.9rem;
-    color: #4b5563;
-    line-height: 1.6;
+    font-size: 15px !important;
+    color: #4b5563 !important;
+    line-height: 1.7 !important;
 }
 
-/* Capacity */
 .prev-cap-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
 }
 
 .prev-cap-item {
-    background: #f9fafb;
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
+    background: #f9fafb !important;
+    border-radius: 16px !important;
+    padding: 16px 12px !important;
+    text-align: center !important;
+    border: 1px solid rgba(12, 19, 34, .05) !important;
 }
 
 .prev-cap-num {
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: #111827;
+    font-size: 1.7rem !important;
+    font-weight: 850 !important;
+    color: #111827 !important;
+    line-height: 1 !important;
 }
 
 .prev-cap-label {
-    font-size: 0.78rem;
-    color: #6b7280;
-    margin-top: 2px;
+    font-size: 12px !important;
+    color: #6b7280 !important;
+    margin-top: 8px !important;
+    font-weight: 700 !important;
 }
 
-/* Pricing */
 .prev-pricing {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    flex-wrap: wrap !important;
 }
 
 .prev-rent {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #111827;
+    font-size: 2rem !important;
+    font-weight: 850 !important;
+    color: #111827 !important;
+    line-height: 1 !important;
 }
 
 .prev-rent-period {
-    font-size: 0.85rem;
-    color: #6b7280;
-    font-weight: 500;
+    font-size: 14px !important;
+    color: #6b7280 !important;
+    font-weight: 600 !important;
 }
 
 .prev-discount-badge {
-    background: #dcfce7;
-    color: #166534;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 5px 14px;
-    border-radius: 20px;
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    padding: 7px 14px !important;
+    border-radius: 999px !important;
 }
 
-.prev-no-data {
-    font-size: 0.85rem;
-    color: #dc2626;
-    font-style: italic;
-}
-
-/* Tags */
 .prev-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
 }
 
 .prev-tag {
-    background: #f0f7ff;
-    color: #1e40af;
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 5px 14px;
-    border-radius: 20px;
+    background: #eef5ff !important;
+    color: #1e40af !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    padding: 7px 14px !important;
+    border-radius: 999px !important;
 }
 
 .prev-tag--highlight {
-    background: #fef3c7;
-    color: #92400e;
+    background: #fef3c7 !important;
+    color: #92400e !important;
 }
 
-/* Status */
+.prev-no-data {
+    font-size: 13px !important;
+    color: #dc2626 !important;
+    font-style: italic !important;
+    font-weight: 700 !important;
+}
+
 .prev-status {
-    margin-top: 16px;
-    border-radius: 10px;
-    padding: 14px 18px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    line-height: 1.5;
+    border-radius: 16px !important;
+    padding: 16px 18px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.6 !important;
 }
 
 .prev-status--ok {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
+    background: #f0fdf4 !important;
+    border: 1px solid #bbf7d0 !important;
+    color: #166534 !important;
 }
 
 .prev-status--warn {
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    color: #92400e;
+    background: #fef3c7 !important;
+    border: 1px solid #fde68a !important;
+    color: #92400e !important;
+}
+
+.prev-status-pill {
+    display: inline-block;
+    margin: 4px 6px 0 0;
+    background: rgba(0, 0, 0, 0.07);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 980px) {
+    .prevShell {
+        grid-template-columns: 1fr !important;
+    }
+
+    .prevMediaCard {
+        position: static !important;
+    }
+
+    .prev-status {
+        grid-column: auto !important;
+    }
+
+    #prevPanoViewer,
+    .prev-pano-viewer,
+    #prevPanoViewer.pnlm-container {
+        height: 300px !important;
+        min-height: 300px !important;
+    }
+
+    .prev-cap-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 720px) {
+    .prev-cap-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .prev-title {
+        font-size: 1.6rem !important;
+    }
+
+    #prevPanoViewer,
+    .prev-pano-viewer,
+    #prevPanoViewer.pnlm-container {
+        height: 240px !important;
+        min-height: 240px !important;
+    }
 }
 
 /* ========= Custom Dropdown (City) ========= */
@@ -5306,5 +5438,384 @@ body:has(.photoShell) .vtHint {
     body.wiz-step-step-7 .thumbGrid,
     body:has(.photoShell) .thumbGrid {
         grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+
+/* ===== GLOBAL FITMENT ===== */
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
+.page {
+    height: calc(100vh - 80px - 80px) !important;
+    min-height: calc(100vh - 80px - 80px) !important;
+    overflow: hidden !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+    padding: 0 18px !important;
+}
+
+.wizard-shell {
+    width: min(1240px, 96vw) !important;
+    max-width: 1240px !important;
+    height: 100% !important;
+    margin: 0 auto !important;
+}
+
+.stage,
+.stage-centered {
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+.stage-centered {
+    display: block !important;
+}
+
+.panel.panel-main {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 28px 0 40px !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, .18) transparent;
+    /* Scrollbar must always appear on the RIGHT side */
+    direction: ltr !important;
+}
+
+.panel.panel-main>* {
+    /* Ensure content direction is always LTR */
+    direction: ltr;
+}
+
+.panel.panel-main::-webkit-scrollbar {
+    width: 6px;
+}
+
+.panel.panel-main::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.panel.panel-main::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .18);
+    border-radius: 999px;
+}
+
+.bottombar {
+    flex-shrink: 0 !important;
+}
+
+/* ===== STEP HEADER FIT ===== */
+.step-header {
+    max-width: 1180px !important;
+    margin: 0 auto 22px !important;
+    padding: 0 2px !important;
+}
+
+/* ===== COMMON STEP SHELLS ===== */
+.loc-stage,
+.capCard,
+.amenShell,
+.hlShell,
+.hlShellMinimal,
+.detShell,
+.pricingCard,
+.prevShell {
+    width: 100% !important;
+}
+
+/* ============================================================
+   STEP 9 — FITMENT ONLY
+============================================================ */
+
+/* Center the card and cap its width — prevents flush-left layout */
+.pricingCard {
+    max-width: 680px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Step header alignment matches the card width */
+body.wiz-step-step-9 .step-header,
+body:has(.pricingCard) .step-header {
+    max-width: 680px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* ============================================================
+   STEP 10 — FITMENT ONLY
+============================================================ */
+
+.prevShell {
+    max-width: 1180px !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(380px, 0.9fr) minmax(0, 1.35fr) !important;
+    gap: 24px !important;
+    align-items: start !important;
+    padding-bottom: 20px !important;
+}
+
+/* LEFT = INFO */
+.prev-card {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+    max-height: none !important;
+}
+
+/* RIGHT = MEDIA */
+.prevMediaCard {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: grid !important;
+    gap: 16px !important;
+    min-width: 0 !important;
+}
+
+.prev-status {
+    grid-column: 1 / -1 !important;
+    margin-top: 0 !important;
+}
+
+/* Photos */
+.prev-photos {
+    overflow: hidden !important;
+}
+
+.prev-cover {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    min-height: 300px !important;
+    max-height: 460px !important;
+    overflow: hidden !important;
+}
+
+#prevCoverImg,
+.prev-cover img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+.prev-thumbStrip {
+    display: flex !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin;
+}
+
+.prev-thumbStrip::-webkit-scrollbar {
+    height: 6px;
+}
+
+.prev-thumbStrip::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .18);
+    border-radius: 999px;
+}
+
+.prev-thumbStrip img {
+    width: 88px !important;
+    height: 66px !important;
+    flex-shrink: 0 !important;
+    object-fit: cover !important;
+}
+
+/* 360 viewer */
+.prev-pano-wrap {
+    overflow: hidden !important;
+}
+
+#prevPanoViewer,
+.prev-pano-viewer,
+#prevPanoViewer.pnlm-container {
+    width: 100% !important;
+    height: 320px !important;
+    min-height: 320px !important;
+    max-height: 420px !important;
+    display: block !important;
+    background: #111 !important;
+}
+
+#prevPanoViewer .pnlm-render-container,
+#prevPanoViewer .pnlm-ui,
+#prevPanoViewer canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Info card internal fit */
+.prev-title {
+    font-size: clamp(1.8rem, 2.6vw, 2.25rem) !important;
+    line-height: 1.1 !important;
+}
+
+.prev-desc,
+.prev-location {
+    line-height: 1.6 !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+}
+
+.prev-cap-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+}
+
+.prev-pricing {
+    align-items: baseline !important;
+}
+
+.prev-rent {
+    font-size: clamp(1.8rem, 3vw, 2.2rem) !important;
+    line-height: 1 !important;
+}
+
+.prev-tags {
+    gap: 8px !important;
+}
+
+.prev-tag,
+.prev-badge,
+.prev-discount-badge {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+}
+
+/* ===== STEP 7 fitment cleanup only ===== */
+body.wiz-step-step-7 .wizard-shell,
+body:has(.photoShell) .wizard-shell {
+    width: min(1180px, 96vw) !important;
+    max-width: 1180px !important;
+}
+
+body.wiz-step-step-7 .page,
+body:has(.photoShell) .page {
+    overflow: hidden !important;
+}
+
+body.wiz-step-step-7 .panel.panel-main,
+body:has(.photoShell) .panel.panel-main {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+body.wiz-step-step-7 .photoShell,
+body:has(.photoShell) .photoShell {
+    gap: 20px !important;
+    align-items: start !important;
+}
+
+body.wiz-step-step-7 .vtCard,
+body:has(.photoShell) .vtCard {
+    min-width: 0 !important;
+}
+
+/* ===== RESPONSIVE FIT ===== */
+@media (max-width: 1100px) {
+    .wizard-shell {
+        width: min(980px, 96vw) !important;
+        max-width: 980px !important;
+    }
+
+    .prevShell {
+        grid-template-columns: 1fr !important;
+    }
+
+    .prev-card,
+    .prevMediaCard,
+    .prev-status {
+        grid-column: auto !important;
+        grid-row: auto !important;
+    }
+
+    .prev-cover {
+        min-height: 260px !important;
+        max-height: 380px !important;
+    }
+
+    #prevPanoViewer,
+    .prev-pano-viewer,
+    #prevPanoViewer.pnlm-container {
+        height: 280px !important;
+        min-height: 280px !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .page {
+        padding: 0 14px !important;
+    }
+
+    .wizard-shell {
+        width: min(760px, 96vw) !important;
+        max-width: 760px !important;
+    }
+
+    body.wiz-step-step-7 .photoShell,
+    body:has(.photoShell) .photoShell {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto !important;
+    }
+
+    body.wiz-step-step-7 .photoShell>.darkWarning,
+    body.wiz-step-step-7 .photoShell>.uploadZone,
+    body.wiz-step-step-7 .photoShell>.thumbGrid,
+    body.wiz-step-step-7 .photoShell>.vtCard,
+    body:has(.photoShell) .photoShell>.darkWarning,
+    body:has(.photoShell) .photoShell>.uploadZone,
+    body:has(.photoShell) .photoShell>.thumbGrid,
+    body:has(.photoShell) .photoShell>.vtCard {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .wizard-shell {
+        width: min(100%, 96vw) !important;
+        max-width: none !important;
+    }
+
+    .panel.panel-main {
+        padding: 22px 0 28px !important;
+    }
+
+    .step-title {
+        font-size: 24px !important;
+    }
+
+    .prev-cover {
+        min-height: 220px !important;
+        max-height: 300px !important;
+    }
+
+    .prev-thumbStrip img {
+        width: 72px !important;
+        height: 54px !important;
+    }
+
+    #prevPanoViewer,
+    .prev-pano-viewer,
+    #prevPanoViewer.pnlm-container {
+        height: 220px !important;
+        min-height: 220px !important;
+    }
+
+    .prev-cap-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .prev-card {
+        padding: 18px !important;
     }
 }

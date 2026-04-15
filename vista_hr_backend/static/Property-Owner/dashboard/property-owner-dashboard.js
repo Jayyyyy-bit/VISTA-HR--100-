@@ -46,13 +46,36 @@
     const modalCancel = document.getElementById("modalCancel");
     const modalConfirm = document.getElementById("modalConfirm");
 
-    // Avatar initial
+    // ── Dashboard avatar helper ─────────────────────────────────────────
+    function applyDashboardAvatar(user) {
+      const url = (user.avatar_url || "").trim();
+      const initial = (user.first_name?.[0] || user.email?.[0] || "O").toUpperCase();
+
+      // Topbar button
+      const circle = document.getElementById("avatarCircle");
+      const img = document.getElementById("avatarImg");
+      // Sidebar / today panel
+      const sCircle = document.getElementById("sidebarAvatar");
+      const sImg = document.getElementById("sidebarAvatarImg");
+
+      if (url) {
+        if (circle) circle.hidden = true;
+        if (img) { img.src = url; img.hidden = false; }
+        if (sCircle) sCircle.hidden = true;
+        if (sImg) { sImg.src = url; sImg.hidden = false; }
+      } else {
+        if (circle) { circle.textContent = initial; circle.hidden = false; }
+        if (img) { img.hidden = true; img.src = ""; }
+        if (sCircle) { sCircle.textContent = initial; sCircle.hidden = false; }
+        if (sImg) { sImg.hidden = true; sImg.src = ""; }
+      }
+    }
+
+    // Avatar — requireOwner() already called fetchMe() + saveSession(),
+    // so getSession() is already fresh here. No extra fetch needed.
     try {
-      const s = AuthGuard.getSession?.();
-      const email = s?.user?.email || "";
-      const initial = (email?.[0] || "O").toUpperCase();
-      const avatar = document.getElementById("avatarCircle");
-      if (avatar) avatar.textContent = initial;
+      const user = AuthGuard.getSession?.()?.user;
+      if (user) applyDashboardAvatar(user);
     } catch { }
 
     function escapeHtml(str) {

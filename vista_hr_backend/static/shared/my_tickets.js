@@ -112,7 +112,7 @@
                 el("ticketBody").value = "";
                 close();
                 await loadTickets();
-                if (window.showToast) showToast("Ticket submitted!", "success");
+                if (window.showSuccess) showSuccess("Ticket submitted!"); else if (window.showToast) showToast("Ticket submitted!");
             } catch (err) {
                 errEl.textContent = err.message;
             } finally {

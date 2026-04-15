@@ -55,6 +55,10 @@ window.Step6Init = function Step6Init({ nextBtn }) {
             if (!res.ok) throw new Error(data.error || "Failed to load");
 
             HIGHLIGHTS = data.highlights || [];
+
+            // Cache id → { label, icon } globally so step 10 preview can resolve IDs → labels
+            window._hlCache = new Map(HIGHLIGHTS.map(h => [h.id, { label: h.label, icon: h.icon || "star" }]));
+
             render();
         } catch (err) {
             console.error("[Step6] loadHighlights failed:", err);
@@ -280,10 +284,12 @@ window.Step6Init = function Step6Init({ nextBtn }) {
 
                 const newItem = data.highlight;
 
-                // Add to local list
+                // Add to local list + update global cache
                 if (!HIGHLIGHTS.find(x => itemKey(x) === String(newItem.id))) {
                     HIGHLIGHTS.push(newItem);
                 }
+                if (!window._hlCache) window._hlCache = new Map();
+                window._hlCache.set(newItem.id, { label: newItem.label, icon: newItem.icon || "star" });
 
                 // Auto-select
                 const current = new Set(readSelected());

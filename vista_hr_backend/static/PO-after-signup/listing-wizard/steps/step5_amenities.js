@@ -95,6 +95,16 @@ window.Step5Init = function Step5Init({ nextBtn }) {
 
             OPTIONS = data.amenities || { appliances: [], activities: [], safety: [] };
             isLoaded = true;
+
+            // Populate global cache: id → { label, icon, category }
+            // Used by step 10 preview to resolve IDs → labels
+            window._amenCache = new Map();
+            for (const [cat, items] of Object.entries(OPTIONS)) {
+                for (const item of items) {
+                    window._amenCache.set(String(item.id), { label: item.label, icon: item.icon || "check-circle", category: cat });
+                }
+            }
+
             renderTab(activeTab);
         } catch (err) {
             console.error("[Step5] loadAmenities failed:", err);
@@ -367,6 +377,10 @@ window.Step5Init = function Step5Init({ nextBtn }) {
                 if (!OPTIONS[category].find(x => String(x.id) === String(newItem.id))) {
                     OPTIONS[category].push(newItem);
                 }
+
+                // Keep global cache in sync
+                if (!window._amenCache) window._amenCache = new Map();
+                window._amenCache.set(String(newItem.id), { label: newItem.label, icon: newItem.icon || "check-circle", category });
 
                 // Auto-select it
                 const draft = readAmenDraft();
