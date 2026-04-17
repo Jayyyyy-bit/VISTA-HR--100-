@@ -706,7 +706,7 @@ def google_callback():
     # ── STEP 4: Destination Logic ──
     if is_new_user:
         # Kapag bagong gawa ang account, dapat pumili muna ng role
-        dest = "/auth/roles.html"
+        dest = "/Login_Register_Page/Signup/roles.html"
     elif role_val == "ADMIN":
         dest = "/admin/user-management/user-management.html"
     elif role_val == "OWNER":
