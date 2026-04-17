@@ -30,25 +30,22 @@ def init_oauth(app):
     )
 
 
+# UPDATE 1: Sa _set_auth_cookie function
 def _set_auth_cookie(resp, token: str):
-    """
-    Dev (http://127.0.0.1): Secure=False, SameSite=Lax works.
-    Prod (https): set Secure=True + SameSite=None if cross-site.
-    """
     is_prod = current_app.config.get("ENV") == "production"
-    # if you deploy frontend and backend on different domains,
-    # you'll likely need: samesite="None" and secure=True (HTTPS)
-    # Hanapin ang _set_auth_cookie function
     resp.set_cookie(
-    COOKIE_NAME,
-    token,
-    httponly=True,
-    secure=is_prod,          # True ito sa production
-    samesite="None" if is_prod else "Lax",  # CHANGE THIS: "None" kailangan for cross-site
-    max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 60) * 60,
-    path="/",
-)
+        COOKIE_NAME,
+        token,
+        httponly=True,
+        secure=is_prod, # Dapat True ito sa Railway
+        samesite="None" if is_prod else "Lax", # GAWIN ITONG "None" PARA SA PRODUCTION
+        max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 10080) * 60,
+        path="/",
+    )
     return resp
+
+# UPDATE 2: Sa _make_redirect_response function (line 583 sa auth.py)
+# Siguraduhin na SameSite="None" din dito para pumasok ang cookie pagkatapos ng Google login
 
 
 def _generate_otp() -> str:
@@ -763,8 +760,8 @@ def _make_redirect_response(dest: str, token: str, user):
     resp.set_cookie(
         COOKIE_NAME, token,
         httponly=True,
-        secure=is_prod,
-        samesite="Lax",
+        secure=True, # Laging True sa Railway/HTTPS
+        samesite="None", # Importante ito para sa cross-domain redirects
         max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 10080) * 60,
         path="/",
     )
