@@ -666,9 +666,11 @@ def google_callback():
 
     # 3. New user — auto-register
     # 3. New user — redirect to roles page to pick role
+    # 3. New user — encode pending data in signed JWT, pass via URL
     if not user:
-        from flask import session
-        session["google_pending"] = {
+        import jwt as _jwt
+        import json
+        pending_data = {
             "google_id":      google_id,
             "email":          email,
             "first_name":     first_name,
@@ -676,8 +678,13 @@ def google_callback():
             "picture":        picture,
             "email_verified": bool(email_verified_google),
         }
+        pending_token = _jwt.encode(
+            {"gp": pending_data, "exp": datetime.now(timezone.utc).timestamp() + 600},
+            current_app.config["JWT_SECRET"],
+            algorithm="HS256"
+        )
         from flask import redirect as _redirect
-        return _redirect("/Login_Register_Page/Signup/roles.html?mode=google")
+        return _redirect(f"/Login_Register_Page/Signup/roles.html?mode=google&gpt={pending_token}")
 
     # Final checks
     if not getattr(user, "is_active", True):
@@ -747,10 +754,18 @@ def _make_redirect_response(dest: str, token: str, user):
 @auth_bp.post("/auth/google/complete")
 def google_complete():
     """Complete Google registration after user picks a role."""
-    from flask import session
-    pending = session.get("google_pending")
-    if not pending:
+    import jwt as _jwt
+    data = request.get_json(silent=True) or {}
+    pending_token = data.get("pending_token", "")
+    if not pending_token:
         return json_error("No pending Google registration.", 400)
+    try:
+        payload = _jwt.decode(pending_token, current_app.config["JWT_SECRET"], algorithms=["HS256"])
+        pending = payload.get("gp")
+        if not pending:
+            raise ValueError("Missing pending data")
+    except Exception:
+        return json_error("Google session expired. Please try again.", 400)
 
     data = request.get_json(silent=True) or {}
     role = (data.get("role") or "").upper()

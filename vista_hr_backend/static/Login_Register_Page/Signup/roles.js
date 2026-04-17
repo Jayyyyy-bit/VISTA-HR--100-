@@ -8,7 +8,9 @@ function safeGoTo(url) {
     else window.location.href = url;
 }
 
-const isGoogleMode = new URLSearchParams(window.location.search).get("mode") === "google";
+const _urlParams = new URLSearchParams(window.location.search);
+const isGoogleMode = _urlParams.get("mode") === "google";
+const _googlePendingToken = _urlParams.get("gpt") || "";
 
 async function handleRoleSelect(role) {
     if (isGoogleMode) {
@@ -17,8 +19,9 @@ async function handleRoleSelect(role) {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ role }),
+                body: JSON.stringify({ role, pending_token: _googlePendingToken }),
             });
+
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed.");
             const dest = role === "OWNER"
