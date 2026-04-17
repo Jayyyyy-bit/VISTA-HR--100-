@@ -34,11 +34,10 @@ def init_oauth(app):
 def _set_auth_cookie(resp, token: str):
     is_prod = current_app.config.get("ENV") == "production"
     resp.set_cookie(
-        COOKIE_NAME,
-        token,
+        COOKIE_NAME, token,
         httponly=True,
-        secure=is_prod, # Dapat True ito sa Railway
-        samesite="None" if is_prod else "Lax", # GAWIN ITONG "None" PARA SA PRODUCTION
+        secure=True, # Laging True sa Railway
+        samesite="None", # Importante ito para sa cross-domain redirects
         max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 10080) * 60,
         path="/",
     )
@@ -750,8 +749,8 @@ def _make_redirect_response(dest: str, token: str, user):
     resp.set_cookie(
         COOKIE_NAME, token,
         httponly=True,
-        secure=True, 
-        samesite="None" if is_prod else "Lax",
+        secure=True, # Laging True sa Railway
+        samesite="None", # Importante ito para sa cross-domain redirects
         max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 10080) * 60,
         path="/",
     )
