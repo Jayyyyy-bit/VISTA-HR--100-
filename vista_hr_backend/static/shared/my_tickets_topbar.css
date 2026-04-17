@@ -1,0 +1,219 @@
+/* VH Shared Topbar — injected into my_tickets pages */
+.vh-topbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: #fff;
+    border-bottom: 1px solid rgba(34, 34, 34, 0.12);
+    height: 64px;
+}
+
+.vh-topbar-inner {
+    width: 100%;
+    padding: 0 48px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.vh-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+    color: #222;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.vh-brand-mark {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: #C8872A;
+    flex-shrink: 0;
+}
+
+.vh-topbar-right {
+    display: flex;
+    align-items: center;
+}
+
+.vh-profile-wrap {
+    position: relative;
+}
+
+.vh-user-btn {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid rgba(34, 34, 34, 0.18);
+    border-radius: 999px;
+    padding: 4px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 140ms;
+}
+
+.vh-user-btn:hover {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.14);
+}
+
+.vh-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B3F6E, #C8872A);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.vh-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.vh-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 210px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    z-index: 300;
+    animation: vhDdIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vh-dropdown.open {
+    display: block;
+}
+
+@keyframes vhDdIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.vh-dd-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px 12px;
+    overflow: hidden;
+}
+
+.vh-dd-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B3F6E, #C8872A);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.vh-dd-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.vh-dd-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.vh-dd-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vh-dd-email {
+    font-size: 11px;
+    color: rgba(34, 34, 34, 0.6);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vh-dd-sep {
+    height: 1px;
+    background: rgba(34, 34, 34, 0.1);
+    margin: 4px 0;
+}
+
+.vh-dd-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    color: #222;
+    text-align: left;
+    transition: background 120ms;
+}
+
+.vh-dd-item:hover {
+    background: rgba(34, 34, 34, 0.05);
+}
+
+.vh-dd-item i {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: rgba(34, 34, 34, 0.6);
+}
+
+.vh-dd-logout {
+    color: #dc2626;
+}
+
+.vh-dd-logout i {
+    color: #dc2626;
+}

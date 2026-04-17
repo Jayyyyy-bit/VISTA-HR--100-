@@ -197,13 +197,25 @@ function render(l) {
         ownerId = owner.id;
         ownerName = owner.name || "Property Owner";
         const init = (ownerName[0] || "P").toUpperCase();
-        $("ldHostAv").textContent = init;
+
+        // Small host row avatar (top of listing)
+        const av = $("ldHostAv");
+        if (av) {
+            if (owner.avatar_url) {
+                av.innerHTML = `<img src="${esc(owner.avatar_url)}" alt="${esc(ownerName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            } else {
+                av.textContent = init;
+            }
+        }
         $("ldHostName").textContent = ownerName;
         $("ldHostSince").textContent = owner.member_since ? `Member since ${owner.member_since}` : "";
         if (owner.email) {
             const btn = $("ldMsgOwnerBtn");
             if (btn) btn.hidden = false;
         }
+
+        // Meet your landlord card
+        renderLandlordCard(owner);
     }
 
     // Room breakdown cards
@@ -441,7 +453,7 @@ function render(l) {
 
     // Set today as min date for move-in
     const today = new Date().toISOString().split("T")[0];
-    [$("ldMoveIn"), $("bmDate")].forEach(el => { if (el) el.min = today; });
+    // date mins handled by Pikaday in setupBooking()
 
     lucide.createIcons();
 }
@@ -688,6 +700,37 @@ function haversine(la1, lo1, la2, lo2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── Meet your landlord ────────────────────────────────────
+function renderLandlordCard(owner) {
+    const sec = $("ldLandlordSec");
+    if (!sec) return;
+    sec.hidden = false;
+
+    const init = (owner.name?.[0] || "P").toUpperCase();
+    const avatarHtml = owner.avatar_url
+        ? `<img src="${esc(owner.avatar_url)}" alt="${esc(owner.name || "Owner")}" class="ll-av-img">`
+        : `<div class="ll-av-fallback">${esc(init)}</div>`;
+
+    const ratingHtml = owner.owner_rating
+        ? `<div class="ll-rating">
+             <svg viewBox="0 0 24 24" width="14" height="14" fill="#F59E0B" stroke="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+             ${owner.owner_rating.toFixed(1)}
+             <span class="ll-rating-ct">(${owner.owner_reviews} review${owner.owner_reviews !== 1 ? "s" : ""})</span>
+           </div>`
+        : `<div class="ll-rating ll-rating-none">No ratings yet</div>`;
+
+    const badgeHtml = owner.kyc_verified
+        ? `<span class="ll-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Verified</span>`
+        : "";
+
+    $("llAvWrap").innerHTML = avatarHtml;
+    $("llName").textContent = owner.name || "Property Owner";
+    $("llMeta").innerHTML = `
+        ${badgeHtml}
+        <div class="ll-since">${owner.member_since ? `Member since ${owner.member_since}` : ""}</div>
+        ${ratingHtml}`;
+}
+
 // ── Reviews ───────────────────────────────────────────────
 async function loadReviews(lid, reset = false) {
     if (reset) { rvPage = 1; allRevs = []; }
@@ -740,20 +783,51 @@ function renderRevSummary(avg, total, breakdown) {
 
 function renderRevList(revs) {
     const grid = $("ldRevGrid");
-    if (!grid) return;
-    if (!revs.length) {
-        grid.innerHTML = `<p class="ld-no-rev">No reviews yet. Be the first!</p>`;
-        return;
+    const llGrid = $("llRevGrid");
+
+    // Populate Meet your landlord reviews panel (same data)
+    if (llGrid) {
+        if (!revs.length) {
+            llGrid.innerHTML = `<p class="ll-no-rev">No reviews yet.</p>`;
+        } else {
+            llGrid.innerHTML = revs.slice(0, 6).map(rv => {
+                const date = rv.created_at
+                    ? new Date(rv.created_at).toLocaleDateString("en-PH", { month: "short", year: "numeric", timeZone: "Asia/Manila" })
+                    : "";
+                const name = rv.resident_name || "Resident";
+                const init = (name[0] || "R").toUpperCase();
+                const avatarHtml = rv.reviewer_avatar_url
+                    ? `<img src="${esc(rv.reviewer_avatar_url)}" alt="${esc(name)}" class="ll-rev-av-img">`
+                    : `<div class="ll-rev-av-fallback">${esc(init)}</div>`;
+                return `<div class="ll-rev-card">
+                  <div class="ll-rev-top">
+                    <div class="ll-rev-av-wrap">${avatarHtml}</div>
+                    <div>
+                      <div class="ll-rev-name">${esc(name)}</div>
+                      <div class="ll-rev-date">${esc(date)}</div>
+                    </div>
+                    <div class="ll-rev-stars">${Array.from({ length: 5 }, (_, i) => starSvg(i < rv.rating, "ld-rev-s")).join("")}</div>
+                  </div>
+                  ${rv.comment ? `<p class="ll-rev-txt">${esc(rv.comment)}</p>` : ""}
+                </div>`;
+            }).join("");
+        }
     }
+
+    if (!grid) return;
     grid.innerHTML = revs.map(rv => {
         const date = rv.created_at
             ? new Date(rv.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" })
             : "";
-        const init = (rv.resident_name?.[0] || "R").toUpperCase();
+        const name = rv.resident_name || "Resident";
+        const init = (name[0] || "R").toUpperCase();
+        const avatarHtml = rv.reviewer_avatar_url
+            ? `<img src="${esc(rv.reviewer_avatar_url)}" alt="${esc(name)}" class="ld-rev-av-img">`
+            : `<div class="ld-rev-av">${esc(init)}</div>`;
         return `<div class="ld-rev-card">
       <div class="ld-rev-top">
-        <div class="ld-rev-av">${esc(init)}</div>
-        <div><div class="ld-rev-name">${esc(rv.resident_name || "Resident")}</div><div class="ld-rev-date">${esc(date)}</div></div>
+        <div class="ld-rev-av-wrap">${avatarHtml}</div>
+        <div><div class="ld-rev-name">${esc(name)}</div><div class="ld-rev-date">${esc(date)}</div></div>
       </div>
       <div class="ld-rev-stars2">${Array.from({ length: 5 }, (_, i) => starSvg(i < rv.rating, "ld-rev-s")).join("")}</div>
       ${rv.comment ? `<p class="ld-rev-txt">${esc(rv.comment)}</p>` : ""}
@@ -904,22 +978,101 @@ async function checkReservationStatus(lid) {
 }
 
 // ── Booking ───────────────────────────────────────────────
+let _pikaMoveIn = null;
+let _pikaEnd = null;
+
 function setupBooking(lid) {
     const openBm = () => openBookingModal(lid);
     on("ldReserveBtn", "click", openBm);
     on("ldMobReserveBtn", "click", openBm);
     on("bmClose", "click", closeBm);
     on("bmCancel", "click", closeBm);
-    on("bmOv", "click", closeBm);
     on("bmSend", "click", () => sendBooking(lid));
+
+    // Close on overlay click (outside modal card)
+    $("bmOv")?.addEventListener("click", e => {
+        if (e.target === $("bmOv")) closeBm();
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Pikaday — Move-in
+    _pikaMoveIn = new Pikaday({
+        field: $("bmMoveIn"),
+        minDate: today,
+        toString: d => fmtPikaDate(d),
+        onSelect(d) {
+            $("bmMoveInVal").value = toISODate(d);
+            // Push contract end minDate to day after move-in
+            const next = new Date(d);
+            next.setDate(next.getDate() + 1);
+            _pikaEnd.setMinDate(next);
+            updateDuration();
+            validateBmDates();
+        },
+    });
+
+    // Pikaday — Contract end
+    _pikaEnd = new Pikaday({
+        field: $("bmContractEnd"),
+        minDate: new Date(today.getTime() + 86400000),
+        toString: d => fmtPikaDate(d),
+        onSelect() {
+            $("bmContractEndVal").value = toISODate(_pikaEnd.getDate());
+            updateDuration();
+            validateBmDates();
+        },
+    });
+}
+
+function fmtPikaDate(d) {
+    if (!d) return "";
+    return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function toISODate(d) {
+    if (!d) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+}
+
+function updateDuration() {
+    const startVal = $("bmMoveInVal")?.value;
+    const endVal = $("bmContractEndVal")?.value;
+    const dur = $("bmDuration");
+    if (!dur) return;
+    if (!startVal || !endVal) { dur.hidden = true; return; }
+    const ms = new Date(endVal) - new Date(startVal);
+    const days = Math.round(ms / 86400000);
+    if (days <= 0) { dur.hidden = true; return; }
+    const months = Math.floor(days / 30);
+    const rem = days % 30;
+    const parts = [];
+    if (months) parts.push(`${months} month${months !== 1 ? "s" : ""}`);
+    if (rem) parts.push(`${rem} day${rem !== 1 ? "s" : ""}`);
+    dur.textContent = `Duration: ${parts.join(" and ")}`;
+    dur.hidden = false;
+
+    // Update sidebar summary
+    const summary = $("ldDateSummary");
+    if (summary) {
+        $("ldsSummaryMoveIn").textContent = fmtPikaDate(new Date(startVal));
+        $("ldsSummaryEnd").textContent = fmtPikaDate(new Date(endVal));
+        summary.hidden = false;
+    }
+}
+
+function validateBmDates() {
+    const hasStart = !!$("bmMoveInVal")?.value;
+    const hasEnd = !!$("bmContractEndVal")?.value;
+    const btn = $("bmSend");
+    if (btn) btn.disabled = !(hasStart && hasEnd);
 }
 
 function openBookingModal(lid) {
-    const dateVal = $("ldMoveIn")?.value || "";
-    if (dateVal && $("bmDate")) $("bmDate").value = dateVal;
-    const today = new Date().toISOString().split("T")[0];
-    if ($("bmDate")) $("bmDate").min = today;
-
     const cap = listing?.capacity || {};
     const rent = cap.monthly_rent || cap.price;
     const isStudentV = currentUser?.student_status === "APPROVED";
@@ -927,32 +1080,49 @@ function openBookingModal(lid) {
     const bDiscRent = (isStudentV && bDiscPct > 0 && rent) ? Math.round(rent * (1 - bDiscPct / 100)) : null;
     const cover = allPhotos[0];
     const locParts = [listing?.location?.barangay, listing?.location?.city || listing?.city].filter(Boolean);
+
     const priceSnap = rent
         ? (bDiscRent
-            ? `<div class="bm-snap-price"><span style="text-decoration:line-through;color:#999;font-size:0.85em">₱${Number(rent).toLocaleString()}</span> ₱${Number(bDiscRent).toLocaleString()}<span>/mo</span></div>`
-            : `<div class="bm-snap-price">₱${Number(rent).toLocaleString()}<span>/mo</span></div>`)
+            ? `<div class="bm-snap-price"><span class="bm-snap-orig">₱${Number(rent).toLocaleString()}</span> ₱${Number(bDiscRent).toLocaleString()}<span class="bm-snap-mo">/mo</span></div>`
+            : `<div class="bm-snap-price">₱${Number(rent).toLocaleString()}<span class="bm-snap-mo">/mo</span></div>`)
         : "";
-    $("bmSnap").innerHTML = `
-    ${cover ? `<img class="bm-snap-img" src="${esc(cover)}" alt="">` : `<div class="bm-snap-ph"><i data-lucide="home"></i></div>`}
-    <div><div class="bm-snap-title">${esc(listing?.title || "")}</div><div class="bm-snap-sub">${esc(listing?.place_type || "")} · ${esc(locParts.join(", "))}</div></div>
-    ${priceSnap}`;
 
+    $("bmSnap").innerHTML = `
+        ${cover
+            ? `<img class="bm-snap-img" src="${esc(cover)}" alt="">`
+            : `<div class="bm-snap-ph"><i data-lucide="home"></i></div>`}
+        <div class="bm-snap-info">
+            <div class="bm-snap-title">${esc(listing?.title || "")}</div>
+            <div class="bm-snap-sub">${esc(listing?.place_type || "")} · ${esc(locParts.join(", "))}</div>
+        </div>
+        ${priceSnap}`;
+
+    // Reset state
+    $("bmMoveIn").value = "";
+    $("bmContractEnd").value = "";
+    $("bmMoveInVal").value = "";
+    $("bmContractEndVal").value = "";
+    $("bmNote").value = "";
+    $("bmDuration").hidden = true;
+    $("bmErr").hidden = true;
+    $("bmSend").disabled = true;
     $("bmBd").hidden = false;
     $("bmOk").hidden = true;
     $("bmFt").hidden = false;
-    $("bmErr").hidden = true;
-    $("bmSend").disabled = false;
     $("bmLbl").hidden = false;
     $("bmSpin").hidden = true;
+
+    // Reset pikaday
+    _pikaMoveIn?.setDate(null, true);
+    _pikaEnd?.setDate(null, true);
+
     $("bmOv").hidden = false;
-    $("bmModal").hidden = false;
     document.body.style.overflow = "hidden";
     lucide.createIcons();
 }
 
 function closeBm() {
     $("bmOv").hidden = true;
-    $("bmModal").hidden = true;
     document.body.style.overflow = "";
 }
 
@@ -960,6 +1130,13 @@ async function sendBooking(lid) {
     const session = window.AuthGuard?.getSession?.()?.user;
     if (session?.email_verified === false) {
         $("bmErr").textContent = "Please verify your email first.";
+        $("bmErr").hidden = false;
+        return;
+    }
+    const moveIn = $("bmMoveInVal")?.value;
+    const contractEnd = $("bmContractEndVal")?.value;
+    if (!moveIn || !contractEnd) {
+        $("bmErr").textContent = "Please select both move-in and contract end dates.";
         $("bmErr").hidden = false;
         return;
     }
@@ -974,8 +1151,9 @@ async function sendBooking(lid) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 listing_id: lid,
-                move_in_date: $("bmDate")?.value || null,
-                message: $("bmNote")?.value.trim() || null
+                move_in_date: moveIn,
+                move_out_date: contractEnd,
+                message: $("bmNote")?.value.trim() || null,
             }),
         });
         const data = await res.json();

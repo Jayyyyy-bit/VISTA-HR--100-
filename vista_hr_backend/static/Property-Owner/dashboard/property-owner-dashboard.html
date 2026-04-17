@@ -15,6 +15,8 @@
 
     <script src="/auth/toast.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
+    <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/Property-Owner/dashboard/property-owner-dashboard.css">
     <link rel="stylesheet" href="/Property-Owner/dashboard/dashboard-calendar.css">
@@ -191,13 +193,14 @@
                         <div class="td-section-head" style="margin-bottom:12px">
                             <h3 class="td-section-title">Move-in Requests</h3>
                             <div class="bkFilterBar" role="tablist">
-                                <button class="bkFilterBtn active" data-status="ALL" role="tab">All</button>
+                                <button class="bkFilterBtn active" data-status="ALL" role="tab">Active</button>
                                 <button class="bkFilterBtn" data-status="PENDING" role="tab">Pending <span
                                         class="bkFilterCount" id="bkCountPending"></span></button>
-                                <button class="bkFilterBtn" data-status="APPROVED" role="tab">Reserved</button>
+                                <button class="bkFilterBtn" data-status="APPROVED" role="tab">Approved</button>
+                                <button class="bkFilterBtn" data-status="VIEWING_SCHEDULED" role="tab">Viewing</button>
+                                <button class="bkFilterBtn" data-status="VIEWING_DECLINED" role="tab">Declined</button>
                                 <button class="bkFilterBtn" data-status="ACTIVE" role="tab">Occupied</button>
                                 <button class="bkFilterBtn" data-status="COMPLETED" role="tab">Moved Out</button>
-                                <button class="bkFilterBtn" data-status="REJECTED" role="tab">Rejected</button>
                                 <button class="bkFilterBtn" data-status="CANCELLED" role="tab">Cancelled</button>
                             </div>
                         </div>
@@ -434,6 +437,13 @@
                                 style="font-weight:700;color:#6b7280;text-transform:uppercase;font-size:10px;">Type</span><br><span
                                 id="occDetailType">—</span></div>
                     </div>
+                    <!-- Viewing schedule action -->
+                    <div id="occViewingWrap" hidden style="margin-top:12px;">
+                        <button id="occScheduleViewingBtn"
+                            style="width:100%;padding:8px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                            <i data-lucide="eye" style="width:14px;height:14px;"></i> Schedule Viewing
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -534,6 +544,7 @@
                 <button class="btn ghost" id="modalCancel" type="button">Cancel</button>
                 <button class="btn solid" id="modalConfirm" type="button">Confirm</button>
             </div>
+            <div id="modalExtra"></div>
         </div>
     </div>
 

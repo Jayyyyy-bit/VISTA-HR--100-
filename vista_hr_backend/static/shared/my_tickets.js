@@ -14,15 +14,6 @@
             if (!currentUser) { location.href = "/auth/login.html"; return; }
         } catch { location.href = "/auth/login.html"; return; }
 
-        // Brand + back button based on role
-        const brandLink = el("brandLink");
-        const backBtn = el("backBtn");
-        const dashUrl = currentUser.role === "OWNER"
-            ? "/Property-Owner/dashboard/property-owner-dashboard.html"
-            : "/Resident/resident_home.html";
-        if (brandLink) brandLink.href = dashUrl;
-        backBtn?.addEventListener("click", () => { location.href = dashUrl; });
-
         await loadTickets();
         setupNewTicket();
         setupDetailModal();

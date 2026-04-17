@@ -79,6 +79,9 @@ class User(db.Model):
         default="NONE",
         server_default="NONE",
     )
+    # ── Google OAuth ──────────────────────────────────────────────
+    google_id        = db.Column(db.String(100), nullable=True, unique=True, index=True)
+    avatar_url_google = db.Column(db.String(500), nullable=True)
 
     # ── Profile extras ────────────────────────────────────────────
     based_in = db.Column(db.String(100), nullable=True)
@@ -127,7 +130,9 @@ class User(db.Model):
             "student_status": stu_val,
             "student_reject_reason": self.student_reject_reason,
             # Profile extras
-            "based_in": self.based_in,
+            "based_in":         self.based_in,
+            "google_id":        self.google_id,
+            "has_google":       bool(self.google_id),
             # Session
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
             "token_version": int(self.token_version or 0),

@@ -74,9 +74,12 @@
                 Pending
                 <span class="tabCount" id="countPending" hidden></span>
             </button>
-            <button class="filterTab" data-status="APPROVED">Reserved</button>
+            <button class="filterTab" data-status="APPROVED">Approved</button>
+            <button class="filterTab" data-status="VIEWING_SCHEDULED">Viewing</button>
+            <button class="filterTab" data-status="VIEWING_DECLINED">Declined</button>
             <button class="filterTab" data-status="ACTIVE">Occupied</button>
             <button class="filterTab" data-status="COMPLETED">Moved Out</button>
+            <button class="filterTab" data-status="MOVED_OUT">Moved Out (Early)</button>
             <button class="filterTab" data-status="REJECTED">Rejected</button>
             <button class="filterTab" data-status="CANCELLED">Cancelled</button>
         </div>
@@ -95,6 +98,10 @@
                     <div class="modalTitle">Cancel reservation?</div>
                     <div class="modalSub" id="modalSub">This will cancel your pending request.</div>
                 </div>
+            </div>
+            <div style="padding:0 1.5rem 0.5rem">
+                <textarea id="cancelReasonInput" class="rv-comment" placeholder="Reason for cancelling (optional)…"
+                    rows="2" maxlength="500" style="width:100%;margin-top:0.25rem"></textarea>
             </div>
             <div class="modalActions">
                 <button class="modalBtn modalBtn--ghost" id="modalCancel">Keep it</button>
@@ -140,6 +147,50 @@
         </div>
     </div>
 
+    <!-- Decline viewing modal -->
+    <div class="modalOverlay" id="declineViewingOverlay" hidden>
+        <div class="modalCard">
+            <div class="modalHead">
+                <div class="modalIcon" style="background:#fef2f2;color:#dc2626">
+                    <i data-lucide="x-circle"></i>
+                </div>
+                <div>
+                    <div class="modalTitle">Decline viewing?</div>
+                    <div class="modalSub">Tell the owner why you can't make it.</div>
+                </div>
+            </div>
+            <div style="padding:0 1.5rem 0.5rem">
+                <textarea id="declineReasonInput" class="rv-comment"
+                    placeholder="e.g. I found another unit, schedule conflict…" rows="3" maxlength="500"
+                    style="width:100%;margin-top:0.25rem"></textarea>
+                <p class="ld-err" id="declineErr" hidden style="margin-top:0.4rem;color:#dc2626;font-size:13px"></p>
+            </div>
+            <div class="modalActions">
+                <button class="modalBtn modalBtn--ghost" id="declineViewingCancel">Keep it</button>
+                <button class="modalBtn modalBtn--danger" id="declineViewingConfirm">Decline viewing</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete booking modal -->
+    <div class="modalOverlay" id="deleteBookingOverlay" hidden>
+        <div class="modalCard">
+            <div class="modalHead">
+                <div class="modalIcon" style="background:#fef2f2;color:#dc2626">
+                    <i data-lucide="trash-2"></i>
+                </div>
+                <div>
+                    <div class="modalTitle">Delete this record?</div>
+                    <div class="modalSub">This will remove it from your reservation history.</div>
+                </div>
+            </div>
+            <div class="modalActions">
+                <button class="modalBtn modalBtn--ghost" id="deleteBookingCancel">Keep it</button>
+                <button class="modalBtn modalBtn--danger" id="deleteBookingConfirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Payment proof upload modal -->
     <div class="modalOverlay" id="proofOverlay" hidden>
         <div class="modalCard" style="max-width:440px">
@@ -168,44 +219,6 @@
         </div>
     </div>
 
-
-    <!-- ══ REVIEW MODAL ══ -->
-    <div class="modalOverlay" id="rvOverlay" hidden>
-        <div class="modalCard rv-modal">
-            <button class="rv-close" id="rvClose" aria-label="Close"><i data-lucide="x"></i></button>
-
-            <!-- Step: Rating -->
-            <div id="rvStepRate">
-                <div class="rv-icon-wrap" id="rvIcon"></div>
-                <div class="rv-progress" id="rvProgress" hidden></div>
-                <div class="rv-title" id="rvTitle">Rate your experience</div>
-                <div class="rv-sub" id="rvSub">How was it?</div>
-                <div class="rv-stars" id="rvStars">
-                    <button class="rv-star" data-val="1" type="button"><i data-lucide="star"></i></button>
-                    <button class="rv-star" data-val="2" type="button"><i data-lucide="star"></i></button>
-                    <button class="rv-star" data-val="3" type="button"><i data-lucide="star"></i></button>
-                    <button class="rv-star" data-val="4" type="button"><i data-lucide="star"></i></button>
-                    <button class="rv-star" data-val="5" type="button"><i data-lucide="star"></i></button>
-                </div>
-                <textarea class="rv-comment" id="rvComment" placeholder="Share more about your experience… (optional)"
-                    rows="3" maxlength="500"></textarea>
-                <div class="rv-actions">
-                    <button class="modalBtn modalBtn--ghost" id="rvSkip" type="button">Skip</button>
-                    <button class="modalBtn modalBtn--primary" id="rvNext" type="button" disabled>Next</button>
-                </div>
-            </div>
-
-            <!-- Step: Done -->
-            <div id="rvStepDone" hidden>
-                <div class="rv-done-icon"><i data-lucide="check-circle-2"></i></div>
-                <div class="rv-title">Thank you!</div>
-                <div class="rv-sub">Your feedback helps improve VISTA-HR for everyone.</div>
-                <div class="rv-actions" style="justify-content:center">
-                    <button class="modalBtn modalBtn--primary" id="rvDone" type="button">Done</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
 
     <!-- ══ REVIEW MODAL ══ -->

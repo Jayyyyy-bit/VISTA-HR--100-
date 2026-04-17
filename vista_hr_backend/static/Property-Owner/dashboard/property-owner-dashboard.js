@@ -97,6 +97,13 @@
       onConfirm,
       onCancel
     }) {
+      // Re-query every time — avoids stale null refs from early init
+      const modalOverlay = document.getElementById("modalOverlay");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalMessage = document.getElementById("modalMessage");
+      const modalCancel = document.getElementById("modalCancel");
+      const modalConfirm = document.getElementById("modalConfirm");
+
       if (!modalOverlay || !modalTitle || !modalMessage || !modalCancel || !modalConfirm) {
         const yes = window.confirm(`${title}\n\n${message}`);
         if (yes && !confirmDisabled) onConfirm?.();
@@ -106,6 +113,9 @@
 
       modalTitle.textContent = title || "Confirm";
       modalMessage.textContent = message || "";
+      // modalExtra is pre-populated by caller — do not clear it here
+      // Inject extra HTML (e.g. form fields) below message
+      // Don't clear modalExtra — caller pre-populates it before calling openModal
       modalConfirm.textContent = confirmText || "Confirm";
       modalCancel.textContent = cancelText || "Cancel";
       modalConfirm.classList.toggle("danger", !!danger);
@@ -152,6 +162,11 @@
       modalOverlay.classList.add("open");
       modalOverlay.setAttribute("aria-hidden", "false");
     }
+
+    window.DashModal = { open: openModal };
+
+    // Expose openModal globally for dashboard-today.js
+
 
     async function apiFetch(path, options = {}) {
       const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -627,9 +642,8 @@
       const reserved = listings.filter(l => {
         const bk = String(l.booking_status || "").toUpperCase();
         const st = String(l.status || "").toUpperCase();
-        return st === "PUBLISHED" && bk === "APPROVED";
+        return st === "PUBLISHED" && (bk === "APPROVED" || bk === "VIEWING_SCHEDULED");
       });
-
       const occupied = listings.filter(l => {
         const bk = String(l.booking_status || "").toUpperCase();
         const st = String(l.status || "").toUpperCase();
@@ -734,7 +748,7 @@
       if (window.lucide?.createIcons) lucide.createIcons();
     }
 
-    function showOccDetail(l, type) {
+    async function showOccDetail(l, type) {
       const panel = document.getElementById("occDetailPanel");
       const images = galleryImages(l);
       const cap = typeof l.capacity === "object" ? l.capacity : {};
@@ -746,10 +760,195 @@
       if (images[0]) { imgEl.src = images[0]; imgEl.style.display = "block"; }
       else { imgEl.style.display = "none"; }
 
-      document.getElementById("occDetailStatus").textContent = type === "Reserved" ? "Reserved (Approved)" : "Occupied (Active)";
+      const bkStatus = String(l.booking_status || "").toUpperCase();
+      const statusLabels = {
+        APPROVED: "Approved — Awaiting viewing",
+        VIEWING_SCHEDULED: "Viewing Scheduled",
+        ACTIVE: "Occupied",
+      };
+      document.getElementById("occDetailStatus").textContent = statusLabels[bkStatus] || type;
       document.getElementById("occDetailPrice").textContent = cap.monthly_rent ? `₱${Number(cap.monthly_rent).toLocaleString()}/mo` : "On request";
       document.getElementById("occDetailLocation").textContent = [loc.city, loc.barangay].filter(Boolean).join(", ") || "—";
       document.getElementById("occDetailType").textContent = l.place_type || "—";
+
+      // Viewing + payment wrap
+      const viewingWrap = document.getElementById("occViewingWrap");
+
+      // Fetch booking detail for proof + verified status
+      let booking = null;
+      if (l.booking_id) {
+        try {
+          const d = await apiFetch(`/bookings/${l.booking_id}/receipt`);
+          booking = d.receipt || null;
+        } catch { /* silent */ }
+      }
+
+      if (viewingWrap) {
+        viewingWrap.hidden = false;
+        let html = "";
+
+        if (bkStatus === "APPROVED") {
+          html = `<button id="occScheduleViewingBtn"
+              style="width:100%;padding:8px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i data-lucide="eye" style="width:14px;height:14px;"></i> Schedule Viewing
+            </button>`;
+        } else if (bkStatus === "VIEWING_SCHEDULED") {
+          html = `<div style="font-size:12px;color:#1d4ed8;background:#eff6ff;border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+              <i data-lucide="calendar-clock" style="width:13px;height:13px;"></i>
+              Viewing: <strong>${l.viewing_date ? new Date(l.viewing_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "TBD"}</strong>
+            </div>`;
+
+          // Payment proof section
+          if (booking?.payment_proof_url) {
+            html += `<div style="margin-top:8px;">
+                <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">Payment Proof</div>
+                <a href="${escapeHtml(booking.payment_proof_url)}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#1d4ed8;text-decoration:none;background:#eff6ff;padding:5px 10px;border-radius:6px;border:1px solid #bfdbfe;">
+                   <i data-lucide="file-text" style="width:13px;height:13px;"></i> View proof
+                </a>
+                ${booking.payment_verified
+                ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#15803d;background:#f0fdf4;padding:5px 10px;border-radius:6px;border:1px solid #bbf7d0;margin-left:6px;"><i data-lucide="check-circle-2" style="width:13px;height:13px;"></i> Verified</span>`
+                : `<button id="occVerifyPaymentBtn" data-booking-id="${l.booking_id}"
+                       style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#fff;background:#15803d;padding:5px 10px;border-radius:6px;border:none;cursor:pointer;margin-left:6px;">
+                       <i data-lucide="check" style="width:13px;height:13px;"></i> Verify payment
+                     </button>`
+              }
+              </div>`;
+          } else {
+            html += `<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:7px 10px;margin-top:8px;">
+                <i data-lucide="clock" style="width:13px;height:13px;"></i> Awaiting payment proof from resident
+              </div>`;
+          }
+        }
+
+        viewingWrap.innerHTML = html;
+
+        // Bind schedule viewing btn
+        const schedBtn = document.getElementById("occScheduleViewingBtn");
+        if (schedBtn) schedBtn.onclick = () => openScheduleViewingModal(l.booking_id);
+
+        // Bind verify payment btn
+        const verifyBtn = document.getElementById("occVerifyPaymentBtn");
+        if (verifyBtn) {
+          verifyBtn.onclick = async () => {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = "Verifying…";
+            try {
+              await apiFetch(`/bookings/${verifyBtn.dataset.bookingId}/verify-payment`, {
+                method: "PATCH",
+                body: JSON.stringify({ verified: true }),
+              });
+              if (window.showSuccess) showSuccess("Payment verified! Resident can now be confirmed for move-in.");
+              showOccDetail(l, type); // refresh panel
+            } catch (e) {
+              if (window.showToast) showToast(e?.error || "Failed.", "error");
+              verifyBtn.disabled = false;
+            }
+          };
+        }
+      }
+
+      panel.hidden = false;
+      if (window.lucide?.createIcons) lucide.createIcons();
+    } async function showOccDetail(l, type) {
+      const panel = document.getElementById("occDetailPanel");
+      const images = galleryImages(l);
+      const cap = typeof l.capacity === "object" ? l.capacity : {};
+      const loc = typeof l.location === "object" ? l.location : {};
+
+      document.getElementById("occDetailTitle").textContent = (l.title || "").trim() || "Untitled space";
+
+      const imgEl = document.getElementById("occDetailImg");
+      if (images[0]) { imgEl.src = images[0]; imgEl.style.display = "block"; }
+      else { imgEl.style.display = "none"; }
+
+      const bkStatus = String(l.booking_status || "").toUpperCase();
+      const statusLabels = {
+        APPROVED: "Approved — Awaiting viewing",
+        VIEWING_SCHEDULED: "Viewing Scheduled",
+        ACTIVE: "Occupied",
+      };
+      document.getElementById("occDetailStatus").textContent = statusLabels[bkStatus] || type;
+      document.getElementById("occDetailPrice").textContent = cap.monthly_rent ? `₱${Number(cap.monthly_rent).toLocaleString()}/mo` : "On request";
+      document.getElementById("occDetailLocation").textContent = [loc.city, loc.barangay].filter(Boolean).join(", ") || "—";
+      document.getElementById("occDetailType").textContent = l.place_type || "—";
+
+      // Viewing + payment wrap
+      const viewingWrap = document.getElementById("occViewingWrap");
+
+      // Fetch booking detail for proof + verified status
+      let booking = null;
+      if (l.booking_id) {
+        try {
+          const d = await apiFetch(`/bookings/${l.booking_id}/receipt`);
+          booking = d.receipt || null;
+        } catch { /* silent */ }
+      }
+
+      if (viewingWrap) {
+        viewingWrap.hidden = false;
+        let html = "";
+
+        if (bkStatus === "APPROVED") {
+          html = `<button id="occScheduleViewingBtn"
+              style="width:100%;padding:8px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i data-lucide="eye" style="width:14px;height:14px;"></i> Schedule Viewing
+            </button>`;
+        } else if (bkStatus === "VIEWING_SCHEDULED") {
+          html = `<div style="font-size:12px;color:#1d4ed8;background:#eff6ff;border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+              <i data-lucide="calendar-clock" style="width:13px;height:13px;"></i>
+              Viewing: <strong>${l.viewing_date ? new Date(l.viewing_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "TBD"}</strong>
+            </div>`;
+
+          // Payment proof section
+          if (booking?.payment_proof_url) {
+            html += `<div style="margin-top:8px;">
+                <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">Payment Proof</div>
+                <a href="${escapeHtml(booking.payment_proof_url)}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#1d4ed8;text-decoration:none;background:#eff6ff;padding:5px 10px;border-radius:6px;border:1px solid #bfdbfe;">
+                   <i data-lucide="file-text" style="width:13px;height:13px;"></i> View proof
+                </a>
+                ${booking.payment_verified
+                ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#15803d;background:#f0fdf4;padding:5px 10px;border-radius:6px;border:1px solid #bbf7d0;margin-left:6px;"><i data-lucide="check-circle-2" style="width:13px;height:13px;"></i> Verified</span>`
+                : `<button id="occVerifyPaymentBtn" data-booking-id="${l.booking_id}"
+                       style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#fff;background:#15803d;padding:5px 10px;border-radius:6px;border:none;cursor:pointer;margin-left:6px;">
+                       <i data-lucide="check" style="width:13px;height:13px;"></i> Verify payment
+                     </button>`
+              }
+              </div>`;
+          } else {
+            html += `<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:7px 10px;margin-top:8px;">
+                <i data-lucide="clock" style="width:13px;height:13px;"></i> Awaiting payment proof from resident
+              </div>`;
+          }
+        }
+
+        viewingWrap.innerHTML = html;
+
+        // Bind schedule viewing btn
+        const schedBtn = document.getElementById("occScheduleViewingBtn");
+        if (schedBtn) schedBtn.onclick = () => openScheduleViewingModal(l.booking_id);
+
+        // Bind verify payment btn
+        const verifyBtn = document.getElementById("occVerifyPaymentBtn");
+        if (verifyBtn) {
+          verifyBtn.onclick = async () => {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = "Verifying…";
+            try {
+              await apiFetch(`/bookings/${verifyBtn.dataset.bookingId}/verify-payment`, {
+                method: "PATCH",
+                body: JSON.stringify({ verified: true }),
+              });
+              if (window.showSuccess) showSuccess("Payment verified! Resident can now be confirmed for move-in.");
+              showOccDetail(l, type); // refresh panel
+            } catch (e) {
+              if (window.showToast) showToast(e?.error || "Failed.", "error");
+              verifyBtn.disabled = false;
+            }
+          };
+        }
+      }
 
       panel.hidden = false;
       if (window.lucide?.createIcons) lucide.createIcons();
@@ -764,6 +963,45 @@
     document.getElementById("occExpandedClose")?.addEventListener("click", closeOccExpanded);
     document.getElementById("occBackdrop")?.addEventListener("click", closeOccExpanded);
 
+    function openScheduleViewingModal(bookingId) {
+      openModal({
+        title: "Schedule Viewing",
+        message: "Set a viewing date and optional notes for the resident.",
+        confirmText: "Schedule",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          const dateVal = document.getElementById("viewingDateInput")?.value;
+          const notesVal = (document.getElementById("viewingNotesInput")?.value || "").trim() || null;
+          if (!dateVal) { if (window.showError) showError("Please pick a date."); return; }
+          try {
+            const res = await fetch(`${API}/bookings/${bookingId}/status`, {
+              method: "PATCH", credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "VIEWING_SCHEDULED", viewing_date: dateVal, viewing_notes: notesVal }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to schedule viewing.");
+            if (window.showSuccess) showSuccess("Viewing scheduled! Resident has been notified.");
+            closeOccExpanded();
+          } catch (e) {
+            if (window.showError) showError(e.message);
+          }
+        },
+        extraHTML: `
+          <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
+            <label style="font-size:0.8rem;font-weight:600;color:#374151">Viewing Date & Time</label>
+            <input type="datetime-local" id="viewingDateInput" style="padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;width:100%">
+            <label style="font-size:0.8rem;font-weight:600;color:#374151">Notes (optional)</label>
+            <input type="text" id="viewingNotesInput" placeholder="e.g. Bring valid ID" style="padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;width:100%">
+          </div>`,
+      });
+    }
+
+    function fmtDate(dt) {
+      if (!dt) return "—";
+      try { return new Date(dt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }); }
+      catch { return "—"; }
+    }
     //  Buttons to
     btnCompleteListing?.addEventListener("click", () => {
       setTab("listings");
@@ -1034,7 +1272,7 @@
 
         return `<div class="notif-item${n.is_read ? "" : " unread"}" data-id="${n.id}"
                     style="cursor:${redirectUrl ? 'pointer' : 'default'}"
-                    ${redirectUrl ? `onclick="window.location.href='${redirectUrl}'"` : ""}>
+                    ${redirectUrl ? `data-redirect="${redirectUrl}"` : ""}>
                     <div class="notif-item-dot"></div>
                     <div class="notif-item-body">
                         <div class="notif-item-title">${escapeHtmlN(n.title || "")}</div>
@@ -1075,7 +1313,29 @@
   });
 
   // Mark all read button
+  // Mark all read button
   elN("notifMarkRead")?.addEventListener("click", markAllRead);
+
+  // Mark single as read on click + redirect
+  elN("notifList")?.addEventListener("click", async (e) => {
+    const item = e.target.closest(".notif-item[data-redirect]");
+    if (!item) return;
+    if (e.target.closest("[data-notif-del]")) return;
+    const id = item.dataset.id;
+    const redirect = item.dataset.redirect;
+    if (id && item.classList.contains("unread")) {
+      item.classList.remove("unread");
+      fetch(`/api/notifications/${id}/read`, { method: "PATCH", credentials: "include" }).catch(() => { });
+      const badge = elN("notifBadge");
+      if (badge) {
+        const cur = parseInt(badge.textContent, 10) || 0;
+        const next = Math.max(0, cur - 1);
+        badge.textContent = next > 9 ? "9+" : String(next);
+        badge.hidden = next === 0;
+      }
+    }
+    if (redirect) window.location.href = redirect;
+  });
 
   // Close on outside click
   document.addEventListener("click", (e) => {
@@ -1102,5 +1362,6 @@
     }
     fetch(`/api/notifications/${id}`, { method: "DELETE", credentials: "include" }).catch(() => { });
   });
+
 
 })();

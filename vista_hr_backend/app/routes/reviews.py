@@ -45,12 +45,20 @@ def listing_public(listing_id: int):
     if owner:
         first = (owner.first_name or "").strip()
         last  = (owner.last_name  or "").strip()
+        owner_rating_row = (
+            db.session.query(func.count(Review.id), func.avg(Review.rating))
+            .filter(Review.target_user_id == owner.id, Review.review_type == "OWNER")
+            .one()
+        )
         owner_info = {
-            "id":           owner.id,
-            "name":         f"{first} {last}".strip() or "Property Owner",
-            "member_since": owner.created_at.year if owner.created_at else None,
-            "email":        owner.email if bool(getattr(owner, "email_verified", False)) else None,
-            "avatar_url":   getattr(owner, "avatar_url", None),
+            "id":             owner.id,
+            "name":           f"{first} {last}".strip() or "Property Owner",
+            "member_since":   owner.created_at.year if owner.created_at else None,
+            "email":          owner.email if bool(getattr(owner, "email_verified", False)) else None,
+            "avatar_url":     getattr(owner, "avatar_url", None),
+            "kyc_verified":   getattr(owner, "kyc_status", None) == "APPROVED",
+            "owner_rating":   round(float(owner_rating_row[1]), 1) if owner_rating_row[1] else None,
+            "owner_reviews":  owner_rating_row[0] or 0,
         }
 
     stats = (
@@ -111,8 +119,20 @@ def list_reviews(listing_id: int):
         total_cnt += cnt
     avg = round(total_sum / total_cnt, 1) if total_cnt else None
 
+    # Batch-load reviewer avatars — avoids N+1
+    reviewer_ids = [r.reviewer_id for r in reviews]
+    avatar_map = {}
+    if reviewer_ids:
+        rows = db.session.query(User.id, User.avatar_url).filter(User.id.in_(reviewer_ids)).all()
+        avatar_map = {row.id: row.avatar_url for row in rows}
+
+    def _serialize(r):
+        d = r.to_dict()
+        d["reviewer_avatar_url"] = avatar_map.get(r.reviewer_id)
+        return d
+
     return jsonify({
-        "reviews":          [r.to_dict() for r in reviews],
+        "reviews":          [_serialize(r) for r in reviews],
         "total":            total,
         "page":             page,
         "per_page":         per_page,
@@ -345,7 +365,7 @@ def submit_review():
         db.session.add(review)
         db.session.commit()
         return jsonify({"message": "Review submitted", "review": review.to_dict()}), 201
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         return json_error("Database error", 500)
 

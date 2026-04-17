@@ -5,21 +5,29 @@
     let _all = [];
     let _status = "ALL";
     let _cancelTarget = null;
+    let _page = 1;
+    const PAGE_SIZE = 5;
 
     const STATUS_MAP = {
         PENDING: { label: "Pending", cls: "bc-status--pending" },
-        APPROVED: { label: "Reserved", cls: "bc-status--approved" },
+        APPROVED: { label: "Approved", cls: "bc-status--approved" },
+        VIEWING_SCHEDULED: { label: "Viewing Scheduled", cls: "bc-status--viewing" },
+        VIEWING_DECLINED: { label: "Viewing Declined", cls: "bc-status--cancelled" },
         ACTIVE: { label: "Occupied", cls: "bc-status--active" },
         COMPLETED: { label: "Moved Out", cls: "bc-status--completed" },
+        MOVED_OUT: { label: "Moved Out (Early)", cls: "bc-status--moved-out" },
         REJECTED: { label: "Rejected", cls: "bc-status--rejected" },
         CANCELLED: { label: "Cancelled", cls: "bc-status--cancelled" },
     };
 
     const STATUS_TOASTS = {
-        APPROVED: { msg: "Your booking was approved! You're reserved.", type: "success" },
+        APPROVED: { msg: "Your booking was approved!", type: "success" },
+        VIEWING_SCHEDULED: { msg: "Your viewing has been scheduled. Check your booking for details.", type: "info" },
+        VIEWING_DECLINED: { msg: "You declined the viewing. You may rebook after 1 day.", type: "warning" },
         REJECTED: { msg: "Your booking request was rejected.", type: "error" },
-        ACTIVE: { msg: "You've been marked as moved in. Welcome home!", type: "success" },
-        COMPLETED: { msg: "Your stay has been marked as completed.", type: "info" },
+        ACTIVE: { msg: "You've been moved in. Welcome home!", type: "success" },
+        COMPLETED: { msg: "Your stay has ended. Thanks for using VISTA-HR!", type: "info" },
+        MOVED_OUT: { msg: "Move-out recorded successfully.", type: "info" },
         CANCELLED: { msg: "Your booking was cancelled.", type: "warning" },
     };
 
@@ -87,6 +95,7 @@
                 document.querySelectorAll(".filterTab").forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
                 _status = btn.dataset.status;
+                _page = 1;
                 renderList();
             });
         });
@@ -107,7 +116,27 @@
             return;
         }
 
-        list.innerHTML = filtered.map((b, i) => bookingCardHTML(b, i)).join("");
+        const total = filtered.length;
+        const pages = Math.ceil(total / PAGE_SIZE);
+        _page = Math.min(_page, pages);
+        const start = (_page - 1) * PAGE_SIZE;
+        const paged = filtered.slice(start, start + PAGE_SIZE);
+
+        const paginationHTML = pages > 1 ? `
+            <div class="bk-pagination" style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0 4px">
+                <button class="bk-pg-btn" id="mbPgPrev" ${_page === 1 ? "disabled" : ""} style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <span style="font-size:13px;font-weight:600;color:#6b7280">${_page} / ${pages}</span>
+                <button class="bk-pg-btn" id="mbPgNext" ${_page === pages ? "disabled" : ""} style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <i data-lucide="chevron-right"></i>
+                </button>
+            </div>` : "";
+
+        list.innerHTML = paged.map((b, i) => bookingCardHTML(b, i)).join("") + paginationHTML;
+
+        list.querySelector("#mbPgPrev")?.addEventListener("click", () => { _page--; renderList(); });
+        list.querySelector("#mbPgNext")?.addEventListener("click", () => { _page++; renderList(); });
 
         list.querySelectorAll("[data-cancel-id]").forEach(btn => {
             btn.addEventListener("click", () => openCancelModal(Number(btn.dataset.cancelId), btn.dataset.cancelTitle));
@@ -124,15 +153,25 @@
         list.querySelectorAll(".bc-review-btn").forEach(btn => {
             btn.addEventListener("click", () => openReviewModal(Number(btn.dataset.bookingId), btn.dataset.trigger));
         });
+        list.querySelectorAll(".bc-view-confirm-btn").forEach(btn => {
+            btn.addEventListener("click", () => confirmViewing(Number(btn.dataset.bookingId)));
+        });
+        list.querySelectorAll("[data-delete-id]").forEach(btn => {
+            btn.addEventListener("click", () => openDeleteBookingModal(Number(btn.dataset.deleteId)));
+        });
+        list.querySelectorAll(".bc-view-decline-btn").forEach(btn => {
+            btn.addEventListener("click", () => openDeclineViewingModal(Number(btn.dataset.bookingId)));
+        });
 
         if (window.lucide?.createIcons) lucide.createIcons();
     }
 
     // ── Booking status timeline ───────────────────────────────
     function bookingTimelineHTML(status) {
-        const steps = ["PENDING", "APPROVED", "ACTIVE", "COMPLETED"];
-        const labels = ["Requested", "Approved", "Moved in", "Completed"];
+        const steps = ["PENDING", "APPROVED", "VIEWING_SCHEDULED", "ACTIVE", "COMPLETED"];
+        const labels = ["Requested", "Approved", "Viewing", "Moved In", "Moved Out"];
         const terminal = ["CANCELLED", "REJECTED"].includes(status);
+        const earlyOut = status === "MOVED_OUT";
 
         if (terminal) {
             const icon = status === "REJECTED" ? "x-circle" : "ban";
@@ -140,6 +179,84 @@
             return `<div class="bc-timeline bc-timeline--fail">
                 <i data-lucide="${icon}" class="bc-tl-fail-icon"></i>
                 <span class="bc-tl-fail-label">${label}</span>
+            </div>`;
+        }
+
+        if (earlyOut) {
+            return `<div class="bc-timeline bc-timeline--fail">
+                <i data-lucide="log-out" class="bc-tl-fail-icon" style="color:#ea580c"></i>
+                <span class="bc-tl-fail-label" style="color:#ea580c">Moved Out (Early)</span>
+            </div>`;
+        }
+
+        if (status === "VIEWING_DECLINED") {
+            return `<div class="bc-timeline bc-timeline--fail">
+                <i data-lucide="x-circle" class="bc-tl-fail-icon" style="color:#dc2626"></i>
+                <span class="bc-tl-fail-label" style="color:#dc2626">Viewing Declined</span>
+            </div>`;
+        }
+
+        const curIdx = steps.indexOf(status);
+        const html = steps.map((s, i) => {
+            const cls = i < curIdx ? "done" : i === curIdx ? "current" : "future";
+            return `<div class="bc-tl-step bc-tl-step--${cls}">
+                        <div class="bc-tl-dot"></div>
+                        <div class="bc-tl-label">${labels[i]}</div>
+                    </div>${i < steps.length - 1 ? '<div class="bc-tl-bar"></div>' : ""}`;
+        }).join("");
+
+        return `<div class="bc-timeline">${html}</div>`;
+    } function bookingTimelineHTML(status) {
+        const steps = ["PENDING", "APPROVED", "VIEWING_SCHEDULED", "ACTIVE", "COMPLETED"];
+        const labels = ["Requested", "Approved", "Viewing", "Moved In", "Moved Out"];
+        const terminal = ["CANCELLED", "REJECTED"].includes(status);
+        const earlyOut = status === "MOVED_OUT";
+
+        if (terminal) {
+            const icon = status === "REJECTED" ? "x-circle" : "ban";
+            const label = status === "REJECTED" ? "Rejected" : "Cancelled";
+            return `<div class="bc-timeline bc-timeline--fail">
+                <i data-lucide="${icon}" class="bc-tl-fail-icon"></i>
+                <span class="bc-tl-fail-label">${label}</span>
+            </div>`;
+        }
+
+        if (earlyOut) {
+            return `<div class="bc-timeline bc-timeline--fail">
+                <i data-lucide="log-out" class="bc-tl-fail-icon" style="color:#ea580c"></i>
+                <span class="bc-tl-fail-label" style="color:#ea580c">Moved Out (Early)</span>
+            </div>`;
+        }
+
+        const curIdx = steps.indexOf(status);
+        const html = steps.map((s, i) => {
+            const cls = i < curIdx ? "done" : i === curIdx ? "current" : "future";
+            return `<div class="bc-tl-step bc-tl-step--${cls}">
+                        <div class="bc-tl-dot"></div>
+                        <div class="bc-tl-label">${labels[i]}</div>
+                    </div>${i < steps.length - 1 ? '<div class="bc-tl-bar"></div>' : ""}`;
+        }).join("");
+
+        return `<div class="bc-timeline">${html}</div>`;
+    } function bookingTimelineHTML(status) {
+        const steps = ["PENDING", "APPROVED", "VIEWING_SCHEDULED", "ACTIVE", "COMPLETED"];
+        const labels = ["Requested", "Approved", "Viewing", "Moved In", "Moved Out"];
+        const terminal = ["CANCELLED", "REJECTED"].includes(status);
+        const earlyOut = status === "MOVED_OUT";
+
+        if (terminal) {
+            const icon = status === "REJECTED" ? "x-circle" : "ban";
+            const label = status === "REJECTED" ? "Rejected" : "Cancelled";
+            return `<div class="bc-timeline bc-timeline--fail">
+                <i data-lucide="${icon}" class="bc-tl-fail-icon"></i>
+                <span class="bc-tl-fail-label">${label}</span>
+            </div>`;
+        }
+
+        if (earlyOut) {
+            return `<div class="bc-timeline bc-timeline--fail">
+                <i data-lucide="log-out" class="bc-tl-fail-icon" style="color:#ea580c"></i>
+                <span class="bc-tl-fail-label" style="color:#ea580c">Moved Out (Early)</span>
             </div>`;
         }
 
@@ -176,9 +293,11 @@
         const listing = b.listing || {};
         const status = b.status || "PENDING";
         const { label, cls } = STATUS_MAP[status] || STATUS_MAP.PENDING;
-        const isCancellable = ["PENDING", "APPROVED"].includes(status);
+        const isCancellable = ["PENDING", "APPROVED", "VIEWING_SCHEDULED"].includes(status);
+        const isDeletable = ["CANCELLED", "REJECTED", "VIEWING_DECLINED", "MOVED_OUT", "COMPLETED"].includes(status);
         const isActive = status === "ACTIVE";
-        const isApproved = status === "APPROVED";
+        const isApproved = status === "VIEWING_SCHEDULED";
+        const isViewingScheduled = status === "VIEWING_SCHEDULED";
 
         const thumbEl = listing.cover
             ? `<img class="bc-thumb" src="${esc(listing.cover)}" alt="${esc(listing.title || "Listing")}">`
@@ -191,6 +310,45 @@
 
         const moveIn = b.move_in_date
             ? `<span class="bc-meta-item"><i data-lucide="calendar"></i>${fmtDate(b.move_in_date)}</span>`
+            : "";
+
+        const contractEnd = b.contract_end_date
+            ? `<span class="bc-meta-item"><i data-lucide="calendar-x"></i>Until ${fmtDate(b.contract_end_date)}</span>`
+            : "";
+
+        const viewingBlock = ""; // replaced by viewingResponseBlock
+
+        // Viewing response block
+        const viewingResponseBlock = isViewingScheduled && b.viewing_date && !b._viewingConfirmed ? `
+            <div class="bc-viewing-block">
+                <i data-lucide="eye"></i>
+                <div style="flex:1">
+                    <div class="bc-viewing-label">Viewing scheduled</div>
+                    <div class="bc-viewing-date">${fmtDate(b.viewing_date)}</div>
+                    ${b.viewing_notes ? `<div class="bc-viewing-notes">${esc(b.viewing_notes)}</div>` : ""}
+                    <div class="bc-viewing-actions">
+                        <button class="bc-view-confirm-btn" data-booking-id="${b.id}">
+                            <i data-lucide="check"></i> Confirm viewing
+                        </button>
+                        <button class="bc-view-decline-btn" data-booking-id="${b.id}">
+                            <i data-lucide="x"></i> Decline
+                        </button>
+                        <a class="bc-view-msg-btn" href="/Resident/resident_messages.html?listing=${b.listing_id}&owner=${b.listing?.owner_id || ''}">
+                            <i data-lucide="message-circle"></i> Message owner
+                        </a>
+                    </div>
+                </div>
+            </div>` : "";
+
+        // Viewing declined block
+        const viewingDeclinedBlock = status === "VIEWING_DECLINED" ? `
+            <div class="bc-owner-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">
+                <i data-lucide="x-circle"></i>
+                <span>You declined the viewing${b.viewing_decline_reason ? `: "${esc(b.viewing_decline_reason)}"` : ""}. You may rebook after 1 day.</span>
+            </div>` : "";
+
+        const daysEarlyBlock = status === "MOVED_OUT" && b.days_early != null
+            ? `<div class="bc-owner-note"><i data-lucide="info"></i><span>Moved out <strong>${b.days_early} day${b.days_early !== 1 ? "s" : ""}</strong> before contract end.</span></div>`
             : "";
 
         const messageBlock = b.message
@@ -256,6 +414,7 @@
                     </div>
                     <div class="bc-meta">
                         ${moveIn}
+                        ${contractEnd}
                         <span class="bc-meta-item"><i data-lucide="clock-3"></i>${relTime(b.created_at)}</span>
                     </div>
                 </div>
@@ -263,6 +422,10 @@
             </div>
             ${messageBlock}
             ${noteBlock}
+            ${viewingResponseBlock}
+            ${viewingDeclinedBlock}
+            ${viewingBlock}
+            ${daysEarlyBlock}
             ${paymentProofBlock}
             ${bookingTimelineHTML(status)}
             <div class="bc-actions">
@@ -271,6 +434,7 @@
                     ${receiptBtn}
                     ${moveOutBtn}
                     ${cancelBtn}
+                    ${isDeletable ? `<button class="bc-delete-btn" data-delete-id="${b.id}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;"><i data-lucide="trash-2"></i> Delete</button>` : ""}
                     ${reviewBtnHTML(b)}
                 </div>
             </div>
@@ -381,8 +545,11 @@
         btn.textContent = "Cancelling…";
         btn.disabled = true;
         try {
+            const reason = (document.getElementById("cancelReasonInput")?.value || "").trim() || null;
             const res = await fetch(`${API}/bookings/${_cancelTarget}/cancel`, {
                 method: "POST", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cancel_reason: reason }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || "Cancel failed.");
@@ -534,8 +701,9 @@
 
             const idx = _all.findIndex(b => b.id === _moveOutTarget);
             if (idx !== -1) {
-                _all[idx].status = "CANCELLED";
+                _all[idx].status = "MOVED_OUT";
                 _all[idx].move_out_date = data.booking?.move_out_date || new Date().toISOString();
+                _all[idx].days_early = data.booking?.days_early ?? null;
             }
             const movedId = _moveOutTarget;
             closeMoveOutModal();
@@ -696,6 +864,8 @@
         if (step >= pending.length) {
             document.getElementById("rvForm").hidden = true;
             document.getElementById("rvCongrats").hidden = false;
+            // Auto-close after 2.5s
+            setTimeout(() => closeReviewModal(), 2500);
             return;
         }
 
@@ -771,5 +941,121 @@
         _rv = { bookingId: null, trigger: null, step: 0, pending: [] };
         renderList();
     }
+
+
+    // ── Viewing confirm ───────────────────────────────────────
+    async function confirmViewing(bookingId) {
+        try {
+            const res = await fetch(`${API}/bookings/${bookingId}/viewing-response`, {
+                method: "PATCH", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "CONFIRM" }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed.");
+            // Mark confirmed locally so buttons disappear
+            const idx = _all.findIndex(b => b.id === bookingId);
+            if (idx !== -1) _all[idx]._viewingConfirmed = true;
+            renderList();
+            if (window.showSuccess) showSuccess("Viewing confirmed! The owner has been notified.");
+        } catch (err) {
+            if (window.showError) showError(err.message);
+        }
+    }
+
+    // ── Decline viewing modal ─────────────────────────────────
+    let _declineTarget = null;
+
+    function openDeclineViewingModal(bookingId) {
+        _declineTarget = bookingId;
+        const inp = document.getElementById("declineReasonInput");
+        if (inp) inp.value = "";
+        const err = document.getElementById("declineErr");
+        if (err) err.hidden = true;
+        document.getElementById("declineViewingOverlay").hidden = false;
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function closeDeclineViewingModal() {
+        _declineTarget = null;
+        document.getElementById("declineViewingOverlay").hidden = true;
+    }
+
+    document.getElementById("declineViewingCancel")?.addEventListener("click", closeDeclineViewingModal);
+    document.getElementById("declineViewingOverlay")?.addEventListener("click", e => {
+        if (e.target === e.currentTarget) closeDeclineViewingModal();
+    });
+    document.getElementById("declineViewingConfirm")?.addEventListener("click", async () => {
+        if (!_declineTarget) return;
+        const reason = (document.getElementById("declineReasonInput")?.value || "").trim();
+        const err = document.getElementById("declineErr");
+        if (!reason) {
+            if (err) { err.textContent = "Please provide a reason."; err.hidden = false; }
+            return;
+        }
+        const btn = document.getElementById("declineViewingConfirm");
+        btn.disabled = true; btn.textContent = "Submitting…";
+        try {
+            const res = await fetch(`${API}/bookings/${_declineTarget}/viewing-response`, {
+                method: "PATCH", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "DECLINE", reason }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed.");
+            const idx = _all.findIndex(b => b.id === _declineTarget);
+            if (idx !== -1) {
+                _all[idx].status = "VIEWING_DECLINED";
+                _all[idx].viewing_decline_reason = reason;
+            }
+            closeDeclineViewingModal();
+            renderList();
+            if (window.showToast) showToast("Viewing declined. You may rebook after 1 day.", "warning");
+        } catch (err2) {
+            if (err) { err.textContent = err2.message; err.hidden = false; }
+        } finally {
+            btn.disabled = false; btn.textContent = "Decline viewing";
+        }
+    });
+
+    // ── Delete booking (terminal statuses only) ───────────────
+    let _deleteTarget = null;
+
+    function openDeleteBookingModal(id) {
+        _deleteTarget = id;
+        document.getElementById("deleteBookingOverlay").hidden = false;
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function closeDeleteBookingModal() {
+        _deleteTarget = null;
+        document.getElementById("deleteBookingOverlay").hidden = true;
+    }
+
+    document.getElementById("deleteBookingCancel")?.addEventListener("click", closeDeleteBookingModal);
+    document.getElementById("deleteBookingOverlay")?.addEventListener("click", e => {
+        if (e.target === e.currentTarget) closeDeleteBookingModal();
+    });
+    document.getElementById("deleteBookingConfirm")?.addEventListener("click", async () => {
+        if (!_deleteTarget) return;
+        const btn = document.getElementById("deleteBookingConfirm");
+        btn.disabled = true; btn.textContent = "Deleting…";
+        try {
+            const res = await fetch(`${API}/bookings/${_deleteTarget}`, {
+                method: "DELETE", credentials: "include",
+            });
+            if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Failed."); }
+            _all = _all.filter(b => b.id !== _deleteTarget);
+            closeDeleteBookingModal();
+            updatePageSub();
+            updatePendingBadge();
+            renderList();
+            if (window.showSuccess) showSuccess("Booking removed.");
+        } catch (err) {
+            if (window.showError) showError(err.message);
+        } finally {
+            btn.disabled = false; btn.textContent = "Delete";
+        }
+    });
 
 })();

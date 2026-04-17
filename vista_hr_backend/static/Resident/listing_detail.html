@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
+    <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <link rel="stylesheet" href="/Resident/listing_detail.css" />
 </head>
@@ -201,6 +203,24 @@
                     <div class="ld-rev-summary" id="ldRevSummary" hidden></div>
                     <div class="ld-rev-grid" id="ldRevGrid"></div>
                     <button class="ld-load-more-btn" id="ldLoadMore" hidden>Show more reviews</button>
+                    <!-- Meet your landlord -->
+                    <section id="ldLandlordSec" hidden>
+                        <h2 class="ld-sh">Meet your landlord</h2>
+                        <div class="ll-layout">
+                            <!-- Left: owner card -->
+                            <div class="ll-card">
+                                <div class="ll-av-wrap" id="llAvWrap">
+                                    <div class="ll-av-fallback">P</div>
+                                </div>
+                                <div class="ll-name" id="llName">Property Owner</div>
+                                <div class="ll-meta" id="llMeta"></div>
+                            </div>
+                            <!-- Right: review list -->
+                            <div class="ll-reviews">
+                                <div class="ll-rev-grid" id="llRevGrid"></div>
+                            </div>
+                        </div>
+                    </section>
                 </section>
                 <hr class="ld-hr">
 
@@ -218,10 +238,16 @@
                     <div class="ld-book-price" id="ldBookPrice"></div>
                     <div class="ld-book-rating" id="ldBookRating" hidden></div>
 
-                    <!-- Date picker inline -->
-                    <div class="ld-book-dates">
-                        <label class="ld-date-lbl">Move-in date</label>
-                        <input type="date" id="ldMoveIn" class="ld-date-inp">
+                    <!-- Dates shown as summary after selection -->
+                    <div class="ld-book-dates-summary" id="ldDateSummary" hidden>
+                        <div class="lds-row">
+                            <span class="lds-label">Move-in</span>
+                            <span class="lds-val" id="ldsSummaryMoveIn">—</span>
+                        </div>
+                        <div class="lds-row">
+                            <span class="lds-label">Until</span>
+                            <span class="lds-val" id="ldsSummaryEnd">—</span>
+                        </div>
                     </div>
 
                     <button class="ld-btn-reserve" id="ldReserveBtn">Reserve now</button>
@@ -279,57 +305,67 @@
     </div>
 
     <!-- BOOKING MODAL -->
-    <div class="ld-ov" id="bmOv" hidden></div>
-    <div class="ld-modal bm" id="bmModal" hidden>
-        <div class="ld-modal-hd"><button class="ld-modal-x" id="bmClose"><i data-lucide="x"></i></button>
-            <h3>Request to book</h3>
-        </div>
-        <div class="bm-snap" id="bmSnap"></div>
-        <div class="ld-modal-bd" id="bmBd">
-            <div class="ld-field"><label class="ld-lbl" for="bmDate">Move-in date <span
-                        class="ld-opt">(optional)</span></label><input type="date" id="bmDate" class="ld-date-inp full">
+    <div class="bm-overlay" id="bmOv" hidden>
+        <div class="bm-modal" id="bmModal">
+            <!-- Header -->
+            <div class="bm-hd">
+                <button class="bm-close-btn" id="bmClose" aria-label="Close">
+                    <i data-lucide="x"></i>
+                </button>
+                <div class="bm-hd-title">Request to Book</div>
             </div>
-            <div class="ld-field"><label class="ld-lbl" for="bmNote">Message to owner <span
-                        class="ld-opt">(optional)</span></label><textarea id="bmNote" class="ld-ta" rows="3"
-                    placeholder="Hi, I'm interested…"></textarea></div>
-            <p class="ld-err" id="bmErr" hidden></p>
-        </div>
-        <div class="bm-ok" id="bmOk" hidden>
-            <div class="bm-ok-ic"><i data-lucide="check-circle-2"></i></div>
-            <h4>Booking request sent!</h4>
-            <p>The owner will get back to you soon.</p>
-        </div>
-        <div class="ld-modal-ft" id="bmFt">
-            <button class="ld-btn-ghost" id="bmCancel">Cancel</button>
-            <button class="ld-btn-primary" id="bmSend"><span id="bmLbl">Send request</span><span class="ld-spin"
-                    id="bmSpin" hidden></span></button>
-        </div>
-    </div>
 
-    <!-- REVIEW MODAL -->
-    <div class="ld-ov" id="rvOv" hidden></div>
-    <div class="ld-modal" id="rvModal" hidden>
-        <div class="ld-modal-hd">
-            <h3>Write a review</h3><button class="ld-modal-x" id="rvClose"><i data-lucide="x"></i></button>
-        </div>
-        <div class="ld-modal-bd">
-            <div class="ld-star-row" id="ldStarRow">
-                <button data-s="1"><i data-lucide="star"></i></button><button data-s="2"><i
-                        data-lucide="star"></i></button>
-                <button data-s="3"><i data-lucide="star"></i></button><button data-s="4"><i
-                        data-lucide="star"></i></button>
-                <button data-s="5"><i data-lucide="star"></i></button>
+            <!-- Listing snap -->
+            <div class="bm-snap" id="bmSnap"></div>
+
+            <!-- Form body -->
+            <div class="bm-body" id="bmBd">
+
+                <!-- Date section -->
+                <div class="bm-section">
+                    <div class="bm-section-title">Select dates</div>
+                    <div class="bm-date-row">
+                        <div class="bm-date-field">
+                            <label class="bm-date-lbl">Move-in date <span class="bm-req">*</span></label>
+                            <input type="text" id="bmMoveIn" class="bm-date-inp" placeholder="Pick a date" readonly>
+                            <input type="hidden" id="bmMoveInVal">
+                        </div>
+                        <div class="bm-date-arrow"><i data-lucide="arrow-right"></i></div>
+                        <div class="bm-date-field">
+                            <label class="bm-date-lbl">Contract end <span class="bm-req">*</span></label>
+                            <input type="text" id="bmContractEnd" class="bm-date-inp" placeholder="Pick a date"
+                                readonly>
+                            <input type="hidden" id="bmContractEndVal">
+                        </div>
+                    </div>
+                    <div class="bm-duration" id="bmDuration" hidden></div>
+                </div>
+
+                <!-- Message section -->
+                <div class="bm-section">
+                    <div class="bm-section-title">Message to owner <span class="bm-opt-lbl">optional</span></div>
+                    <textarea id="bmNote" class="bm-ta" rows="3" placeholder="Hi, I'm interested in this unit…"
+                        maxlength="500"></textarea>
+                </div>
+
+                <p class="bm-err" id="bmErr" hidden></p>
             </div>
-            <p class="ld-star-lbl" id="rvLbl">Tap a star to rate</p>
-            <textarea id="rvText" class="ld-ta" rows="4" placeholder="Tell others about your stay… (optional)"
-                maxlength="1000"></textarea>
-            <div class="ld-char-ct"><span id="rvCt">0</span>/1000</div>
-            <p class="ld-err" id="rvErr" hidden></p>
-        </div>
-        <div class="ld-modal-ft">
-            <button class="ld-btn-ghost" id="rvCancel">Cancel</button>
-            <button class="ld-btn-primary" id="rvSend" disabled><span id="rvLbl2">Submit review</span><span
-                    class="ld-spin" id="rvSpin" hidden></span></button>
+
+            <!-- Success state -->
+            <div class="bm-ok" id="bmOk" hidden>
+                <div class="bm-ok-ic"><i data-lucide="check-circle-2"></i></div>
+                <h4>Request sent!</h4>
+                <p>The owner will get back to you soon.</p>
+            </div>
+
+            <!-- Footer -->
+            <div class="bm-ft" id="bmFt">
+                <button class="ld-btn-ghost" id="bmCancel">Cancel</button>
+                <button class="ld-btn-primary" id="bmSend" disabled>
+                    <span id="bmLbl">Send request</span>
+                    <span class="ld-spin" id="bmSpin" hidden></span>
+                </button>
+            </div>
         </div>
     </div>
 

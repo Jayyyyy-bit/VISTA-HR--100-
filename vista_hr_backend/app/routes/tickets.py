@@ -36,12 +36,8 @@ def create_ticket():
     if category not in valid_categories:
         category = "OTHER"
 
-    # Store submitter's role so admin can filter by OWNER vs RESIDENT
-    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
-
     ticket = Ticket(
         user_id=user.id,
-        role=role_val,
         subject=subject,
         body=body,
         category=category,
@@ -102,9 +98,6 @@ def admin_list_tickets():
         query = query.filter(Ticket.status == status)
     if category and category in ("TECHNICAL", "BILLING", "LISTING", "ACCOUNT", "OTHER"):
         query = query.filter(Ticket.category == category)
-    if role and role in ("OWNER", "RESIDENT"):
-        query = query.filter(Ticket.role == role)
-
     tickets = query.order_by(Ticket.created_at.desc()).all()
 
     result = []

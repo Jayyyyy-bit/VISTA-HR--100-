@@ -16,8 +16,87 @@ from ..routes.notifications import create_notification
 bookings_bp = Blueprint("bookings", __name__)
 
 # ── Constants ─────────────────────────────────────────────
-LIVE_STATUSES = ("PENDING", "APPROVED", "ACTIVE")
-RECEIPT_STATUSES = ("APPROVED", "ACTIVE", "COMPLETED")
+LIVE_STATUSES    = ("PENDING", "APPROVED", "VIEWING_SCHEDULED", "VIEWING_DECLINED", "ACTIVE")
+RECEIPT_STATUSES = ("APPROVED", "VIEWING_SCHEDULED", "VIEWING_DECLINED", "ACTIVE", "COMPLETED", "MOVED_OUT")
+VIEWING_COOLDOWN_DAYS = 1   # days before resident can rebook after declining
+
+AUTO_CANCEL_PENDING_DAYS  = 3   # PENDING → CANCELLED after 3 days
+AUTO_CANCEL_APPROVED_DAYS = 3   # APPROVED → CANCELLED if no viewing set after 3 days
+
+
+# ── Auto-cancel helper (lazy evaluation) ─────────────────
+def _run_auto_cancels(bookings: list) -> None:
+    """
+    Called after any booking list fetch.
+    Mutates stale bookings in-place and commits once.
+    """
+    now  = datetime.now(timezone.utc)
+    dirty = False
+
+    for b in bookings:
+        status = b.status.value if hasattr(b.status, "value") else str(b.status)
+
+        if status == "PENDING":
+            age = (now - b.created_at.replace(tzinfo=timezone.utc)).days
+            if age >= AUTO_CANCEL_PENDING_DAYS:
+                b.status = "CANCELLED"
+                b.cancel_reason = "Auto-cancelled: no response from owner within 3 days."
+                dirty = True
+                resident = db.session.get(User, b.resident_id)
+                if resident:
+                    create_notification(
+                        user_id=resident.id,
+                        notif_type="BOOKING",
+                        title="Reservation auto-cancelled",
+                        body="Your reservation was automatically cancelled after 3 days with no response.",
+                    )
+
+        elif status == "APPROVED":
+            age = (now - b.approved_at.replace(tzinfo=timezone.utc)).days if b.approved_at else 0
+            if age >= AUTO_CANCEL_APPROVED_DAYS:
+                b.status = "CANCELLED"
+                b.cancel_reason = "Auto-cancelled: no viewing scheduled within 3 days of approval."
+                dirty = True
+                resident = db.session.get(User, b.resident_id)
+                if resident:
+                    create_notification(
+                        user_id=resident.id,
+                        notif_type="BOOKING",
+                        title="Reservation auto-cancelled",
+                        body="Your reservation was cancelled — no viewing was scheduled within 3 days.",
+                    )
+
+        elif status == "VIEWING_SCHEDULED":
+            if b.viewing_date:
+                vd = b.viewing_date if b.viewing_date.tzinfo else b.viewing_date.replace(tzinfo=timezone.utc)
+                if vd < now:
+                    b.status = "VIEWING_DECLINED"
+                    b.viewing_declined_at = now
+                    b.viewing_decline_reason = "Auto-declined: viewing date passed with no response."
+                    dirty = True
+                    resident = db.session.get(User, b.resident_id)
+                    listing  = db.session.get(Listing, b.listing_id)
+                    owner    = db.session.get(User, listing.owner_id) if listing else None
+                    if resident:
+                        create_notification(
+                            user_id=resident.id,
+                            notif_type="BOOKING",
+                            title="Reservation auto-cancelled",
+                            body="Your viewing date has passed with no move-in confirmation.",
+                        )
+                    if owner:
+                        create_notification(
+                            user_id=owner.id,
+                            notif_type="BOOKING",
+                            title="Viewing expired",
+                            body=f"A scheduled viewing has expired with no move-in confirmed.",
+                        )
+
+    if dirty:
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
 
 
 # ══════════════════════════════════════════════════════════
@@ -39,8 +118,8 @@ def create_booking():
         )
 
     listing_id = data.get("listing_id")
-    move_in_raw = data.get("move_in_date")
-    move_out_raw = data.get("move_out_date")
+    move_in_raw       = data.get("move_in_date")
+    move_out_raw      = data.get("move_out_date")   # treated as contract_end_date
     message = (data.get("message") or "").strip() or None
 
     # ── Validate listing_id ──
@@ -51,6 +130,7 @@ def create_booking():
     if not listing or listing.status != "PUBLISHED":
         return json_error("Listing not found or unavailable", 404)
 
+    # ── Guard: 1 live reservation per resident ──
     # ── Guard: 1 live reservation per resident ──
     live_booking = (
         Booking.query
@@ -66,6 +146,24 @@ def create_booking():
             409,
         )
 
+    # ── Guard: cooldown after declining a viewing ──
+    from datetime import timedelta
+    recent_decline = (
+        Booking.query
+        .filter(
+            Booking.resident_id == user.id,
+            Booking.status == "VIEWING_DECLINED",
+            Booking.viewing_declined_at >= datetime.now(timezone.utc) - timedelta(days=VIEWING_COOLDOWN_DAYS),
+        )
+        .first()
+    )
+    if recent_decline:
+        return json_error(
+            f"You recently declined a viewing. Please wait {VIEWING_COOLDOWN_DAYS} day(s) before making a new reservation.",
+            429,
+            code="VIEWING_COOLDOWN",
+        )
+
     # ── Guard: listing already occupied ──
     listing_active = (
         Booking.query
@@ -79,24 +177,25 @@ def create_booking():
         return json_error("This listing is currently occupied.", 409)
 
     # Validate move_in_date (optional but if provided must be valid)
-    move_in = None
-    if move_in_raw:
-        try:
-            move_in = date.fromisoformat(str(move_in_raw))
-            if move_in < date.today():
-                return json_error("Validation failed", 400, fields={"move_in_date": "Move-in date cannot be in the past."})
-        except ValueError:
-            return json_error("Validation failed", 400, fields={"move_in_date": "Must be a valid date (YYYY-MM-DD)."})
+    # Validate move_in_date — required
+    if not move_in_raw:
+        return json_error("Validation failed", 400, fields={"move_in_date": "Move-in date is required."})
+    try:
+        move_in = date.fromisoformat(str(move_in_raw))
+        if move_in < date.today():
+            return json_error("Validation failed", 400, fields={"move_in_date": "Move-in date cannot be in the past."})
+    except ValueError:
+        return json_error("Validation failed", 400, fields={"move_in_date": "Must be a valid date (YYYY-MM-DD)."})
 
-    #  Validate move_out_date (optional, must be after move_in if both provided)
-    move_out = None
-    if move_out_raw:
-        try:
-            move_out = date.fromisoformat(str(move_out_raw))
-            if move_in and move_out <= move_in:
-                return json_error("Validation failed", 400, fields={"move_out_date": "Move-out date must be after move-in date."})
-        except ValueError:
-            return json_error("Validation failed", 400, fields={"move_out_date": "Must be a valid date (YYYY-MM-DD)."})
+    # Validate move_out_date — required, must be after move_in
+    if not move_out_raw:
+        return json_error("Validation failed", 400, fields={"move_out_date": "Contract end date is required."})
+    try:
+        move_out = date.fromisoformat(str(move_out_raw))
+        if move_out <= move_in:
+            return json_error("Validation failed", 400, fields={"move_out_date": "Contract end date must be after move-in date."})
+    except ValueError:
+        return json_error("Validation failed", 400, fields={"move_out_date": "Must be a valid date (YYYY-MM-DD)."})
 
     #  Prevent duplicate PENDING booking for same listing
     existing = Booking.query.filter_by(
@@ -112,7 +211,7 @@ def create_booking():
         resident_id=user.id,
         status="PENDING",
         move_in_date=move_in,
-        move_out_date=move_out,
+        contract_end_date=move_out,
         message=message,
     )
 
@@ -175,6 +274,7 @@ def my_bookings():
         .order_by(Booking.created_at.desc())
         .all()
     )
+    _run_auto_cancels(bookings)
     return jsonify({"bookings": [b.to_dict() for b in bookings]}), 200
 
 
@@ -305,12 +405,15 @@ def booking_receipt(booking_id: int):
 
     # ── Status display label ──
     STATUS_LABELS = {
-        "PENDING": "Pending",
-        "APPROVED": "Reserved",
-        "ACTIVE": "Occupied",
-        "COMPLETED": "Moved Out",
-        "REJECTED": "Rejected",
-        "CANCELLED": "Cancelled",
+        "PENDING":           "Pending",
+        "APPROVED":          "Approved",
+        "VIEWING_SCHEDULED": "Viewing Scheduled",
+        "VIEWING_DECLINED":  "Viewing Declined",
+        "ACTIVE":            "Occupied",
+        "COMPLETED":         "Moved Out",
+        "MOVED_OUT":         "Moved Out (Early)",
+        "REJECTED":          "Rejected",
+        "CANCELLED":         "Cancelled",
     }
     display_status = STATUS_LABELS.get(status_val, status_val)
 
@@ -345,6 +448,7 @@ def owner_bookings():
         .order_by(Booking.created_at.desc())
         .all()
     )
+    _run_auto_cancels(bookings)
 
     out = []
     for b in bookings:
@@ -353,9 +457,11 @@ def owner_bookings():
 
         # Map backend status → calendar display status
         status_map = {
-            "APPROVED":  "RESERVED",
-            "ACTIVE":    "MOVED_IN",
-            "COMPLETED": "MOVE_OUT",
+            "APPROVED":           "RESERVED",
+            "VIEWING_SCHEDULED":  "VIEWING",
+            "ACTIVE":             "OCCUPIED",
+            "COMPLETED":          "MOVED_OUT",
+            "MOVED_OUT":          "MOVED_OUT_EARLY",
         }
         calendar_status = status_map.get(d.get("status"), d.get("status"))
 
@@ -385,9 +491,10 @@ def update_booking_status(booking_id: int):
     new_status = (data.get("status") or "").upper()
 
     ALLOWED_TRANSITIONS = {
-        "PENDING":   ["APPROVED", "REJECTED", "CANCELLED"],
-        "APPROVED":  ["ACTIVE",   "CANCELLED"],
-        "ACTIVE":    ["COMPLETED", "CANCELLED"],
+        "PENDING":            ["APPROVED", "REJECTED", "CANCELLED"],
+        "APPROVED":           ["VIEWING_SCHEDULED", "CANCELLED"],
+        "VIEWING_SCHEDULED":  ["ACTIVE", "CANCELLED"],
+        "ACTIVE":             ["COMPLETED"],
     }
 
     booking = db.session.get(Booking, booking_id)
@@ -407,8 +514,29 @@ def update_booking_status(booking_id: int):
         )
 
     # If moving to ACTIVE and no move_in_date set yet, default to today
-    if new_status == "ACTIVE" and not booking.move_in_date:
-        booking.move_in_date = date.today()
+    # VIEWING_SCHEDULED — requires viewing_date in body
+    if new_status == "VIEWING_SCHEDULED":
+        viewing_raw = data.get("viewing_date")
+        if not viewing_raw:
+            return json_error("Validation failed", 400, fields={"viewing_date": "viewing_date is required when scheduling a viewing."})
+        try:
+            booking.viewing_date  = datetime.fromisoformat(str(viewing_raw))
+            booking.viewing_notes = (data.get("viewing_notes") or "").strip() or None
+        except ValueError:
+            return json_error("Validation failed", 400, fields={"viewing_date": "Must be ISO datetime (YYYY-MM-DDTHH:MM)."})
+
+    
+    # ACTIVE — requires payment verified first
+    if new_status == "ACTIVE":
+        if not booking.payment_verified:
+            return json_error("Payment proof must be verified before confirming move-in.", 400)
+        if not booking.move_in_date:
+            booking.move_in_date = date.today()
+
+    # CANCELLED — require reason
+    if new_status == "CANCELLED":
+        reason = (data.get("cancel_reason") or data.get("note") or "").strip() or None
+        booking.cancel_reason = reason
 
     booking.status = new_status
     if data.get("note"):
@@ -454,8 +582,15 @@ def resident_move_out(booking_id: int):
     if booking.status != "ACTIVE":
         return json_error("Move-out is only available for active bookings.", 400)
 
-    booking.status = "CANCELLED"
-    booking.move_out_date = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    booking.status        = "MOVED_OUT"
+    booking.move_out_date = now
+
+    if booking.contract_end_date:
+        contract_end = datetime.combine(booking.contract_end_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        booking.days_early = max((contract_end - now).days, 0)
+    else:
+        booking.days_early = None
 
     try:
         db.session.commit()
@@ -479,7 +614,124 @@ def resident_move_out(booking_id: int):
 
     return jsonify({"message": "Move-out recorded.", "booking": booking.to_dict()}), 200
 
+# ══════════════════════════════════════════════════════════════
+# RESIDENT: Delete a terminal booking from history
+# ══════════════════════════════════════════════════════════════
 
+@bookings_bp.delete("/bookings/<int:booking_id>")
+@require_role("RESIDENT")
+def delete_booking(booking_id: int):
+    """Resident can delete bookings in terminal states from their history."""
+    DELETABLE = ("CANCELLED", "REJECTED", "VIEWING_DECLINED", "MOVED_OUT", "COMPLETED")
+    user = g.current_user
+    booking = db.session.get(Booking, booking_id)
+    if not booking or booking.resident_id != user.id:
+        return json_error("Booking not found.", 404)
+    if (booking.status.value if hasattr(booking.status, "value") else str(booking.status)) not in DELETABLE:
+        return json_error("Only cancelled, rejected, or completed bookings can be deleted.", 400)
+    try:
+        db.session.delete(booking)
+        db.session.commit()
+        return jsonify({"message": "Booking deleted."}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)
+    # ══════════════════════════════════════════════════════════════
+# OWNER: Delete a terminal booking from their view
+# ══════════════════════════════════════════════════════════════
+
+@bookings_bp.delete("/bookings/<int:booking_id>/owner-delete")
+@require_role("OWNER")
+def owner_delete_booking(booking_id: int):
+    DELETABLE = ("CANCELLED", "REJECTED", "VIEWING_DECLINED", "MOVED_OUT", "COMPLETED")
+    user = g.current_user
+    booking = db.session.get(Booking, booking_id)
+    if not booking:
+        return json_error("Booking not found.", 404)
+    listing = db.session.get(Listing, booking.listing_id)
+    if not listing or listing.owner_id != user.id:
+        return json_error("Forbidden.", 403)
+    status = booking.status.value if hasattr(booking.status, "value") else str(booking.status)
+    if status not in DELETABLE:
+        return json_error("Only terminal bookings can be deleted.", 400)
+    try:
+        db.session.delete(booking)
+        db.session.commit()
+        return jsonify({"message": "Booking deleted."}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)
+    
+# ══════════════════════════════════════════════════════════
+# RESIDENT: Confirm or decline a scheduled viewing
+# ══════════════════════════════════════════════════════════
+
+@bookings_bp.patch("/bookings/<int:booking_id>/viewing-response")
+@require_role("RESIDENT")
+def viewing_response(booking_id: int):
+    """
+    Resident responds to a scheduled viewing.
+    Body: { "action": "CONFIRM" | "DECLINE", "reason": str (required if DECLINE) }
+    CONFIRM — no status change, just records acknowledgement (viewing proceeds)
+    DECLINE — sets status to VIEWING_DECLINED, records reason + timestamp
+              Resident must wait VIEWING_COOLDOWN_DAYS before rebooking.
+    """
+    user = g.current_user
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").upper()
+
+    if action not in ("CONFIRM", "DECLINE"):
+        return json_error("action must be CONFIRM or DECLINE.", 400)
+
+    booking = db.session.get(Booking, booking_id)
+    if not booking or booking.resident_id != user.id:
+        return json_error("Booking not found.", 404)
+
+    if booking.status != "VIEWING_SCHEDULED":
+        return json_error("Viewing response is only valid for scheduled viewings.", 400)
+
+    listing = db.session.get(Listing, booking.listing_id)
+    owner   = db.session.get(User, listing.owner_id) if listing else None
+    listing_title = listing.title if listing else f"Listing #{booking.listing_id}"
+
+    if action == "CONFIRM":
+        # No status change — viewing is proceeding
+        # Notify owner
+        if owner:
+            create_notification(
+                user_id=owner.id,
+                notif_type="BOOKING",
+                title="Resident confirmed viewing",
+                body=f"{user.first_name or user.email} confirmed the viewing for '{listing_title}'.",
+            )
+        return jsonify({"message": "Viewing confirmed.", "booking": booking.to_dict()}), 200
+
+    # DECLINE
+    reason = (data.get("reason") or "").strip() or None
+    if not reason:
+        return json_error("A reason is required when declining a viewing.", 400)
+
+    now = datetime.now(timezone.utc)
+    booking.status                  = "VIEWING_DECLINED"
+    booking.viewing_declined_at     = now
+    booking.viewing_decline_reason  = reason
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)
+
+    # Notify owner
+    if owner:
+        create_notification(
+            user_id=owner.id,
+            notif_type="BOOKING",
+            title="Resident declined viewing",
+            body=f"{user.first_name or user.email} declined the viewing for '{listing_title}'. Reason: {reason}",
+        )
+
+    return jsonify({"message": "Viewing declined.", "booking": booking.to_dict()}), 200  
 # ══════════════════════════════════════════════════════════
 # RESIDENT: Upload payment proof
 # ══════════════════════════════════════════════════════════
@@ -497,8 +749,8 @@ def upload_payment_proof(booking_id: int):
     if not booking or booking.resident_id != user.id:
         return json_error("Booking not found", 404)
 
-    if booking.status != "APPROVED":
-        return json_error("Payment proof can only be submitted for approved bookings.", 400)
+    if booking.status != "VIEWING_SCHEDULED":
+        return json_error("Payment proof can only be submitted once a viewing is scheduled.", 400)
 
     proof_url = (data.get("payment_proof_url") or "").strip() or None
     if not proof_url:
@@ -584,11 +836,14 @@ def _owner_update_booking(booking_id: int, new_status: str, note: str = None):
     listing_title = listing.title or f"Listing #{booking.listing_id}"
 
     notif_map = {
-        "APPROVED": ("Reservation approved!",  f"Your reservation for '{listing_title}' was approved."),
-        "REJECTED": ("Reservation not approved", f"Your reservation for '{listing_title}' was not approved." + (f" Reason: {note}" if note else "")),
+        "VIEWING_SCHEDULED": ("Viewing scheduled",    f"Your viewing for '{listing_title}' is set on {booking.viewing_date.strftime('%b %d, %Y %I:%M %p') if booking.viewing_date else 'TBD'}."),
+        "ACTIVE":            ("You're now moved in!", f"Your reservation for '{listing_title}' is now active. Welcome!"),
+        "COMPLETED":         ("Moved out",            f"Your stay at '{listing_title}' has ended."),
+        "CANCELLED":         ("Reservation cancelled", f"Your reservation for '{listing_title}' was cancelled by the owner." + (f" Reason: {booking.cancel_reason}" if booking.cancel_reason else "")),
     }
-    title, body = notif_map[new_status]
-    create_notification(user_id=resident.id, notif_type=f"BOOKING_{new_status}", title=title, body=body)
+    if resident and new_status in notif_map:
+        title, body = notif_map[new_status]
+        create_notification(user_id=resident.id, notif_type="BOOKING", title=title, body=body)
 
     return jsonify({"message": f"Reservation {new_status.lower()}", "booking": booking.to_dict()}), 200
 
@@ -611,6 +866,9 @@ def verify_payment(booking_id: int):
     listing = db.session.get(Listing, booking.listing_id)
     if not listing or listing.owner_id != user.id:
         return json_error("Forbidden", 403)
+
+    if booking.status != "VIEWING_SCHEDULED":
+        return json_error("Payment can only be verified for bookings with a scheduled viewing.", 400)
 
     if not booking.payment_proof_url:
         return json_error("No proof of payment has been uploaded yet.", 400)

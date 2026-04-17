@@ -32,7 +32,13 @@ class Config:
             stacklevel=2,
         )
     JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRES_MINUTES", "10080"))
-
+    SECRET_KEY           = os.getenv("SECRET_KEY", "dev-secret-change-me-32chars")
+    GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5000/api/auth/google/callback")
+    
     # Gmail SMTP — set in .env
     MAIL_SENDER   = os.getenv("MAIL_SENDER", "")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-flask-session-key-change-me")

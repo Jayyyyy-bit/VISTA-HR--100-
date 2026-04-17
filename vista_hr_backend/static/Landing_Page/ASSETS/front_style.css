@@ -1310,6 +1310,215 @@ body.dark-slide .btn-pill:hover {
 }
 
 /* ════════════════════════════════
+   SLIDE 5 — HELP / FAQ
+════════════════════════════════ */
+.fp-slide[data-index="5"] {
+    top: 500svh;
+}
+
+.slide-help {
+    background: var(--white);
+    overflow-y: auto;
+}
+
+.faq-wrap {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 96px 32px 48px;
+}
+
+.faq-eyebrow {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--navy);
+    background: rgba(27, 63, 110, .08);
+    padding: 4px 12px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-bottom: 14px;
+}
+
+.faq-heading {
+    font-family: var(--font-d);
+    font-size: clamp(28px, 3.5vw, 48px);
+    font-weight: 300;
+    letter-spacing: -.04em;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 2.5rem;
+}
+
+.faq-heading em {
+    font-style: italic;
+    color: var(--navy);
+}
+
+.faq-item {
+    border-bottom: .5px solid var(--ink-10);
+}
+
+.faq-item:first-of-type {
+    border-top: .5px solid var(--ink-10);
+}
+
+.faq-q {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 1rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-b);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    transition: color 150ms;
+}
+
+.faq-q:hover {
+    color: var(--ink-60);
+}
+
+.faq-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    position: relative;
+}
+
+.faq-icon::before,
+.faq-icon::after {
+    content: '';
+    position: absolute;
+    background: var(--ink-60);
+    border-radius: 2px;
+}
+
+.faq-icon::before {
+    width: 10px;
+    height: 1.5px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.faq-icon::after {
+    width: 1.5px;
+    height: 10px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity .2s, transform .2s;
+}
+
+.faq-item.faq-open .faq-icon::after {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.faq-a {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease;
+}
+
+.faq-item.faq-open .faq-a {
+    max-height: 300px;
+}
+
+.faq-a-inner {
+    padding: 0 0 1rem;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--ink-60);
+}
+
+.faq-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 999px;
+    margin-right: 6px;
+    margin-bottom: 10px;
+}
+
+.faq-tag-all {
+    background: rgba(10, 10, 10, .06);
+    color: var(--ink-60);
+}
+
+.faq-tag-owner {
+    background: rgba(27, 63, 110, .08);
+    color: var(--navy);
+}
+
+.faq-tag-resident {
+    background: rgba(16, 185, 129, .09);
+    color: #065f46;
+}
+
+.faq-contact {
+    margin-top: 2.5rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--r-lg);
+    border: .5px solid var(--ink-10);
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.faq-contact-text p {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.faq-contact-text span {
+    font-size: 13px;
+    color: var(--ink-60);
+}
+
+.faq-contact-btn {
+    flex-shrink: 0;
+    font-family: var(--font-b);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 999px;
+    border: 1.5px solid var(--ink-35);
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 140ms, color 140ms, border-color 140ms;
+}
+
+.faq-contact-btn:hover {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+}
+
+@media (max-width: 640px) {
+    .faq-wrap {
+        padding: 80px 20px 40px;
+    }
+}
+
+/* ════════════════════════════════
    RESPONSIVE
 ════════════════════════════════ */
 @media (min-width: 900px) {

@@ -25,7 +25,7 @@ function exitTo(url) {
 ════════════════════════════════════════ */
 const fp = {
     current: 0,
-    total: 5,
+    total: 6,
     isAnimating: false,
     touchStartY: 0,
     DARK_SLIDES: new Set([4]), // slide-navy indices
@@ -124,6 +124,9 @@ const fp = {
    AUTH-AWARE NAV
 ════════════════════════════════════════ */
 async function initAuth() {
+    const nextParam = new URLSearchParams(location.search).get("next");
+    if (nextParam) sessionStorage.setItem("loadingDest", nextParam);
+
     const loginBtn = document.getElementById("loginBtn");
     const startBtn = document.getElementById("getStartedBtn");
 
@@ -135,6 +138,7 @@ async function initAuth() {
     document.getElementById("seeAllBtn")?.addEventListener("click", () => exitTo(PATHS.residentHome));
     document.getElementById("ownerCtaBtn")?.addEventListener("click", () => exitTo(PATHS.signup));
     document.getElementById("demoCta")?.addEventListener("click", () => exitTo(PATHS.login));
+    document.getElementById("helpNavBtn")?.addEventListener("click", () => fp.goTo(5));
 
     // Check localStorage first
     let session = null;
@@ -429,3 +433,57 @@ window.addEventListener('pageshow', (e) => {
         bootPage();
     }
 });
+
+/* ════════════════════════════════════════
+   FAQ ACCORDION — SLIDE 5
+════════════════════════════════════════ */
+(function initFAQ() {
+    const FAQS = [
+        { q: "How do I create an account?", a: "Click Sign up on the login page. Choose your role — Resident or Property Owner — fill in your details, then verify your email using the OTP sent to your inbox.", tag: "all" },
+        { q: "What is KYC verification and why do I need it?", a: "KYC verifies your identity using a government-issued ID and a selfie. Residents must complete it before booking. Property Owners must complete it before publishing a listing.", tag: "all" },
+        { q: "How do I list my property?", a: "After completing KYC, go to your Owner Dashboard and use the listing wizard. It walks you through property details, photos, capacity, amenities, and pricing across 10 steps.", tag: "owner" },
+        { q: "How do I book a room?", a: "Browse listings from the home page, open a listing you like, and click Reserve. You can only have one active booking at a time (Pending, Approved, or Active).", tag: "resident" },
+        { q: "What happens after I submit a booking request?", a: "Your request enters Pending status. The property owner reviews it and either approves or rejects it. You'll receive a notification either way.", tag: "resident" },
+        { q: "How do I submit payment proof?", a: "Go to My Bookings, open your approved booking, and tap Upload Payment Proof. The image uploads directly and is sent to the owner for review.", tag: "resident" },
+        { q: "Can I get a student discount?", a: "Yes. Go to Account Settings → Verification and toggle 'I am a student'. Upload your School ID and Certificate of Registration. Once approved, the discount applies automatically on eligible listings.", tag: "resident" },
+        { q: "How do I move out early?", a: "Go to My Bookings and tap Move Out on your active booking. This initiates a cancellation and records your move-out date.", tag: "resident" },
+        { q: "How do I message a property owner?", a: "Open any listing and use the message button. All conversations are in your Messages tab, with inbox and archived views.", tag: "all" },
+        { q: "How do I file a support ticket?", a: "Log in and go to Help & Support from your dashboard. Describe your issue and submit — admins will reply and you'll get a notification on every update.", tag: "all" },
+    ];
+
+    const TAG_LABEL = { all: "General", owner: "Property Owners", resident: "Residents" };
+    const TAG_CLASS = { all: "faq-tag-all", owner: "faq-tag-owner", resident: "faq-tag-resident" };
+
+    const list = document.getElementById("faqList");
+    if (!list) return;
+
+    FAQS.forEach((f, i) => {
+        const item = document.createElement("div");
+        item.className = "faq-item";
+        item.innerHTML = `
+            <button class="faq-q" aria-expanded="false" aria-controls="faq-ans-${i}">
+                <span>${f.q}</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+            </button>
+            <div class="faq-a" id="faq-ans-${i}" role="region">
+                <div class="faq-a-inner">
+                    <span class="faq-tag ${TAG_CLASS[f.tag]}">${TAG_LABEL[f.tag]}</span>
+                    ${f.a}
+                </div>
+            </div>`;
+
+        item.querySelector(".faq-q").addEventListener("click", () => {
+            const isOpen = item.classList.contains("faq-open");
+            list.querySelectorAll(".faq-item.faq-open").forEach(el => {
+                el.classList.remove("faq-open");
+                el.querySelector(".faq-q").setAttribute("aria-expanded", "false");
+            });
+            if (!isOpen) {
+                item.classList.add("faq-open");
+                item.querySelector(".faq-q").setAttribute("aria-expanded", "true");
+            }
+        });
+
+        list.appendChild(item);
+    });
+})();

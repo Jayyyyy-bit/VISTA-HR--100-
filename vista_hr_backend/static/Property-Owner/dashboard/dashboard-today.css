@@ -1162,3 +1162,97 @@
         max-width: calc(100vw - 24px);
     }
 }
+
+/* Viewing info row inside card */
+.bk-viewing-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 6px 16px 0;
+}
+
+.bk-viewing-info svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.bk-viewing-notes {
+    color: #3b82f6;
+}
+
+/* Awaiting payment label */
+.bk-awaiting-payment {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #92400e;
+    background: #fef3c7;
+    padding: 5px 10px;
+    border-radius: 8px;
+}
+
+.bk-awaiting-payment svg {
+    width: 13px;
+    height: 13px;
+}
+
+/* Badge for viewing */
+.bk-badge--viewing {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.bk-badge--active {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+/* Pagination */
+.bk-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 0 4px;
+}
+
+.bk-pg-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #374151;
+    transition: background 150ms;
+}
+
+.bk-pg-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+}
+
+.bk-pg-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.bk-pg-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.bk-pg-info {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+}

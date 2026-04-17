@@ -120,7 +120,7 @@
         );
 
         // Unread pill
-        const unreadCount = state.conversations.filter(t => t.unread).length;
+        const unreadCount = state.conversations.filter(t => t.unread && t.last_message).length;
         const pill = el("rmUnreadPill");
         if (pill) { pill.textContent = unreadCount; pill.hidden = unreadCount === 0; }
 

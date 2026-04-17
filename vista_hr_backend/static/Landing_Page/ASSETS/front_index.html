@@ -25,6 +25,7 @@
         <button class="dot" data-section="2"></button>
         <button class="dot" data-section="3"></button>
         <button class="dot" data-section="4"></button>
+        <button class="dot" data-section="5"></button>
     </nav>
 
     <!-- ══ NAV ══ -->
@@ -38,6 +39,8 @@
                 <a href="#" data-goto="1">Listings</a>
                 <a href="#" data-goto="2">Virtual Tours</a>
                 <a href="#" data-goto="3">How it Works</a>
+                <a href="/about/index.html">About Us</a>
+                <a href="#" id="helpNavBtn">Help</a>
             </div>
             <div class="nav-actions">
                 <button id="loginBtn" class="btn-ghost">Log In</button>
@@ -230,12 +233,28 @@
                         </div>
                     </div>
                     <div class="footer-links">
-                        <a href="#">About</a><a href="#">Support</a><a href="#">Privacy</a><a href="#">Facebook</a><a
-                            href="#">Instagram</a>
+                        <a href="/about/index.html">About</a><a href="#">Support</a><a href="#">Privacy</a><a
+                            href="#">Facebook</a><a href="#">Instagram</a>
                     </div>
                     <p class="footer-copy">© 2026 VISTA-HR · University of Caloocan City · CCS 111</p>
                 </div>
             </footer>
+        </section>
+
+        <!-- ── 5 · HELP / FAQ ── -->
+        <section class="fp-slide slide-help" data-index="5">
+            <div class="faq-wrap">
+                <span class="faq-eyebrow">Help Center</span>
+                <h2 class="faq-heading">Frequently asked<br><em>questions</em></h2>
+                <div id="faqList"></div>
+                <div class="faq-contact">
+                    <div class="faq-contact-text">
+                        <p>Still need help?</p>
+                        <span>Log in and file a support ticket — we usually respond within 24 hours.</span>
+                    </div>
+                    <a class="faq-contact-btn" href="/auth/login.html?next=/shared/my_tickets.html">Open a ticket</a>
+                </div>
+            </div>
         </section>
 
     </div>

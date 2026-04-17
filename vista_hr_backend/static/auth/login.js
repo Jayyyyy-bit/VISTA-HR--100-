@@ -89,6 +89,17 @@
     });
 
     goRolesBtn?.addEventListener("click", () => (window.location.href = ROUTE_ROLES));
+
+    // Google SSO — default RESIDENT, role can be passed via ?role=OWNER
+    document.getElementById("googleLoginBtn")?.addEventListener("click", () => {
+        const role = new URLSearchParams(window.location.search).get("role") || "RESIDENT";
+        window.location.href = `${API_BASE}/auth/google?role=${role}`;
+    });
+
+    // Show Google error if redirected back with error
+    const googleError = new URLSearchParams(window.location.search).get("google_error");
+    if (googleError) setError(decodeURIComponent(googleError));
+    
     goSignupBtn?.addEventListener("click", () => (window.location.href = ROUTE_ROLES));
     // ── FORGOT PASSWORD FLOW (Meta-style) ────────────────
     const API_FP = "/api";

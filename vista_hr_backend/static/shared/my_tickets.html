@@ -12,19 +12,41 @@
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="/auth/toast.js"></script>
-    <link rel="stylesheet" href="/shared/my_tickets.css" />
+    <link rel="stylesheet" href="my_tickets.css" />
+    <link rel="stylesheet" href="my_tickets_topbar.css" />
 </head>
 
 <body>
-    <header class="topbar">
-        <div class="topbar-inner">
-            <a class="brand" id="brandLink" href="#">
-                <span class="brand-dot"></span>
+    <!-- ══ TOPBAR ══ -->
+    <header class="vh-topbar">
+        <div class="vh-topbar-inner">
+            <a class="vh-brand" id="brandLink" href="#">
+                <span class="vh-brand-mark"></span>
                 <span>VISTA<b>-HR</b></span>
             </a>
-            <button class="back-btn" id="backBtn" type="button">
-                <i data-lucide="arrow-left"></i> Back
-            </button>
+            <div class="vh-topbar-right">
+                <div class="vh-profile-wrap" id="vhProfileWrap">
+                    <button class="vh-user-btn" id="vhProfileBtn" aria-haspopup="true" aria-expanded="false">
+                        <span class="vh-avatar" id="vhAvatarEl"></span>
+                    </button>
+                    <div class="vh-dropdown" id="vhDropdown" aria-hidden="true">
+                        <div class="vh-dd-user">
+                            <div class="vh-dd-avatar" id="vhDdAvatar"></div>
+                            <div class="vh-dd-info">
+                                <div class="vh-dd-name" id="vhDdName">User</div>
+                                <div class="vh-dd-email" id="vhDdEmail"></div>
+                            </div>
+                        </div>
+                        <div class="vh-dd-sep"></div>
+                        <button class="vh-dd-item" id="vhDashLink"><i
+                                data-lucide="layout-dashboard"></i>Dashboard</button>
+                        <button class="vh-dd-item" id="vhProfileLink"><i data-lucide="user"></i>Profile</button>
+                        <div class="vh-dd-sep"></div>
+                        <button class="vh-dd-item vh-dd-logout" id="vhLogout"><i data-lucide="log-out"></i>Log
+                            out</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -119,6 +141,82 @@
 
     <script src="/auth/sessionGuard.js" defer></script>
     <script src="/shared/my_tickets.js" defer></script>
+
+    <script>
+        /* ── VH Shared Topbar (Tickets — role-aware) ── */
+        (function () {
+            const API = "/api";
+            async function initVhTopbar() {
+                let user = null;
+                try {
+                    const res = await fetch(API + "/auth/me", { credentials: "include" });
+                    if (res.ok) { const d = await res.json(); user = d?.user || null; }
+                } catch { }
+
+                const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "User";
+                const init = (name[0] || "U").toUpperCase();
+                const avatarEl = document.getElementById("vhAvatarEl");
+                const ddAvatar = document.getElementById("vhDdAvatar");
+                if (avatarEl) avatarEl.textContent = init;
+                if (ddAvatar) ddAvatar.textContent = init;
+                const nameEl = document.getElementById("vhDdName");
+                const emailEl = document.getElementById("vhDdEmail");
+                if (nameEl) nameEl.textContent = name;
+                if (emailEl) emailEl.textContent = user?.email || "";
+
+                if (user?.avatar_url) {
+                    [avatarEl, ddAvatar].forEach(el => {
+                        if (!el) return;
+                        el.textContent = "";
+                        let img = el.querySelector("img");
+                        if (!img) { img = document.createElement("img"); img.alt = "Avatar"; el.appendChild(img); }
+                        img.src = user.avatar_url;
+                    });
+                }
+
+                // Role-aware dashboard link
+                const role = user?.role || "RESIDENT";
+                const dashUrl = role === "OWNER"
+                    ? "/Property-Owner/dashboard/property-owner-dashboard.html"
+                    : "/Resident/resident_home.html";
+
+                const brandLink = document.getElementById("brandLink");
+                if (brandLink) brandLink.href = dashUrl;
+
+                const dashBtn = document.getElementById("vhDashLink");
+                if (dashBtn) dashBtn.addEventListener("click", () => location.href = dashUrl);
+
+                const profileBtn = document.getElementById("vhProfileLink");
+                if (profileBtn) profileBtn.addEventListener("click", () => location.href = "/auth/account-settings.html");
+
+                if (window.lucide?.createIcons) lucide.createIcons();
+
+                const btn = document.getElementById("vhProfileBtn");
+                const menu = document.getElementById("vhDropdown");
+                btn?.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    menu?.classList.toggle("open");
+                    btn.setAttribute("aria-expanded", menu?.classList.contains("open"));
+                });
+                document.addEventListener("click", () => menu?.classList.remove("open"));
+                menu?.addEventListener("click", e => e.stopPropagation());
+
+                document.getElementById("vhLogout")?.addEventListener("click", async () => {
+                    try { await fetch(API + "/auth/logout", { method: "POST", credentials: "include" }); } catch { }
+                    try { window.AuthGuard?.clearSession?.(); } catch { }
+                    localStorage.removeItem("vista_session_user");
+                    sessionStorage.setItem("loadingDest", "/auth/login.html");
+                    sessionStorage.setItem("loadingMsg", "Logging you out…");
+                    window.location.href = "/auth/loading.html";
+                });
+            }
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", initVhTopbar);
+            } else {
+                initVhTopbar();
+            }
+        })();
+    </script>
 </body>
 
 </html>

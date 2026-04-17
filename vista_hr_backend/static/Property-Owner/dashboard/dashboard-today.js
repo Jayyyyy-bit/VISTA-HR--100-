@@ -432,26 +432,62 @@ window.DashToday = (() => {
         _applyFilter();
     }
 
+    const BK_PAGE_SIZE = 5;
+    let _bkPage = 1;
+
     function _applyFilter() {
         const listEl = el("bookingsList");
         if (!listEl) return;
 
+        // ALL tab excludes terminal statuses — show active pipeline only
         const filtered = _bkStatus === "ALL"
-            ? _bookings
+            ? _bookings.filter(b => !["CANCELLED", "REJECTED", "COMPLETED", "MOVED_OUT", "VIEWING_DECLINED"].includes(b.status))
             : _bookings.filter(b => b.status === _bkStatus);
+
+        _bkPage = 1;
+        _renderPage(filtered);
+    }
+
+    function _renderPage(filtered) {
+        const listEl = el("bookingsList");
+        if (!listEl) return;
 
         if (!filtered.length) {
             listEl.innerHTML = `
                 <div class="td-empty td-empty--box">
                     <i data-lucide="calendar-x-2"></i>
-                    <span>No move-in requests${_bkStatus !== "ALL" ? ` · ${_bkStatus.toLowerCase()}` : ""} yet.</span>
+                    <span>No requests${_bkStatus !== "ALL" ? ` · ${_bkStatus.toLowerCase()}` : ""} yet.</span>
                 </div>`;
             if (window.lucide?.createIcons) lucide.createIcons();
             return;
         }
 
-        listEl.innerHTML = `<div class="bk-task-list">${filtered.map(_taskRowHTML).join("")}</div>`;
+        const total = filtered.length;
+        const pages = Math.ceil(total / BK_PAGE_SIZE);
+        const start = (_bkPage - 1) * BK_PAGE_SIZE;
+        const paged = filtered.slice(start, start + BK_PAGE_SIZE);
+
+        const paginationHTML = pages > 1 ? `
+            <div class="bk-pagination">
+                <button class="bk-pg-btn" id="bkPgPrev" ${_bkPage === 1 ? "disabled" : ""}>
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <span class="bk-pg-info">${_bkPage} / ${pages}</span>
+                <button class="bk-pg-btn" id="bkPgNext" ${_bkPage === pages ? "disabled" : ""}>
+                    <i data-lucide="chevron-right"></i>
+                </button>
+            </div>` : "";
+
+        listEl.innerHTML = `<div class="bk-task-list">${paged.map(_taskRowHTML).join("")}</div>${paginationHTML}`;
         _bindActions(listEl);
+
+        listEl.querySelector("#bkPgPrev")?.addEventListener("click", () => {
+            if (_bkPage > 1) { _bkPage--; _renderPage(filtered); if (window.lucide?.createIcons) lucide.createIcons(); }
+        });
+        listEl.querySelector("#bkPgNext")?.addEventListener("click", () => {
+            if (_bkPage < pages) { _bkPage++; _renderPage(filtered); if (window.lucide?.createIcons) lucide.createIcons(); }
+        });
+
         if (window.lucide?.createIcons) lucide.createIcons();
     }
 
@@ -460,12 +496,26 @@ window.DashToday = (() => {
         const tenant = esc(b.resident_name || b.resident_email || "Resident");
         const title = esc(listing.title || "Untitled listing");
         const dotCls = {
-            PENDING: "dot--pending", APPROVED: "dot--approved", ACTIVE: "dot--approved",
-            COMPLETED: "dot--approved", REJECTED: "dot--rejected", CANCELLED: "dot--cancelled"
+            PENDING: "dot--pending",
+            APPROVED: "dot--approved",
+            VIEWING_SCHEDULED: "dot--viewing",
+            VIEWING_DECLINED: "dot--rejected",
+            ACTIVE: "dot--active",
+            COMPLETED: "dot--approved",
+            MOVED_OUT: "dot--cancelled",
+            REJECTED: "dot--rejected",
+            CANCELLED: "dot--cancelled",
         }[b.status] || "";
         const label = {
-            PENDING: "Pending", APPROVED: "Reserved", ACTIVE: "Occupied",
-            COMPLETED: "Moved Out", REJECTED: "Rejected", CANCELLED: "Cancelled"
+            PENDING: "Pending",
+            APPROVED: "Approved",
+            VIEWING_SCHEDULED: "Viewing Scheduled",
+            VIEWING_DECLINED: "Viewing Declined",
+            ACTIVE: "Occupied",
+            COMPLETED: "Moved Out",
+            MOVED_OUT: "Moved Out (Early)",
+            REJECTED: "Rejected",
+            CANCELLED: "Cancelled",
         }[b.status] || b.status;
 
         const moveIn = b.move_in_date
@@ -473,36 +523,56 @@ window.DashToday = (() => {
         const moveOut = b.move_out_date
             ? new Date(b.move_out_date).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : "—";
 
-        const actions = b.status === "PENDING" ? `
-            <div class="bk-task-actions">
-                <button class="bk-action-btn bk-action-btn--approve" data-id="${b.id}" type="button">
+        // PENDING: Approve + Reject only
+        const approveBtn = b.status === "PENDING"
+            ? `<button class="bk-action-btn bk-action-btn--approve" data-id="${b.id}" type="button">
                     <i data-lucide="check"></i> Approve
-                </button>
-                <button class="bk-action-btn bk-action-btn--reject" data-id="${b.id}" type="button">
+               </button>` : "";
+
+        const rejectBtn = b.status === "PENDING"
+            ? `<button class="bk-action-btn bk-action-btn--reject" data-id="${b.id}" type="button">
                     <i data-lucide="x"></i> Reject
-                </button>
-            </div>` : "";
+               </button>` : "";
 
-        const RECEIPT_STATUSES = ["APPROVED", "ACTIVE", "COMPLETED"];
+        // APPROVED: Schedule Viewing only
+        const scheduleViewingBtn = b.status === "APPROVED"
+            ? `<button class="bk-action-btn bk-action-btn--schedule" data-id="${b.id}" type="button">
+                    <i data-lucide="eye"></i> Schedule Viewing
+               </button>` : "";
+
+        // VIEWING_SCHEDULED: show viewing date + Confirm Move-in (if payment verified)
+        const viewingInfo = b.status === "VIEWING_SCHEDULED" && b.viewing_date
+            ? `<div class="bk-viewing-info">
+                    <i data-lucide="calendar-clock"></i>
+                    ${new Date(b.viewing_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                    ${b.viewing_notes ? `<span class="bk-viewing-notes">— ${esc(b.viewing_notes)}</span>` : ""}
+               </div>` : "";
+
+        const confirmMoveInBtn = b.status === "VIEWING_SCHEDULED"
+            ? (b.payment_verified
+                ? `<button class="bk-action-btn bk-action-btn--movedin" data-id="${b.id}" type="button">
+                        <i data-lucide="door-open"></i> Confirm Move-in
+                   </button>`
+                : (b.payment_proof_url
+                    ? `<span class="bk-awaiting-payment"><i data-lucide="clock"></i> Payment submitted — awaiting verification</span>
+                       <button class="bk-action-btn bk-action-btn--verify-payment" data-id="${b.id}" type="button" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">
+                           <i data-lucide="check-circle-2"></i> Verify Payment
+                       </button>`
+                    : `<span class="bk-awaiting-payment"><i data-lucide="clock"></i> Awaiting payment proof</span>`))
+            : "";
+
+        const TERMINAL = ["CANCELLED", "REJECTED", "VIEWING_DECLINED", "MOVED_OUT", "COMPLETED"];
+        const deleteBtn = TERMINAL.includes(b.status)
+            ? `<button class="bk-action-btn bk-action-btn--delete" data-id="${b.id}" type="button"
+                   style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
+                   <i data-lucide="trash-2"></i> Delete
+               </button>` : "";
+
+        const RECEIPT_STATUSES = ["VIEWING_SCHEDULED", "ACTIVE", "COMPLETED", "MOVED_OUT"];
         const receiptBtn = RECEIPT_STATUSES.includes(b.status)
-            ? `<button class="bk-action-btn bk-action-btn--receipt" data-receipt-id="${b.id}" data-booking='${JSON.stringify({ id: b.id, resident_name: b.resident_name || b.resident_email, listing_title: (b.listing || {}).title, move_in_date: b.move_in_date, move_out_date: b.move_out_date, monthly_rent: (b.listing || {}).price, status: b.status, created_at: b.created_at }).replace(/'/g, "")}' type="button">
+            ? `<button class="bk-action-btn bk-action-btn--receipt" data-receipt-id="${b.id}" type="button">
                     <i data-lucide="file-text"></i> Receipt
-               </button>`
-            : "";
-
-        // "Moved In" button — for APPROVED bookings
-        const movedInBtn = b.status === "APPROVED"
-            ? `<button class="bk-action-btn bk-action-btn--movedin" data-id="${b.id}" type="button">
-                    <i data-lucide="door-open"></i> Moved In
-               </button>`
-            : "";
-
-        // Cancel button — owner can cancel PENDING or APPROVED
-        const ownerCancelBtn = ["PENDING", "APPROVED"].includes(b.status)
-            ? `<button class="bk-action-btn bk-action-btn--owner-cancel" data-id="${b.id}" type="button">
-                    <i data-lucide="x"></i> Cancel
-               </button>`
-            : "";
+               </button>` : "";
 
 
 
@@ -512,6 +582,8 @@ window.DashToday = (() => {
         const thumbEl = cover
             ? `<img class="bk-card-thumb" src="${esc(cover)}" alt="">`
             : `<div class="bk-card-thumb bk-card-thumb--ph"><i data-lucide="home"></i></div>`;
+
+        const hasActions = approveBtn || rejectBtn || scheduleViewingBtn || viewingInfo || confirmMoveInBtn || receiptBtn || deleteBtn;
 
         return `
             <div class="bk-card" data-id="${b.id}">
@@ -534,11 +606,14 @@ window.DashToday = (() => {
                         </div>
                     </div>
                 </div>
-                ${(actions || receiptBtn || movedInBtn || ownerCancelBtn) ? `<div class="bk-card-actions">
-                    ${actions ? actions.replace('<div class="bk-task-actions">', '').replace('</div>', '') : ""}
-                    ${movedInBtn}
-                    ${ownerCancelBtn}
+                ${viewingInfo}
+                ${hasActions ? `<div class="bk-card-actions">
+                    ${approveBtn}
+                    ${rejectBtn}
+                    ${scheduleViewingBtn}
+                    ${confirmMoveInBtn}
                     ${receiptBtn}
+                    ${deleteBtn}
                 </div>` : ""}
             </div>`;
     }
@@ -572,19 +647,100 @@ window.DashToday = (() => {
             btn.addEventListener("click", () => _openReceipt(Number(btn.dataset.receiptId)));
         });
 
-        // Owner Cancel buttons
-        container.querySelectorAll(".bk-action-btn--owner-cancel").forEach(btn => {
+        // Schedule Viewing buttons (APPROVED → VIEWING_SCHEDULED)
+        container.querySelectorAll(".bk-action-btn--schedule").forEach(btn => {
             btn.addEventListener("click", () => {
-                _ownerCancelTarget = Number(btn.dataset.id);
-                _openOwnerCancelModal();
+                if (window.openScheduleViewingModal) {
+                    openScheduleViewingModal(Number(btn.dataset.id));
+                }
             });
         });
 
-        // Moved In buttons (APPROVED → ACTIVE)
+        // Confirm Move-in buttons (VIEWING_SCHEDULED → ACTIVE, payment_verified required)
+        // Verify payment button
+        container.querySelectorAll(".bk-action-btn--verify-payment").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                btn.disabled = true;
+                try {
+                    await apiFetch(`/bookings/${btn.dataset.id}/verify-payment`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ verified: true }),
+                    });
+                    render();
+                    if (window.showSuccess) showSuccess("Payment verified! You can now confirm move-in.");
+                } catch (e) {
+                    if (window.showToast) showToast(e?.error || "Failed.", "error");
+                    btn.disabled = false;
+                }
+            });
+        });
+
+
+        // Verify payment button
+        container.querySelectorAll(".bk-action-btn--verify-payment").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                btn.disabled = true;
+                try {
+                    await apiFetch(`/bookings/${btn.dataset.id}/verify-payment`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ verified: true }),
+                    });
+                    render();
+                    if (window.showSuccess) showSuccess("Payment verified! You can now confirm move-in.");
+                } catch (e) {
+                    if (window.showToast) showToast(e?.error || "Failed.", "error");
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        // Confirm Move-in buttons (VIEWING_SCHEDULED → ACTIVE, payment_verified required)
         container.querySelectorAll(".bk-action-btn--movedin").forEach(btn => {
             btn.addEventListener("click", () => {
                 _movedInTarget = Number(btn.dataset.id);
                 _openMovedInModal();
+            });
+        });
+
+        // Verify payment button
+        container.querySelectorAll(".bk-action-btn--verify-payment").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                btn.disabled = true;
+                try {
+                    await apiFetch(`/bookings/${btn.dataset.id}/verify-payment`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ verified: true }),
+                    });
+                    render();
+                    if (window.showSuccess) showSuccess("Payment verified! You can now confirm move-in.");
+                } catch (e) {
+                    if (window.showToast) showToast(e?.error || "Failed.", "error");
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        // Delete terminal booking
+        container.querySelectorAll(".bk-action-btn--delete").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const id = Number(btn.dataset.id);
+                if (!window.DashModal?.open) return;
+                window.DashModal.open({
+                    title: "Delete this record?",
+                    message: "This will remove it from your booking history.",
+                    confirmText: "Delete",
+                    cancelText: "Cancel",
+                    danger: true,
+                    onConfirm: async () => {
+                        try {
+                            await apiFetch(`/bookings/${id}/owner-delete`, { method: "DELETE" });
+                            render();
+                            if (window.showSuccess) showSuccess("Record deleted.");
+                        } catch (e) {
+                            if (window.showToast) showToast(e?.error || "Failed.", "error");
+                        }
+                    },
+                });
             });
         });
     }
@@ -889,6 +1045,117 @@ window.DashToday = (() => {
             });
         });
     }
+
+    // Expose schedule viewing modal globally so property-owner-dashboard.js can call it
+    let _schedPika = null;
+
+    window.openScheduleViewingModal = function (bookingId) {
+        try {
+            // Inject fields into modalExtra
+            const extraEl = document.getElementById("modalExtra");
+            if (extraEl) extraEl.innerHTML = `
+            <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151">Viewing Date</label>
+                <input type="text" id="viewingDateDisplay" readonly placeholder="Pick a date"
+                    style="padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;width:100%;box-sizing:border-box;cursor:pointer;background:#fff">
+                <input type="hidden" id="viewingDateInput">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151">Time</label>
+                <input type="time" id="viewingTimeInput" value="10:00"
+                    style="padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;width:100%;box-sizing:border-box">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151">Notes <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                <input type="text" id="viewingNotesInput" placeholder="e.g. Bring valid ID"
+                    style="padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;width:100%;box-sizing:border-box">
+            </div>`;
+
+            // Init Pikaday once after DOM is ready
+            if (_schedPika) { _schedPika.destroy(); _schedPika = null; }
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            setTimeout(() => {
+                const displayField = document.getElementById("viewingDateDisplay");
+                if (!displayField || !window.Pikaday) return;
+                _schedPika = new Pikaday({
+                    field: displayField,
+                    minDate: today,
+                    toString: d => d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
+                    onSelect(d) {
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, "0");
+                        const day = String(d.getDate()).padStart(2, "0");
+                        document.getElementById("viewingDateInput").value = `${y}-${m}-${day}`;
+                    },
+                });
+            }, 50);
+
+            const _callModal = window.DashModal?.open;
+            if (!_callModal) {
+                // Fallback: build a simple inline modal using the existing overlay elements
+                const mOverlay = document.getElementById("modalOverlay");
+                const mTitle = document.getElementById("modalTitle");
+                const mMsg = document.getElementById("modalMessage");
+                const mConfirm = document.getElementById("modalConfirm");
+                const mCancel = document.getElementById("modalCancel");
+                if (!mOverlay || !mConfirm) return;
+
+                if (mTitle) mTitle.textContent = "Schedule Viewing";
+                if (mMsg) mMsg.textContent = "Set a viewing date and time for the resident.";
+                if (mConfirm) mConfirm.textContent = "Schedule";
+                if (mCancel) mCancel.textContent = "Cancel";
+
+                const cleanup = () => {
+                    mOverlay.classList.remove("open");
+                    mOverlay.setAttribute("aria-hidden", "true");
+                    mConfirm.onclick = null;
+                    mCancel.onclick = null;
+                };
+                mConfirm.onclick = async () => {
+                    cleanup();
+                    const dateVal = document.getElementById("viewingDateInput")?.value;
+                    const timeVal = document.getElementById("viewingTimeInput")?.value || "10:00";
+                    const notesVal = (document.getElementById("viewingNotesInput")?.value || "").trim() || null;
+                    if (!dateVal) { if (window.showError) showError("Please pick a date."); return; }
+                    const viewingDatetime = `${dateVal}T${timeVal}`;
+                    try {
+                        await apiFetch(`/bookings/${bookingId}/status`, {
+                            method: "PATCH",
+                            body: JSON.stringify({ status: "VIEWING_SCHEDULED", viewing_date: viewingDatetime, viewing_notes: notesVal }),
+                        });
+                        if (window.showSuccess) showSuccess("Viewing scheduled! Resident has been notified.");
+                        render();
+                    } catch (e) {
+                        if (window.showError) showError(e?.error || "Failed to schedule viewing.");
+                    }
+                };
+                mCancel.onclick = cleanup;
+                mOverlay.classList.add("open");
+                mOverlay.setAttribute("aria-hidden", "false");
+                return;
+            }
+
+            _callModal({
+                title: "Schedule Viewing",
+                message: "Set a viewing date and time for the resident.",
+                confirmText: "Schedule",
+                cancelText: "Cancel",
+                onConfirm: async () => {
+                    const dateVal = document.getElementById("viewingDateInput")?.value;
+                    const timeVal = document.getElementById("viewingTimeInput")?.value || "10:00";
+                    const notesVal = (document.getElementById("viewingNotesInput")?.value || "").trim() || null;
+                    if (!dateVal) { if (window.showError) showError("Please pick a date."); return; }
+                    const viewingDatetime = `${dateVal}T${timeVal}`;
+                    try {
+                        await apiFetch(`/bookings/${bookingId}/status`, {
+                            method: "PATCH",
+                            body: JSON.stringify({ status: "VIEWING_SCHEDULED", viewing_date: viewingDatetime, viewing_notes: notesVal }),
+                        });
+                        if (window.showSuccess) showSuccess("Viewing scheduled! Resident has been notified.");
+                        render();
+                    } catch (e) {
+                        if (window.showError) showError(e?.error || "Failed to schedule viewing.");
+                    }
+                },
+            });
+        } catch (err) { console.error("[openScheduleViewingModal]", err); }
+    };
 
     return { render, bindFilterBar };
 })();

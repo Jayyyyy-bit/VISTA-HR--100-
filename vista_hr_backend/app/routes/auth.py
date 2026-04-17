@@ -4,16 +4,30 @@ from flask import Blueprint, request, jsonify, current_app, g
 from sqlalchemy.exc import SQLAlchemyError
 import random, string
 from datetime import datetime, timedelta, timezone
-
+from authlib.integrations.flask_client import OAuth
 
 
 from ..extensions import db
 from ..models import User
 from ..auth.jwt import create_access_token, require_auth, COOKIE_NAME
 from ..utils.errors import json_error
+from werkzeug.security import generate_password_hash
 from ..utils.mail import send_otp_email, send_password_reset_email
 
 auth_bp = Blueprint("auth", __name__)
+
+# ── Google OAuth setup ────────────────────────────────────────
+oauth = OAuth()
+
+def init_oauth(app):
+    oauth.init_app(app)
+    oauth.register(
+        name="google",
+        client_id=app.config["GOOGLE_CLIENT_ID"],
+        client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 
 def _set_auth_cookie(resp, token: str):
@@ -577,3 +591,165 @@ def reset_password():
     except Exception:
         db.session.rollback()
         return json_error("Database error", 500)
+    # ══════════════════════════════════════════════════════════
+# GOOGLE OAuth — Initiate
+# ══════════════════════════════════════════════════════════
+@auth_bp.get("/auth/google")
+def google_login():
+    role = request.args.get("role", "RESIDENT").upper()
+    if role not in ("RESIDENT", "OWNER"):
+        role = "RESIDENT"
+    redirect_uri = current_app.config["GOOGLE_REDIRECT_URI"]
+    # Pass role via state param
+    from authlib.common.security import generate_token
+    import json
+    state = generate_token()
+    # Store role + state in session-like nonce via signed param
+    # We embed role in state string: "RESIDENT::<nonce>"
+    state_val = f"{role}::{state}"
+    from flask import session
+    session["google_oauth_state"] = state_val
+    return oauth.google.authorize_redirect(redirect_uri, state=state_val)
+
+
+# ══════════════════════════════════════════════════════════
+# GOOGLE OAuth — Callback
+# ══════════════════════════════════════════════════════════
+@auth_bp.get("/auth/google/callback")
+def google_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception as e:
+        current_app.logger.error(f"Google OAuth token error: {e}")
+        return _redirect_error("Google sign-in failed. Please try again.")
+
+    userinfo = token.get("userinfo") or {}
+    google_id    = userinfo.get("sub")
+    email        = (userinfo.get("email") or "").strip().lower()
+    first_name   = userinfo.get("given_name") or ""
+    last_name    = userinfo.get("family_name") or ""
+    picture      = userinfo.get("picture") or None
+    email_verified_google = userinfo.get("email_verified", False)
+
+    if not google_id or not email:
+        return _redirect_error("Google account missing email. Please try again.")
+
+    # Extract role from state
+    state_val = request.args.get("state", "")
+    role = "RESIDENT"
+    if "::" in state_val:
+        role_part = state_val.split("::")[0].upper()
+        if role_part in ("RESIDENT", "OWNER"):
+            role = role_part
+
+    # 1. Existing user by google_id
+    user = User.query.filter_by(google_id=google_id).first()
+
+    # 2. Existing user by email — link Google to existing account
+    if not user:
+        user = User.query.filter_by(email=email).first()
+        if user:
+            if not getattr(user, "is_active", True):
+                return _redirect_error("This account has been deactivated.")
+            if getattr(user, "is_suspended", False):
+                return _redirect_error("This account is suspended.")
+            # Link Google to existing account
+            user.google_id         = google_id
+            user.avatar_url_google = picture
+            if not user.avatar_url and picture:
+                user.avatar_url = picture
+            try:
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                return _redirect_error("Database error. Please try again.")
+
+    # 3. New user — auto-register
+    if not user:
+        user = User(
+            email          = email,
+            role           = role,
+            first_name     = first_name or None,
+            last_name      = last_name  or None,
+            google_id      = google_id,
+            avatar_url_google = picture,
+            avatar_url     = picture,
+            email_verified = bool(email_verified_google),
+            is_verified    = True if role == "RESIDENT" else False,
+            is_suspended   = False,
+            kyc_status     = "NONE",
+            student_status = "NONE",
+        )
+        # Google users need a password_hash — set unusable hash
+        user.password_hash = generate_password_hash(google_id + "_google_oauth_unusable")
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            return _redirect_error("Registration failed. Please try again.")
+
+    # Final checks
+    if not getattr(user, "is_active", True):
+        return _redirect_error("This account has been deactivated.")
+    if getattr(user, "is_suspended", False):
+        return _redirect_error("This account is suspended.")
+
+    user.last_login_at = datetime.now(timezone.utc)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+
+    token_str = create_access_token(user)
+    role_val  = user.role.value if hasattr(user.role, "value") else str(user.role)
+    done      = Number_bool(getattr(user, "has_completed_onboarding", False))
+
+    if role_val == "ADMIN":
+        dest = "/admin/user-management/user-management.html"
+    elif role_val == "OWNER":
+        dest = "/Property-Owner/dashboard/property-owner-dashboard.html" if done else "/PO-after-signup/PO_welcome-page.html"
+    else:
+        dest = "/Resident/resident_home.html"
+
+    # Set cookie + redirect via loading page
+    resp = _make_redirect_response(dest, token_str, user)
+    return resp
+
+
+def Number_bool(val):
+    return int(bool(val)) == 1
+
+
+def _redirect_error(msg: str):
+    """Redirect to login with error message in query param."""
+    from urllib.parse import urlencode
+    params = urlencode({"google_error": msg})
+    from flask import redirect
+    return redirect(f"/auth/login.html?{params}")
+
+
+def _make_redirect_response(dest: str, token: str, user):
+    from flask import redirect, make_response
+    # Set cookie then redirect to loading page with dest in query
+    loading_url = f"/auth/loading.html"
+    resp = make_response(f"""
+        <html><body>
+        <script>
+            sessionStorage.setItem('loadingDest', '{dest}');
+            sessionStorage.setItem('loadingMsg', 'Signing you in…');
+            window.location.replace('{loading_url}');
+        </script>
+        </body></html>
+    """)
+    is_prod = current_app.config.get("ENV") == "production"
+    from ..auth.jwt import COOKIE_NAME
+    resp.set_cookie(
+        COOKIE_NAME, token,
+        httponly=True,
+        secure=is_prod,
+        samesite="Lax",
+        max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 10080) * 60,
+        path="/",
+    )
+    return resp

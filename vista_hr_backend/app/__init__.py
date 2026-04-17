@@ -40,8 +40,8 @@ def create_app():
             "methods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
         }},
     )
-
-    from .routes.auth          import auth_bp
+    from .routes.auth          import init_oauth, auth_bp
+    init_oauth(app)
     from .routes.listings      import listings_bp
     from .routes.locations     import locations_bp
     from .routes.users         import users_bp

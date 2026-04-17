@@ -1961,3 +1961,63 @@ body {
     text-align: center;
     margin-bottom: 12px;
 }
+
+.bc-viewing-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.bc-view-confirm-btn,
+.bc-view-decline-btn,
+.bc-view-msg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: opacity 150ms;
+}
+
+.bc-view-confirm-btn {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.bc-view-decline-btn {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.bc-view-msg-btn {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.bc-view-confirm-btn:hover {
+    opacity: 0.8;
+}
+
+.bc-view-decline-btn:hover {
+    opacity: 0.8;
+}
+
+.bc-view-msg-btn:hover {
+    opacity: 0.8;
+}
+
+.bc-view-confirm-btn svg,
+.bc-view-decline-btn svg,
+.bc-view-msg-btn svg {
+    width: 13px;
+    height: 13px;
+}

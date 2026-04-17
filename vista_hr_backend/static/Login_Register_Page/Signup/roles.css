@@ -609,3 +609,33 @@ body.page-exit .page-transition {
         opacity: 1;
     }
 }
+
+/* ── Google SSO button ── */
+.google-sso-btn {
+    width: calc(100% - 48px);
+    margin: 0 24px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 11px 16px;
+    border: 1.5px solid var(--ink-12);
+    border-radius: var(--radius-lg);
+    background: var(--white);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-80);
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms, box-shadow 150ms;
+}
+
+.google-sso-btn:hover {
+    background: #f9fafb;
+    border-color: var(--ink-40);
+    box-shadow: 0 2px 8px rgba(12, 14, 20, .08);
+}
+
+.google-sso-btn svg {
+    flex-shrink: 0;
+}

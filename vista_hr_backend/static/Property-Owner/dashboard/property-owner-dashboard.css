@@ -1609,3 +1609,48 @@ button.disabled {
     object-fit: cover;
     border-radius: 50%;
 }
+
+/* Viewing block */
+.bc-viewing-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+    color: #1e40af;
+}
+
+.bc-viewing-block svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.bc-viewing-label {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.bc-viewing-date {
+    font-size: 0.9rem;
+}
+
+.bc-viewing-notes {
+    font-size: 0.8rem;
+    color: #3b82f6;
+    margin-top: 2px;
+}
+
+/* New status badge colors */
+.bc-status--viewing {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.bc-status--moved-out {
+    background: #fff7ed;
+    color: #c2410c;
+}

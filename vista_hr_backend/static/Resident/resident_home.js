@@ -1225,7 +1225,7 @@ function closeBookingModal() {
     const notifId = item.dataset.id;
 
     // Mark individual notif read immediately (optimistic UI)
-    if (notifId && !item.classList.contains("is_read")) {
+    if (notifId && item.classList.contains("unread")) {
       item.classList.remove("unread");
       try {
         await fetch(`${API}/notifications/${notifId}/read`, {
