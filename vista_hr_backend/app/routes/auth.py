@@ -606,15 +606,21 @@ def reset_password():
 # ══════════════════════════════════════════════════════════
 @auth_bp.get("/auth/google")
 def google_login():
-    role = request.args.get("role", "RESIDENT").upper()
-    if role not in ("RESIDENT", "OWNER"):
-        role = "RESIDENT"
-    redirect_uri = current_app.config["https://vistahr.up.railway.app/api/auth/google/callback"]
-    # Pass role via state param
-    from authlib.common.security import generate_token
-    state = generate_token()
-    state_val = f"{role}::{state}"
-    return oauth.google.authorize_redirect(redirect_uri, state=state_val)
+    try:
+        role = request.args.get("role", "RESIDENT").upper()
+        if role not in ("RESIDENT", "OWNER"):
+            role = "RESIDENT"
+        redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI", "")
+        if not redirect_uri:
+            return json_error("GOOGLE_REDIRECT_URI not configured.", 500)
+        if not current_app.config.get("GOOGLE_CLIENT_ID"):
+            return json_error("GOOGLE_CLIENT_ID not configured.", 500)
+        
+        
+    except Exception as e:
+        current_app.logger.error(f"[Google Login] {e}")
+        import traceback; traceback.print_exc()
+        return json_error(f"Google login error: {str(e)}", 500)
 
 
 # ══════════════════════════════════════════════════════════
