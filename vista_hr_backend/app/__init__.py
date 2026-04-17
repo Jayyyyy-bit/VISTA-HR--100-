@@ -27,19 +27,20 @@ def create_app():
     from .models import ticket       as _m9  # noqa
 
     CORS(
-        app,
-        resources={r"/api/*": {
-            "origins": [
-                "http://127.0.0.1:5500",
-                "http://localhost:5500",
-                "http://127.0.0.1:5000",
-                "https://Vista-HR.netlify.app",
-            ],
-            "supports_credentials": True,
-            "allow_headers": ["Content-Type", "Authorization"],
-            "methods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-        }},
-    )
+    app,
+    resources={r"/api/*": {
+        "origins": [
+            "http://127.0.0.1:5500",
+            "http://localhost:5500",
+            "http://127.0.0.1:5000",
+            "https://Vista-HR.netlify.app",
+            "https://vistahr.up.railway.app"  # Idagdag ito
+        ],
+        "supports_credentials": True,
+        "allow_headers": ["Content-Type", "Authorization"],
+        "methods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    }},
+)
     from .routes.auth          import init_oauth, auth_bp
     init_oauth(app)
     from .routes.listings      import listings_bp

@@ -621,8 +621,10 @@ def google_callback():
     try:
         token = oauth.google.authorize_access_token()
     except Exception as e:
-        current_app.logger.error(f"Google OAuth token error: {e}")
-        return _redirect_error("Google sign-in failed. Please try again.")
+        # [CRITICAL] I-print natin ang error para makita sa Railway Dashboard -> Logs
+        current_app.logger.error(f"GOOGLE OAUTH ERROR: {str(e)}")
+        # Karaniwang error sa Railway: "mismatching_state"
+        return _redirect_error(f"Sign-in failed: {str(e)}")
 
     userinfo = token.get("userinfo") or {}
     google_id    = userinfo.get("sub")

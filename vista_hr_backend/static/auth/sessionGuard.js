@@ -47,8 +47,21 @@
     }
 
     async function fetchMe() {
+        // [FIX] Huwag mag-fetch kung nasa public page at wala namang session sa storage
+        // para maiwasan ang 401 error sa console.
+        if (isPublicPage() && !localStorage.getItem(KEY)) {
+            return { ok: false, data: {} };
+        }
+
         try {
             const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
+
+            // Kung 401, ibig sabihin expired o wala talagang cookie
+            if (res.status === 401) {
+                if (!isPublicPage()) clearSession(); // Linisin lang kung nasa protected page
+                return { ok: false, data: {} };
+            }
+
             const data = await res.json().catch(() => ({}));
             if (res.ok && data.user) {
                 saveSession(data);
