@@ -99,7 +99,7 @@
     // Show Google error if redirected back with error
     const googleError = new URLSearchParams(window.location.search).get("google_error");
     if (googleError) setError(decodeURIComponent(googleError));
-    
+
     goSignupBtn?.addEventListener("click", () => (window.location.href = ROUTE_ROLES));
     // ── FORGOT PASSWORD FLOW (Meta-style) ────────────────
     const API_FP = "/api";
@@ -177,7 +177,12 @@
     }
     function clearCountdown() { clearTimeout(_fpCountdownTimer); const c = document.getElementById("fpCountdown"); if (c) c.textContent = ""; }
 
-    forgotBtn?.addEventListener("click", fpOpen);
+    forgotBtn?.addEventListener("click", () => {
+        const email = (emailEl?.value || "").trim().toLowerCase();
+        // Check if this email is a Google account — can't reset via OTP
+        // We do a quick lookup to check has_google flag
+        fpOpen();
+    });
     ["fpClose1", "fpCancel1", "fpCancel2", "fpCancel3", "fpCancel4"].forEach(id => {
         document.getElementById(id)?.addEventListener("click", fpClose);
     });

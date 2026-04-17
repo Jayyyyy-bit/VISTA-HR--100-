@@ -2,7 +2,7 @@ const members = [
     {
         initials: 'M1',
         name: 'MJAY G. CABUG-OS',
-        role: 'Project Manager',
+        role: 'Project Manager / Full-stack Developer',
         bio: 'Leads the team\'s direction and ensures every feature ships on time.',
         tags: ['Leadership', 'Full-stack', 'Git'],
         photo: 'images/cabug-os.png',

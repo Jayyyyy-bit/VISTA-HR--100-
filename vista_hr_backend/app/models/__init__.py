@@ -8,4 +8,4 @@ from .saved_listing import SavedListing
 from .ticket import Ticket
 
 
-__all__ = ["User", "Listing", "Booking", "Message", "Notification", "Review", "SavedListing", "Ticket"]
+__all__ = ["User", "Listing", "Booking", "Message", "ArchivedConversation", "Notification", "Review", "SavedListing", "Ticket"]

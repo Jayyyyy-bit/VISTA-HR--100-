@@ -513,7 +513,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!user) return;
 
         if (user.role === 'Admin') {
-            alert("This is a system administrator account and cannot be modified.");
+            showError("This is a system administrator account and cannot be modified.");
             return;
         }
 
@@ -526,33 +526,36 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (action === "uplift") {
-            if (!confirm(`Lift suspension for ${user.name}?`)) return;
-            try {
-                await apiFetch(`/users/${id}`, {
-                    method: "PATCH",
-                    body: JSON.stringify({ is_suspended: false }),
-                });
-                await loadUsers();
-            } catch (err) { showError(err?.error || err?.message || "An error occurred."); }
+            openApproveModal(`Lift suspension for ${user.name}?`, async () => {
+                try {
+                    await apiFetch(`/users/${id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ is_suspended: false }),
+                    });
+                    await loadUsers();
+                } catch (err) { showError(err?.error || err?.message || "An error occurred."); }
+            });
             return;
         }
 
         if (action === "reset-strikes") {
-            if (!confirm(`Reset strike count for ${user.name} to 0?`)) return;
-            try {
-                await apiFetch(`/admin/users/${id}/reset-strikes`, { method: "POST" });
-                await loadUsers();
-            } catch (err) { showError(err?.error || err?.message || "An error occurred."); }
+            openApproveModal(`Reset strike count for ${user.name} to 0?`, async () => {
+                try {
+                    await apiFetch(`/admin/users/${id}/reset-strikes`, { method: "POST" });
+                    await loadUsers();
+                } catch (err) { showError(err?.error || err?.message || "An error occurred."); }
+            });
             return;
         }
 
         if (action === "delete") {
-            if (!confirm(`Delete ${user.name}? This cannot be undone.`)) return;
-            try {
-                await apiFetch(`/users/${id}`, { method: "DELETE" });
-                addActivity("deleted", user);
-                await loadUsers();
-            } catch (err) { showError(err.message); }
+            openApproveModal(`Delete ${user.name}? This cannot be undone.`, async () => {
+                try {
+                    await apiFetch(`/users/${id}`, { method: "DELETE" });
+                    addActivity("deleted", user);
+                    await loadUsers();
+                } catch (err) { showError(err.message); }
+            });
         }
     });
 
@@ -1156,14 +1159,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         textarea?.focus();
     }
 
-    function openApproveModal(title, onConfirm) {
+    function openApproveModal(title, onConfirm, confirmLabel = "Confirm") {
         const overlay = document.getElementById("approveOverlay");
         const titleEl = document.getElementById("approveModalTitle");
-        if (titleEl) titleEl.textContent = title || "Approve Application";
-        if (overlay) { overlay.hidden = false; overlay.classList.add("open"); }
+        const confirmBtn = document.getElementById("approveModalConfirm");
+        if (titleEl) titleEl.textContent = title || "Confirm";
+        if (confirmBtn) confirmBtn.textContent = confirmLabel;
+        if (overlay) { overlay.style.display = "flex"; overlay.style.alignItems = "center"; overlay.style.justifyContent = "center"; }
         document.body.style.overflow = "hidden";
 
-        const confirmBtn = document.getElementById("approveModalConfirm");
         const cancelBtn = document.getElementById("approveModalCancel");
 
         const cleanup = () => {
@@ -1424,17 +1428,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     </div>`;
     }
 
-    async function handleListingAction(action, id) {
+    function handleListingAction(action, id) {
         const newStatus = action === "archive" ? "ARCHIVED" : "PUBLISHED";
-        if (!confirm(`${action === "archive" ? "Archive" : "Restore"} this listing?`)) return;
-        try {
-            await apiFetch(`/admin/listings/${id}/status`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            loadListings();
-        } catch (err) { showError("Failed: " + err.message); }
+        const label = action === "archive" ? "Archive" : "Restore";
+        openApproveModal(`${label} this listing?`, async () => {
+            try {
+                await apiFetch(`/admin/listings/${id}/status`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: newStatus }),
+                });
+                loadListings();
+            } catch (err) { showError("Failed: " + err.message); }
+        }, label);
     }
 
     // ══ Strike + Suspension Modal ═════════════════════════════
@@ -1757,8 +1763,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 body: JSON.stringify({ is_active: !isActive }),
                             });
                         } else if (action === "delete") {
-                            if (!confirm("Delete this amenity?")) { btn.disabled = false; return; }
-                            await apiFetch(`/admin/amenities/${id}`, { method: "DELETE" });
+                            openApproveModal("Delete this amenity?", async () => {
+                                try {
+                                    await apiFetch(`/admin/amenities/${id}`, { method: "DELETE" });
+                                    if (type === "amenity") loadSystemAmenities();
+                                    else loadSystemHighlights();
+                                } catch (err) { showError(err?.error || err?.message || "Failed."); }
+                            });
+                            btn.disabled = false;
+                            return;
+
+
                         }
                         if (type === "amenity") loadSystemAmenities();
                         else loadSystemHighlights();
