@@ -526,28 +526,20 @@ def verify_reset_otp():
     if user.email_otp != _hash_otp(otp):
         return json_error("Invalid reset code.", 400)
 
-    expires = user.email_otp_expires_at
-    if expires:
-        if expires.tzinfo is None:
-            from datetime import timezone as tz
-            expires = expires.replace(tzinfo=tz.utc)
-        if datetime.now(timezone.utc) > expires:
-            return json_error("Reset code has expired. Please request a new one.", 400)
-
-    # OTP valid — clear it so it can only be used once
-    # Generate a temporary reset token (reuse OTP slot with a special prefix)
+    # Generate a temporary reset token
     import secrets
     reset_token = secrets.token_urlsafe(32)
-    user.email_otp = _hash_otp(reset_token)  # store hash of reset token
+    user.email_otp = _hash_otp(reset_token) 
     user.email_otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
 
     try:
         db.session.commit()
+        return jsonify({"message": "OTP verified.", "reset_token": reset_token}), 200
     except Exception:
         db.session.rollback()
         return json_error("Database error", 500)
 
-    return jsonify({"message": "OTP verified.", "reset_token": reset_token}), 200
+    
 
 
 # ══════════════════════════════════════════════════════════
@@ -611,18 +603,15 @@ def google_login():
             
         redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
         
-        if not redirect_uri:
-            return json_error("GOOGLE_REDIRECT_URI not configured.", 500)
-        
-        # Dagdag na 'state' para maalala ang Role pagbalik galing Google
+        # Siguraduhing may state para maalala ang role pagbalik
         state = f"{role}::oauth_state"
         
-        # ETO ANG KULANG: Ang pag-return ng redirect sa Google
+        # Eto ang mahalagang return
         return oauth.google.authorize_redirect(redirect_uri, state=state)
         
     except Exception as e:
         current_app.logger.error(f"[Google Login] {e}")
-        return json_error(f"Google login error: {str(e)}", 500)
+        return _redirect_error("Google connection failed.")
 
 
 # ══════════════════════════════════════════════════════════
@@ -647,7 +636,7 @@ def google_callback():
     if not google_id or not email:
         return _redirect_error("Google account missing email. Please try again.")
 
-    # Extract role from state
+    # Extract role from state (default to RESIDENT)
     state_val = request.args.get("state", "")
     role = "RESIDENT"
     if "::" in state_val:
@@ -655,79 +644,77 @@ def google_callback():
         if role_part in ("RESIDENT", "OWNER"):
             role = role_part
 
-    # 1. Existing user by google_id
+    # ── STEP 1: Check if user exists ──
     user = User.query.filter_by(google_id=google_id).first()
+    is_new_user = False
 
-    # 2. Existing user by email — link Google to existing account
+    # ── STEP 2: Link Google to existing email account ──
     if not user:
         user = User.query.filter_by(email=email).first()
         if user:
+            # Check status before linking
             if not getattr(user, "is_active", True):
                 return _redirect_error("This account has been deactivated.")
             if getattr(user, "is_suspended", False):
                 return _redirect_error("This account is suspended.")
-            # Link Google to existing account
-            user.google_id         = google_id
+            
+            user.google_id = google_id
             user.avatar_url_google = picture
             if not user.avatar_url and picture:
                 user.avatar_url = picture
+            db.session.commit()
+        else:
+            # ── STEP 3: Auto-register New User ──
+            is_new_user = True
+            user = User(
+                email          = email,
+                role           = role,
+                first_name     = first_name or None,
+                last_name      = last_name  or None,
+                google_id      = google_id,
+                avatar_url_google = picture,
+                avatar_url     = picture,
+                email_verified = bool(email_verified_google),
+                is_verified    = True if role == "RESIDENT" else False,
+                is_suspended   = False,
+                kyc_status     = "NONE",
+                student_status = "NONE",
+            )
+            user.password_hash = generate_password_hash(google_id + "_google_oauth_unusable")
             try:
+                db.session.add(user)
                 db.session.commit()
             except SQLAlchemyError:
                 db.session.rollback()
-                return _redirect_error("Database error. Please try again.")
+                return _redirect_error("Registration failed. Please try again.")
 
-    # 3. New user — auto-register
-    if not user:
-        user = User(
-            email          = email,
-            role           = role,
-            first_name     = first_name or None,
-            last_name      = last_name  or None,
-            google_id      = google_id,
-            avatar_url_google = picture,
-            avatar_url     = picture,
-            email_verified = bool(email_verified_google),
-            is_verified    = True if role == "RESIDENT" else False,
-            is_suspended   = False,
-            kyc_status     = "NONE",
-            student_status = "NONE",
-        )
-        # Google users need a password_hash — set unusable hash
-        user.password_hash = generate_password_hash(google_id + "_google_oauth_unusable")
-        try:
-            db.session.add(user)
-            db.session.commit()
-        except SQLAlchemyError:
-            db.session.rollback()
-            return _redirect_error("Registration failed. Please try again.")
-
-    # Final checks
+    # Final security checks
     if not getattr(user, "is_active", True):
         return _redirect_error("This account has been deactivated.")
     if getattr(user, "is_suspended", False):
         return _redirect_error("This account is suspended.")
 
     user.last_login_at = datetime.now(timezone.utc)
-    try:
-        db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
+    db.session.commit()
 
+    # Generate Access Token
     token_str = create_access_token(user)
     role_val  = user.role.value if hasattr(user.role, "value") else str(user.role)
     done      = Number_bool(getattr(user, "has_completed_onboarding", False))
 
-    if role_val == "ADMIN":
+    # ── STEP 4: Destination Logic ──
+    if is_new_user:
+        # Kapag bagong gawa ang account, dapat pumili muna ng role
+        dest = "/auth/roles.html"
+    elif role_val == "ADMIN":
         dest = "/admin/user-management/user-management.html"
     elif role_val == "OWNER":
         dest = "/Property-Owner/dashboard/property-owner-dashboard.html" if done else "/PO-after-signup/PO_welcome-page.html"
     else:
+        # Standard Resident
         dest = "/Resident/resident_home.html"
 
-    # Set cookie + redirect via loading page
-    resp = _make_redirect_response(dest, token_str, user)
-    return resp
+    return _make_redirect_response(dest, token_str, user)
 
 
 def Number_bool(val):
@@ -735,7 +722,6 @@ def Number_bool(val):
 
 
 def _redirect_error(msg: str):
-    """Redirect to login with error message in query param."""
     from urllib.parse import urlencode
     params = urlencode({"google_error": msg})
     from flask import redirect
@@ -743,25 +729,29 @@ def _redirect_error(msg: str):
 
 
 def _make_redirect_response(dest: str, token: str, user):
-    from flask import redirect, make_response
-    # Set cookie then redirect to loading page with dest in query
-    loading_url = f"/auth/loading.html"
+    from flask import make_response
+    loading_url = "/auth/loading.html"
+    
+    # Client-side storage of destination before redirecting to loading page
     resp = make_response(f"""
         <html><body>
         <script>
             sessionStorage.setItem('loadingDest', '{dest}');
-            sessionStorage.setItem('loadingMsg', 'Signing you in…');
+            sessionStorage.setItem('loadingMsg', 'Signing you in...');
             window.location.replace('{loading_url}');
         </script>
         </body></html>
     """)
+    
     is_prod = current_app.config.get("ENV") == "production"
     from ..auth.jwt import COOKIE_NAME
+    
+    # Importante: SameSite=None at Secure=True para sa Railway
     resp.set_cookie(
         COOKIE_NAME, token,
         httponly=True,
-        secure=True, # Laging True sa Railway/HTTPS
-        samesite="None", # Importante ito para sa cross-domain redirects
+        secure=True, 
+        samesite="None" if is_prod else "Lax",
         max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 10080) * 60,
         path="/",
     )
