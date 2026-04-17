@@ -610,16 +610,20 @@ def google_login():
         role = request.args.get("role", "RESIDENT").upper()
         if role not in ("RESIDENT", "OWNER"):
             role = "RESIDENT"
-        redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI", "")
+            
+        redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
+        
         if not redirect_uri:
             return json_error("GOOGLE_REDIRECT_URI not configured.", 500)
-        if not current_app.config.get("GOOGLE_CLIENT_ID"):
-            return json_error("GOOGLE_CLIENT_ID not configured.", 500)
         
+        # Dagdag na 'state' para maalala ang Role pagbalik galing Google
+        state = f"{role}::oauth_state"
+        
+        # ETO ANG KULANG: Ang pag-return ng redirect sa Google
+        return oauth.google.authorize_redirect(redirect_uri, state=state)
         
     except Exception as e:
         current_app.logger.error(f"[Google Login] {e}")
-        import traceback; traceback.print_exc()
         return json_error(f"Google login error: {str(e)}", 500)
 
 
