@@ -555,7 +555,7 @@
                 confirmText: "Verify my identity →",
                 cancelText: "Not now",
                 onConfirm: () => {
-                  location.href = "/Property-Owner/verification/verify.html";
+                  location.href = `/auth/account-settings.html#verification`;
                 },
                 onCancel: async () => {
                   // Still allow submitting — listing will sit in READY state

@@ -665,29 +665,19 @@ def google_callback():
                 return _redirect_error("Database error. Please try again.")
 
     # 3. New user — auto-register
+    # 3. New user — redirect to roles page to pick role
     if not user:
-        user = User(
-            email          = email,
-            role           = role,
-            first_name     = first_name or None,
-            last_name      = last_name  or None,
-            google_id      = google_id,
-            avatar_url_google = picture,
-            avatar_url     = picture,
-            email_verified = bool(email_verified_google),
-            is_verified    = True if role == "RESIDENT" else False,
-            is_suspended   = False,
-            kyc_status     = "NONE",
-            student_status = "NONE",
-        )
-        # Google users need a password_hash — set unusable hash
-        user.password_hash = generate_password_hash(google_id + "_google_oauth_unusable")
-        try:
-            db.session.add(user)
-            db.session.commit()
-        except SQLAlchemyError:
-            db.session.rollback()
-            return _redirect_error("Registration failed. Please try again.")
+        from flask import session
+        session["google_pending"] = {
+            "google_id":      google_id,
+            "email":          email,
+            "first_name":     first_name,
+            "last_name":      last_name,
+            "picture":        picture,
+            "email_verified": bool(email_verified_google),
+        }
+        from flask import redirect as _redirect
+        return _redirect("/Login_Register_Page/Signup/roles.html?mode=google")
 
     # Final checks
     if not getattr(user, "is_active", True):
@@ -753,3 +743,64 @@ def _make_redirect_response(dest: str, token: str, user):
         path="/",
     )
     return resp
+
+@auth_bp.post("/auth/google/complete")
+def google_complete():
+    """Complete Google registration after user picks a role."""
+    from flask import session
+    pending = session.get("google_pending")
+    if not pending:
+        return json_error("No pending Google registration.", 400)
+
+    data = request.get_json(silent=True) or {}
+    role = (data.get("role") or "").upper()
+    if role not in ("RESIDENT", "OWNER"):
+        return json_error("Invalid role.", 400)
+
+    # Check again — maybe registered between redirect and completion
+    existing = User.query.filter_by(google_id=pending["google_id"]).first()
+    if not existing:
+        existing = User.query.filter_by(email=pending["email"]).first()
+
+    if existing:
+        # Already exists — just login
+        existing.google_id = pending["google_id"]
+        existing.avatar_url_google = pending["picture"]
+        if not existing.avatar_url:
+            existing.avatar_url = pending["picture"]
+        db.session.commit()
+        session.pop("google_pending", None)
+        token = create_access_token(existing)
+        resp = jsonify({"message": "Logged in", "user": existing.to_dict()})
+        return _set_auth_cookie(resp, token), 200
+
+    user = User(
+        email             = pending["email"],
+        role              = role,
+        first_name        = pending["first_name"] or None,
+        last_name         = pending["last_name"]  or None,
+        google_id         = pending["google_id"],
+        avatar_url_google = pending["picture"],
+        avatar_url        = pending["picture"],
+        email_verified    = bool(pending["email_verified"]),
+        is_verified       = True if role == "RESIDENT" else False,
+        is_suspended      = False,
+        kyc_status        = "NONE",
+        student_status    = "NONE",
+    )
+    user.password_hash = generate_password_hash(pending["google_id"] + "_google_oauth_unusable")
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+        session.pop("google_pending", None)
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Registration failed.", 500)
+
+    user.last_login_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    token = create_access_token(user)
+    resp = jsonify({"message": "Registered", "user": user.to_dict()})
+    return _set_auth_cookie(resp, token), 201

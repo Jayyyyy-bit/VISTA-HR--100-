@@ -8,12 +8,39 @@ function safeGoTo(url) {
     else window.location.href = url;
 }
 
-document.getElementById("btnOwner")?.addEventListener("click", () => {
-    safeGoTo("/Login_Register_Page/Signup/property-owner/owner_signup.html");
-});
-document.getElementById("btnResident")?.addEventListener("click", () => {
-    safeGoTo("/Login_Register_Page/Signup/Resident-SIgnUp/resident.html");
-});
+const isGoogleMode = new URLSearchParams(window.location.search).get("mode") === "google";
+
+async function handleRoleSelect(role) {
+    if (isGoogleMode) {
+        try {
+            const res = await fetch("/api/auth/google/complete", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed.");
+            const dest = role === "OWNER"
+                ? (Number(data.user?.has_completed_onboarding) === 1
+                    ? "/Property-Owner/dashboard/property-owner-dashboard.html"
+                    : "/PO-after-signup/PO_welcome-page.html")
+                : "/Resident/resident_home.html";
+            sessionStorage.setItem("loadingDest", dest);
+            sessionStorage.setItem("loadingMsg", "Setting up your account…");
+            window.location.href = "/auth/loading.html";
+        } catch (err) {
+            alert(err.message);
+        }
+        return;
+    }
+    // Normal registration flow
+    if (role === "OWNER") safeGoTo("/Login_Register_Page/Signup/property-owner/owner_signup.html");
+    else safeGoTo("/Login_Register_Page/Signup/Resident-SIgnUp/resident.html");
+}
+
+document.getElementById("btnOwner")?.addEventListener("click", () => handleRoleSelect("OWNER"));
+document.getElementById("btnResident")?.addEventListener("click", () => handleRoleSelect("RESIDENT"));
 document.getElementById("backBtn")?.addEventListener("click", () => {
     safeGoTo("/Landing_Page/ASSETS/front_index.html");
 });
@@ -86,3 +113,13 @@ async function loadStats() {
 }
 
 setTimeout(loadStats, 400);
+
+// Show banner if google mode
+if (isGoogleMode) {
+    const banner = document.getElementById("googleModeBanner");
+    if (banner) { banner.hidden = false; if (window.lucide?.createIcons) lucide.createIcons(); }
+}
+
+if (isGoogleMode) {
+    document.querySelectorAll(".google-sso-btn").forEach(btn => btn.hidden = true);
+}
