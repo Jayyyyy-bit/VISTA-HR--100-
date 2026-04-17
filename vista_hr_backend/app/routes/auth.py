@@ -38,15 +38,16 @@ def _set_auth_cookie(resp, token: str):
     is_prod = current_app.config.get("ENV") == "production"
     # if you deploy frontend and backend on different domains,
     # you'll likely need: samesite="None" and secure=True (HTTPS)
+    # Hanapin ang _set_auth_cookie function
     resp.set_cookie(
-        COOKIE_NAME,
-        token,
-        httponly=True,
-        secure=is_prod,          # dev False, prod True (HTTPS)
-        samesite="Lax",          # dev safe default
-        max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 60) * 60,
-        path="/",
-    )
+    COOKIE_NAME,
+    token,
+    httponly=True,
+    secure=is_prod,          # True ito sa production
+    samesite="None" if is_prod else "Lax",  # CHANGE THIS: "None" kailangan for cross-site
+    max_age=current_app.config.get("JWT_EXPIRES_MINUTES", 60) * 60,
+    path="/",
+)
     return resp
 
 
