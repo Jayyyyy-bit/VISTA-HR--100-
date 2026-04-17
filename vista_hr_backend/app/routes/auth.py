@@ -612,13 +612,8 @@ def google_login():
     redirect_uri = current_app.config["https://vistahr.up.railway.app/api/auth/google/callback"]
     # Pass role via state param
     from authlib.common.security import generate_token
-    import json
     state = generate_token()
-    # Store role + state in session-like nonce via signed param
-    # We embed role in state string: "RESIDENT::<nonce>"
     state_val = f"{role}::{state}"
-    from flask import session
-    session["google_oauth_state"] = state_val
     return oauth.google.authorize_redirect(redirect_uri, state=state_val)
 
 
