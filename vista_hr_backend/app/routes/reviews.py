@@ -317,8 +317,7 @@ def submit_review():
             return json_error("You can rate the resident after they have moved out.", 403)
 
     elif review_type == "SYSTEM":
-        # Either party can rate system — booking must be ACTIVE or beyond
-        if booking.status not in ("ACTIVE", "COMPLETED", "CANCELLED"):
+        if booking.status not in ("ACTIVE", "COMPLETED", "CANCELLED", "MOVED_OUT"):
             return json_error("System rating is available once a booking is active.", 403)
 
     # Dedup check
@@ -365,7 +364,7 @@ def submit_review():
         db.session.add(review)
         db.session.commit()
         return jsonify({"message": "Review submitted", "review": review.to_dict()}), 201
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
         return json_error("Database error", 500)
 

@@ -55,6 +55,8 @@ def create_app():
     from .routes.amenities     import amenities_bp
     from .routes.saved         import saved_bp
     from .routes.tickets       import tickets_bp
+    from .routes.feedback      import feedback_bp
+
 
     app.register_blueprint(auth_bp,          url_prefix="/api")
     app.register_blueprint(listings_bp,      url_prefix="/api")
@@ -70,6 +72,7 @@ def create_app():
     app.register_blueprint(amenities_bp,     url_prefix="/api")
     app.register_blueprint(saved_bp,         url_prefix="/api")
     app.register_blueprint(tickets_bp,       url_prefix="/api")
+    app.register_blueprint(feedback_bp,      url_prefix="/api")
 
     @app.get("/health")
     def health():

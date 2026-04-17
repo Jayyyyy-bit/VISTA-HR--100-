@@ -242,7 +242,11 @@ def send_message():
 @require_role("OWNER", "RESIDENT")
 def unread_count():
     me = g.current_user
-    count = Message.query.filter_by(receiver_id=me.id, is_read=False).count()
+    count = Message.query.filter_by(
+        receiver_id=me.id,
+        is_read=False,
+        deleted_by_receiver=False,
+    ).count()
     return jsonify({"unread": count}), 200
 
 # ══════════════════════════════════════════════

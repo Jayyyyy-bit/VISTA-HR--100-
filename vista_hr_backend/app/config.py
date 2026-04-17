@@ -36,9 +36,14 @@ class Config:
     GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5000/api/auth/google/callback")
-    
+
     # Gmail SMTP — set in .env
+    # Gmail SMTP — kept for reference, not used (Resend handles email now)
     MAIL_SENDER   = os.getenv("MAIL_SENDER", "")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+
+    # Resend
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+    RESEND_FROM    = os.getenv("RESEND_FROM", "VISTA-HR <onboarding@resend.dev>")
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-flask-session-key-change-me")

@@ -274,7 +274,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         el.querySelectorAll("[data-ov-kyc-approve]").forEach(btn => {
             btn.addEventListener("click", async () => {
-                if (!confirm("Approve this KYC application?")) return;
+                openApproveModal("Approve KYC Application", async () => {
+                    try {
+                        await apiFetch(`/admin/kyc/${btn.dataset.ovKycApprove}/approve`, { method: "POST" });
+                        await loadOverview();
+                    } catch (err) { showError(err.message); }
+                });
+                return;
                 try {
                     await apiFetch(`/admin/kyc/${btn.dataset.ovKycApprove}/approve`, { method: "POST" });
                     await loadOverview();
@@ -1086,15 +1092,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const action = btn.dataset.action;
 
                 if (action.endsWith("-approve")) {
-                    if (!confirm("Approve this application?")) return;
-                    const endpoint = type === "kyc"
-                        ? `/admin/kyc/${id}/approve`
-                        : `/admin/student/${id}/approve`;
-                    try {
-                        await apiFetch(endpoint, { method: "POST" });
-                        if (type === "kyc") loadKyc(); else loadStudent();
-                        refreshBadges();
-                    } catch (err) { showError(err.message); }
+                    const approveTitle = type === "kyc" ? "Approve KYC Application" : "Approve Student Verification";
+                    openApproveModal(approveTitle, async () => {
+                        const endpoint = type === "kyc"
+                            ? `/admin/kyc/${id}/approve`
+                            : `/admin/student/${id}/approve`;
+                        try {
+                            await apiFetch(endpoint, { method: "POST" });
+                            if (type === "kyc") loadKyc(); else loadStudent();
+                            refreshBadges();
+                        } catch (err) { showError(err.message); }
+                    });
                 }
 
                 if (action.endsWith("-reject")) {
@@ -1146,6 +1154,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (overlay) overlay.style.display = "flex";
         if (window.lucide?.createIcons) lucide.createIcons();
         textarea?.focus();
+    }
+
+    function openApproveModal(title, onConfirm) {
+        const overlay = document.getElementById("approveOverlay");
+        const titleEl = document.getElementById("approveModalTitle");
+        if (titleEl) titleEl.textContent = title || "Approve Application";
+        if (overlay) { overlay.hidden = false; overlay.classList.add("open"); }
+        document.body.style.overflow = "hidden";
+
+        const confirmBtn = document.getElementById("approveModalConfirm");
+        const cancelBtn = document.getElementById("approveModalCancel");
+
+        const cleanup = () => {
+            if (overlay) { overlay.hidden = true; overlay.classList.remove("open"); }
+            document.body.style.overflow = "";
+            if (confirmBtn) confirmBtn.onclick = null;
+            if (cancelBtn) cancelBtn.onclick = null;
+        };
+
+        if (confirmBtn) confirmBtn.onclick = async () => {
+            cleanup();
+            await onConfirm();
+        };
+        if (cancelBtn) cancelBtn.onclick = cleanup;
+        overlay?.addEventListener("click", e => { if (e.target === overlay) cleanup(); }, { once: true });
     }
 
     function closeRejectModal() {

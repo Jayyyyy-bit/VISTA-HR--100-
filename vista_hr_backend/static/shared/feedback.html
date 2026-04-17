@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISTA-HR · Leave Feedback</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/auth/toast.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: #f7f4ee;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .08);
+            padding: 40px;
+            width: min(480px, 100%);
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+            text-decoration: none;
+            margin-bottom: 24px;
+        }
+
+        .back-btn:hover {
+            color: #111;
+        }
+
+        .back-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: #fdf3e3;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .card-icon svg {
+            width: 22px;
+            height: 22px;
+            color: #C8882A;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #111;
+            margin: 0 0 6px;
+        }
+
+        p.sub {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 0 0 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-bottom: 6px;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #111;
+            background: #fff;
+            transition: border-color 150ms;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #C8882A;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        .stars {
+            display: flex;
+            gap: 8px;
+            font-size: 28px;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+
+        .stars span {
+            color: #d1d5db;
+            transition: color 150ms;
+            line-height: 1;
+        }
+
+        .stars span.active,
+        .stars span.hover {
+            color: #f59e0b;
+        }
+
+        .err {
+            font-size: 13px;
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 13px;
+            background: #C8882A;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: opacity 150ms;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .submit-btn:hover {
+            opacity: .9;
+        }
+
+        .submit-btn:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+
+        .submit-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .success {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .success-icon {
+            font-size: 52px;
+            margin-bottom: 12px;
+        }
+
+        .success h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111;
+            margin: 0 0 8px;
+        }
+
+        .success p {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 0 0 20px;
+        }
+
+        .success a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            background: #C8882A;
+            color: #fff;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <a class="back-btn" id="backBtn" href="#"><i data-lucide="arrow-left"></i> Back</a>
+
+        <div id="formSection">
+            <div class="card-icon"><i data-lucide="message-circle-heart"></i></div>
+            <h1>Leave feedback</h1>
+            <p class="sub">Help us improve VISTA-HR for everyone.</p>
+
+            <div class="field">
+                <label>Your name *</label>
+                <input type="text" id="fbName" placeholder="Juan dela Cruz" autocomplete="name">
+            </div>
+            <div class="field">
+                <label>I am a…</label>
+                <select id="fbRole">
+                    <option value="">Select role</option>
+                    <option value="Resident">Resident</option>
+                    <option value="Property Owner">Property Owner</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Rating (optional)</label>
+                <div class="stars" id="fbStars">
+                    <span data-star="1">★</span>
+                    <span data-star="2">★</span>
+                    <span data-star="3">★</span>
+                    <span data-star="4">★</span>
+                    <span data-star="5">★</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>Your feedback *</label>
+                <textarea id="fbMessage" rows="4" placeholder="Tell us about your experience…"
+                    maxlength="500"></textarea>
+            </div>
+
+            <div class="err" id="fbErr" hidden></div>
+
+            <button class="submit-btn" id="fbSubmit" type="button">
+                Send feedback <i data-lucide="send"></i>
+            </button>
+        </div>
+
+        <div class="success" id="successSection" hidden>
+            <div class="success-icon">🎉</div>
+            <h2>Thank you!</h2>
+            <p>Your feedback has been submitted successfully.</p>
+            <a id="successBack" href="#">← Back to dashboard</a>
+        </div>
+    </div>
+
+    <script src="/auth/sessionGuard.js"></script>
+    <script>
+        (() => {
+            const API = "/api";
+            let _rating = 0;
+
+            // Set back button based on role
+            async function init() {
+                try {
+                    const res = await fetch(`${API}/auth/me`, { credentials: "include" });
+                    if (!res.ok) { window.location.href = "/auth/login.html"; return; }
+                    const { user } = await res.json();
+                    const role = user?.role?.toUpperCase();
+                    const dest = role === "OWNER"
+                        ? "/Property-Owner/dashboard/property-owner-dashboard.html"
+                        : "/Resident/resident_home.html";
+                    document.getElementById("backBtn").href = dest;
+                    document.getElementById("successBack").href = dest;
+
+                    // Pre-fill name
+                    const name = [user.first_name, user.last_name].filter(Boolean).join(" ");
+                    if (name) document.getElementById("fbName").value = name;
+
+                    // Pre-fill role
+                    const roleMap = { RESIDENT: "Resident", OWNER: "Property Owner" };
+                    if (roleMap[role]) document.getElementById("fbRole").value = roleMap[role];
+                } catch {
+                    window.location.href = "/auth/login.html";
+                }
+            }
+
+            // Stars
+            const starsEl = document.getElementById("fbStars");
+            starsEl?.querySelectorAll("[data-star]").forEach(s => {
+                s.addEventListener("click", () => {
+                    _rating = parseInt(s.dataset.star);
+                    starsEl.querySelectorAll("[data-star]").forEach(st => {
+                        st.classList.toggle("active", parseInt(st.dataset.star) <= _rating);
+                    });
+                });
+                s.addEventListener("mouseover", () => {
+                    starsEl.querySelectorAll("[data-star]").forEach(st => {
+                        st.classList.toggle("hover", parseInt(st.dataset.star) <= parseInt(s.dataset.star));
+                    });
+                });
+                s.addEventListener("mouseout", () => {
+                    starsEl.querySelectorAll("[data-star]").forEach(st => st.classList.remove("hover"));
+                });
+            });
+
+            // Submit
+            document.getElementById("fbSubmit")?.addEventListener("click", async () => {
+                const name = document.getElementById("fbName")?.value.trim();
+                const message = document.getElementById("fbMessage")?.value.trim();
+                const role = document.getElementById("fbRole")?.value || null;
+                const errEl = document.getElementById("fbErr");
+                const btn = document.getElementById("fbSubmit");
+
+                errEl.hidden = true;
+                if (!name) { errEl.textContent = "Name is required."; errEl.hidden = false; return; }
+                if (!message) { errEl.textContent = "Message is required."; errEl.hidden = false; return; }
+
+                btn.disabled = true;
+                btn.innerHTML = `Sending… <i data-lucide="loader-2"></i>`;
+                if (window.lucide?.createIcons) lucide.createIcons();
+
+                try {
+                    const res = await fetch(`${API}/feedback`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name, message, role, rating: _rating || null }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Failed.");
+                    document.getElementById("formSection").hidden = true;
+                    document.getElementById("successSection").hidden = false;
+                } catch (err) {
+                    errEl.textContent = err.message;
+                    errEl.hidden = false;
+                    btn.disabled = false;
+                    btn.innerHTML = `Send feedback <i data-lucide="send"></i>`;
+                    if (window.lucide?.createIcons) lucide.createIcons();
+                }
+            });
+
+            init();
+            if (window.lucide?.createIcons) lucide.createIcons();
+        })();
+    </script>
+</body>
+
+</html>

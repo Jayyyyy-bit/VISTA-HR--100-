@@ -105,8 +105,12 @@
                     <button class="menuItem" id="menuAccount" type="button">
                         <i data-lucide="user"></i><span>Account</span>
                     </button>
-                    <button class="menuItem" id="menuHelp" type="button">
 
+                    <button class="menuItem" id="menuHelp" type="button">
+                        <i data-lucide="help-circle"></i><span>Help</span>
+                    </button>
+                    <button class="menuItem" id="menuFeedback" type="button">
+                        <i data-lucide="message-circle-heart"></i><span>Leave feedback</span>
                     </button>
                     <div class="menuSep"></div>
                     <button class="menuItem danger" id="menuLogout" type="button">
@@ -114,9 +118,34 @@
                     </button>
                 </div>
             </div>
-
         </div>
     </header>
+
+    <!-- Logout confirm modal -->
+    <div id="poLogoutOverlay" hidden
+        style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
+        <div
+            style="background:#fff;border-radius:16px;padding:28px;width:min(380px,90vw);box-shadow:0 16px 48px rgba(0,0,0,.15);">
+            <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;">
+                <div
+                    style="width:40px;height:40px;border-radius:10px;background:#fef2f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="log-out" style="width:18px;height:18px;color:#dc2626;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Log out?</div>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.5;">You'll need to sign in again to access
+                        your account.</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button id="poLogoutCancelBtn"
+                    style="padding:9px 18px;border-radius:10px;border:1.5px solid #e5e7eb;background:#fff;font-size:13px;font-weight:600;cursor:pointer;">Stay</button>
+                <button id="poLogoutConfirmBtn"
+                    style="padding:9px 18px;border-radius:10px;border:none;background:#dc2626;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Log
+                    out</button>
+            </div>
+        </div>
+    </div>
 
     <!--  Main -->
     <main class="dashMain">

@@ -1,55 +1,39 @@
 """
 app/utils/mail.py
 -----------------
-Sends transactional emails via Gmail SMTP using Python stdlib smtplib.
-No third-party library required.
+Sends transactional emails via Resend API.
 
 .env keys needed:
-    MAIL_SENDER=your_vistaHR_gmail@gmail.com
-    MAIL_PASSWORD=your_16char_app_password   (Gmail App Password, no spaces)
+    RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+    RESEND_FROM=VISTA-HR <onboarding@resend.dev>
 """
 
 import os
-import smtplib
-import ssl
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import resend
 
-
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 465   # SSL
-
-
-def _get_credentials():
-    sender = os.getenv("MAIL_SENDER", "")
-    password = os.getenv("MAIL_PASSWORD", "")
-    if not sender or not password:
+def _get_client():
+    api_key = os.getenv("RESEND_API_KEY", "")
+    if not api_key:
         raise RuntimeError(
-            "Mail not configured. Set MAIL_SENDER and MAIL_PASSWORD in .env"
+            "Mail not configured. Set RESEND_API_KEY in .env"
         )
-    return sender, password
+    resend.api_key = api_key
+    return resend
 
+def _from_address():
+    return os.getenv("RESEND_FROM", "VISTA-HR <onboarding@resend.dev>")
 
 def send_email(to: str, subject: str, html_body: str, text_body: str = "") -> None:
-    """
-    Send an HTML email.  Raises on failure so callers can handle errors.
-    text_body is optional plaintext fallback.
-    """
-    sender, password = _get_credentials()
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"]    = f"VISTA-HR <{sender}>"
-    msg["To"]      = to
-
+    client = _get_client()
+    params = {
+        "from": _from_address(),
+        "to": [to],
+        "subject": subject,
+        "html": html_body,
+    }
     if text_body:
-        msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
-
-    ctx = ssl.create_default_context()
-    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx) as server:
-        server.login(sender, password)
-        server.sendmail(sender, to, msg.as_string())
+        params["text"] = text_body
+    client.Emails.send(params)
 
 
 # ── Template helpers ──────────────────────────────────────────────────────────
@@ -69,8 +53,6 @@ def _base_template(title: str, body_html: str) -> str:
         <table width="520" cellpadding="0" cellspacing="0"
                style="background:#fff;border-radius:16px;
                       box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;">
-
-          <!-- Header -->
           <tr>
             <td style="background:#1B3F6E;padding:28px 36px;">
               <p style="margin:0;font-size:22px;font-weight:800;
@@ -83,15 +65,11 @@ def _base_template(title: str, body_html: str) -> str:
               </p>
             </td>
           </tr>
-
-          <!-- Body -->
           <tr>
             <td style="padding:36px 36px 28px;">
               {body_html}
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="padding:20px 36px 28px;border-top:1px solid #f0f0f0;">
               <p style="margin:0;font-size:11px;color:#aaa;line-height:1.6;">
@@ -100,7 +78,6 @@ def _base_template(title: str, body_html: str) -> str:
               </p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
@@ -134,6 +111,32 @@ def send_otp_email(to: str, otp: str, name: str = "") -> None:
     send_email(to, "Your VISTA-HR Verification Code", html, text)
 
 
+def send_password_reset_email(to: str, otp: str, name: str = "") -> None:
+    greeting = f"Hi {name}," if name else "Hi,"
+    body = f"""
+      <p style="margin:0 0 8px;font-size:15px;color:#111;font-weight:600;">{greeting}</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;">
+        We received a request to reset your VISTA-HR password.
+        Use the code below — it expires in <strong>10 minutes</strong>.
+      </p>
+      <div style="text-align:center;margin:0 0 28px;">
+        <span style="display:inline-block;font-size:36px;font-weight:900;
+                     letter-spacing:10px;color:#1B3F6E;background:#f0f4ff;
+                     padding:16px 32px;border-radius:12px;
+                     border:2px dashed #c7d7f5;">
+          {otp}
+        </span>
+      </div>
+      <p style="margin:0 0 16px;font-size:13px;color:#888;">
+        If you did not request a password reset, ignore this email.
+        Your password will not change.
+      </p>
+    """
+    html = _base_template("Password Reset — VISTA-HR", body)
+    text = f"{greeting}\n\nYour VISTA-HR password reset code is: {otp}\n\nExpires in 10 minutes."
+    send_email(to, "Reset Your VISTA-HR Password", html, text)
+
+
 def send_kyc_approved_email(to: str, name: str = "") -> None:
     greeting = f"Hi {name}," if name else "Hi,"
     body = f"""
@@ -145,13 +148,6 @@ def send_kyc_approved_email(to: str, name: str = "") -> None:
       <p style="margin:0 0 20px;font-size:14px;color:#555;line-height:1.7;">
         You can now publish your listings and they will be visible to residents across Metro Manila.
       </p>
-      <div style="text-align:center;">
-        <a href="http://127.0.0.1:5500/Property-Owner/dashboard/property-owner-dashboard.html"
-           style="display:inline-block;background:#1B3F6E;color:#fff;font-size:14px;
-                  font-weight:700;padding:13px 28px;border-radius:10px;text-decoration:none;">
-          Go to Dashboard
-        </a>
-      </div>
     """
     html = _base_template("Account Approved — VISTA-HR", body)
     text = f"{greeting}\n\nYour VISTA-HR account has been approved. You can now publish listings."
@@ -176,11 +172,10 @@ def send_kyc_rejected_email(to: str, reason: str, name: str = "") -> None:
       {reason_html}
       <p style="margin:0 0 20px;font-size:14px;color:#555;line-height:1.7;">
         Please re-submit your documents with clearer photos and try again.
-        If you believe this is an error, contact our support team.
       </p>
     """
     html = _base_template("Verification Update — VISTA-HR", body)
-    text = f"{greeting}\n\nYour VISTA-HR KYC was not approved.\nReason: {reason}\n\nPlease re-submit."
+    text = f"{greeting}\n\nYour VISTA-HR KYC was not approved.\nReason: {reason}"
     send_email(to, "Action Required — VISTA-HR Verification", html, text)
 
 
@@ -218,28 +213,3 @@ def send_student_rejected_email(to: str, reason: str, name: str = "") -> None:
     html = _base_template("Student Verification Update — VISTA-HR", body)
     text = f"{greeting}\n\nYour student verification was not approved.\nReason: {reason}"
     send_email(to, "Action Required — Student Verification", html, text)
-
-def send_password_reset_email(to: str, otp: str, name: str = "") -> None:
-    greeting = f"Hi {name}," if name else "Hi,"
-    body = f"""
-      <p style="margin:0 0 8px;font-size:15px;color:#111;font-weight:600;">{greeting}</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;">
-        We received a request to reset your VISTA-HR password.
-        Use the code below — it expires in <strong>10 minutes</strong>.
-      </p>
-      <div style="text-align:center;margin:0 0 28px;">
-        <span style="display:inline-block;font-size:36px;font-weight:900;
-                     letter-spacing:10px;color:#1B3F6E;background:#f0f4ff;
-                     padding:16px 32px;border-radius:12px;
-                     border:2px dashed #c7d7f5;">
-          {otp}
-        </span>
-      </div>
-      <p style="margin:0 0 16px;font-size:13px;color:#888;">
-        If you did not request a password reset, you can safely ignore this email.
-        Your password will not change.
-      </p>
-    """
-    html = _base_template("Password Reset — VISTA-HR", body)
-    text = f"{greeting}\n\nYour VISTA-HR password reset code is: {otp}\n\nExpires in 10 minutes."
-    send_email(to, "Reset Your VISTA-HR Password", html, text)

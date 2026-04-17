@@ -69,10 +69,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // are populated when render() runs. loadReviews is independent — run in parallel.
     await Promise.all([
         loadCatalog(),
-        loadReviews(lid, true),
         loadCurrentUser(),
     ]);
-    await loadListing(lid);
+    await Promise.all([
+        loadReviews(lid, true),
+        loadListing(lid),
+    ]);
 
     await checkReservationStatus(lid);
     checkEligibility(lid);

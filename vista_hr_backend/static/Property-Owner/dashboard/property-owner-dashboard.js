@@ -1162,8 +1162,31 @@
     profileMenu?.addEventListener("click", (e) => e.stopPropagation());
 
     menuAccount?.addEventListener("click", () => { openMenu(false); location.href = "/auth/account-settings.html"; });
+    document.getElementById("menuFeedback")?.addEventListener("click", () => {
+      window.location.href = "/shared/feedback.html";
+    });
     menuHelp?.addEventListener("click", () => { openMenu(false); showInfo("Help center (later)."); });
-    menuLogout?.addEventListener("click", async () => { openMenu(false); await AuthGuard.logout(); });
+    menuLogout?.addEventListener("click", () => {
+      openMenu(false);
+      const ov = document.getElementById("poLogoutOverlay");
+      if (ov) { ov.hidden = false; ov.style.display = "flex"; if (window.lucide?.createIcons) lucide.createIcons(); }
+    });
+    document.getElementById("poLogoutCancelBtn")?.addEventListener("click", () => {
+      const ov = document.getElementById("poLogoutOverlay");
+      if (ov) { ov.hidden = true; ov.style.display = "none"; }
+    });
+    document.getElementById("poLogoutOverlay")?.addEventListener("click", e => {
+      if (e.target === e.currentTarget) {
+        const ov = e.currentTarget;
+        ov.hidden = true; ov.style.display = "none";
+      }
+    });
+    document.getElementById("poLogoutOverlay")?.addEventListener("click", e => {
+      if (e.target === e.currentTarget) document.getElementById("poLogoutOverlay").hidden = true;
+    });
+    document.getElementById("poLogoutConfirmBtn")?.addEventListener("click", async () => {
+      await AuthGuard.logout();
+    });
 
     document.addEventListener("click", (evt) => {
       if (!evt.target.closest(".lCard")) closeAllMenus();

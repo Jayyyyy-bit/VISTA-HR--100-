@@ -26,6 +26,8 @@
         <button class="dot" data-section="3"></button>
         <button class="dot" data-section="4"></button>
         <button class="dot" data-section="5"></button>
+
+    </nav>
     </nav>
 
     <!-- ══ NAV ══ -->
@@ -173,35 +175,21 @@
             </div>
         </section>
 
-        <!-- ── 3 · HOW IT WORKS (cream) ── -->
-        <section class="fp-slide slide-cream" data-index="3">
+        <!-- ── 3 · FEEDBACK ── -->
+        <section class="fp-slide slide-feedback" data-index="3">
             <div class="slide-inner">
                 <div class="section-head">
-                    <span class="section-tag">How it works</span>
-                    <h2 class="section-title">Fast. Simple.<br><em>Student-first.</em></h2>
+                    <span class="section-tag">Community voices</span>
+                    <h2 class="section-title">What our users<br><em>are saying</em></h2>
                 </div>
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-num">01</div>
-                        <div class="step-body">
-                            <h3>Search &amp; Filter</h3>
-                            <p>Filter by location, price, room type, and amenities.</p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-num">02</div>
-                        <div class="step-body">
-                            <h3>Take a Virtual Tour</h3>
-                            <p>Inspect the room remotely in seconds — no commute needed.</p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-num">03</div>
-                        <div class="step-body">
-                            <h3>Reserve &amp; Move In</h3>
-                            <p>Send an inquiry or book directly. Get notified instantly.</p>
-                        </div>
-                    </div>
+                <div class="feedback-grid" id="feedbackGrid">
+                    <div class="feedback-loading">Loading feedback…</div>
+                </div>
+                <div class="feedback-cta-wrap">
+                    <p class="feedback-cta-text">Have something to share?</p>
+                    <a class="feedback-cta-btn" href="/auth/login.html?next=/shared/feedback.html">
+                        Leave feedback <i data-lucide="arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </section>
@@ -257,6 +245,7 @@
             </div>
         </section>
 
+    </div>
     </div>
 
     <script src="/Landing_Page/ASSETS/front_script.js"></script>

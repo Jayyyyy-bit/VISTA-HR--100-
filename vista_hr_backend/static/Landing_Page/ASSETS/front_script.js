@@ -486,4 +486,58 @@ window.addEventListener('pageshow', (e) => {
 
         list.appendChild(item);
     });
+
+    // ── Feedback section ──────────────────────────────────────
+    // ── Feedback section ──────────────────────────────────────
+    (function () {
+        const API = "/api";
+
+        async function loadFeedback() {
+            const grid = document.getElementById("feedbackGrid");
+            if (!grid) return;
+            try {
+                const res = await fetch(`${API}/feedback?limit=6`);
+                const data = await res.json();
+                const items = data.feedback || [];
+
+                if (!items.length) {
+                    grid.innerHTML = `<div class="feedback-empty">No feedback yet.</div>`;
+                    return;
+                }
+
+                grid.innerHTML = items.map((f, i) => {
+                    const stars = f.rating
+                        ? `<div class="fb-card-stars">${"★".repeat(f.rating)}${"☆".repeat(5 - f.rating)}</div>`
+                        : "";
+                    const initials = (f.name?.[0] || "?").toUpperCase();
+                    const roleLabel = f.role ? `<span class="fb-card-role">${esc(f.role)}</span>` : "";
+                    const avatarHtml = f.avatar_url
+                        ? `<img src="${esc(f.avatar_url)}" alt="${esc(f.name)}" class="fb-card-av-img">`
+                        : initials;
+                    return `<div class="fb-card" style="animation-delay:${i * 80}ms">
+                    <div class="fb-card-top">
+                        <div class="fb-card-av">${avatarHtml}</div>
+                        <div>
+                            <div class="fb-card-name">${esc(f.name)}</div>
+                            ${roleLabel}
+                        </div>
+                        ${stars}
+                    </div>
+                    <p class="fb-card-msg">"${esc(f.message)}"</p>
+                </div>`;
+                }).join("");
+
+            } catch {
+                grid.innerHTML = `<div class="feedback-empty">Could not load feedback.</div>`;
+            }
+        }
+
+        function esc(s) {
+            return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        loadFeedback();
+    })();
+
+
 })();

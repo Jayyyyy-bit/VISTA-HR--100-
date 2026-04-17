@@ -132,6 +132,9 @@ function setupHeader() {
     menu?.classList.remove("open");
     location.href = "/auth/account-settings.html";
   });
+  $("udFeedback")?.addEventListener("click", () => {
+    window.location.href = "/shared/feedback.html";
+  });
 
   $("udMessages")?.addEventListener("click", () => {
     menu?.classList.remove("open");
@@ -153,12 +156,26 @@ function setupHeader() {
     location.href = "/Resident/saved_listings.html";
   });
 
-  $("udLogout")?.addEventListener("click", async () => {
+  $("udLogout")?.addEventListener("click", () => {
+    const ov = document.getElementById("logoutOverlay");
+    if (ov) { ov.hidden = false; ov.style.display = "flex"; if (window.lucide?.createIcons) lucide.createIcons(); }
+  });
+
+  document.getElementById("logoutCancelBtn")?.addEventListener("click", () => {
+    const ov = document.getElementById("logoutOverlay");
+    if (ov) { ov.hidden = true; ov.style.display = "none"; }
+  });
+
+  document.getElementById("logoutOverlay")?.addEventListener("click", e => {
+    if (e.target === e.currentTarget) {
+      const ov = e.currentTarget;
+      ov.hidden = true; ov.style.display = "none";
+    }
+  });
+
+  document.getElementById("logoutConfirmBtn")?.addEventListener("click", async () => {
     try {
-      await fetch(`${API}/auth/logout`, {
-        method: "POST",
-        credentials: "include"
-      });
+      await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" });
     } catch { }
     try { window.AuthGuard?.clearSession?.(); } catch { }
     localStorage.removeItem("vista_session_user");

@@ -1598,3 +1598,155 @@ body.dark-slide .btn-pill:hover {
         transition-duration: 0.01ms !important;
     }
 }
+
+.feedback-cta-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.feedback-cta-text {
+    font-size: 14px;
+    color: rgba(12, 14, 20, .5);
+    margin: 0;
+}
+
+.feedback-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: #C8882A;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 150ms;
+}
+
+.feedback-cta-btn:hover {
+    opacity: .85;
+}
+
+.feedback-cta-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── Feedback slide ── */
+.slide-feedback {
+    background: #f7f4ee;
+    color: #0c0e14;
+}
+
+.slide-feedback .section-tag {
+    color: rgba(12, 14, 20, .5);
+    border-color: rgba(12, 14, 20, .12);
+}
+
+.slide-feedback .section-title {
+    color: #0c0e14;
+}
+
+.slide-feedback .section-title em {
+    color: #C8882A;
+}
+
+.feedback-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.fb-card {
+    background: #fff;
+    border: 1px solid rgba(12, 14, 20, .08);
+    border-radius: 16px;
+    padding: 20px;
+    animation: fbCardIn 500ms ease both;
+    transition: transform 200ms, background 200ms;
+}
+
+.fb-card:hover {
+    background: #fdf3e3;
+    transform: translateY(-3px);
+}
+
+@keyframes fbCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fb-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.fb-card-av {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #C8882A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.fb-card-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #111;
+}
+
+.fb-card-role {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.fb-card-stars {
+    margin-left: auto;
+    color: #f59e0b;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.fb-card-msg {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.6;
+    margin: 0;
+    font-style: italic;
+}
+
+.feedback-loading,
+.feedback-empty {
+    color: rgba(12, 14, 20, .4);
+    font-size: 14px;
+    padding: 24px 0;
+    text-align: center;
+    grid-column: 1/-1;
+}
+
+.fb-card-av-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
