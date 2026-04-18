@@ -327,12 +327,13 @@
 
       if (!listings.length) {
         listingGrid.innerHTML = `
-      <div class="emptyListings">
-        <div class="emptyListingsIcon"><i data-lucide="home"></i></div>
-        <div class="emptyListingsTitle">No listings yet</div>
-        <div class="emptyListingsSub">Create your first listing to start accepting bookings.</div>
-      </div>
-    `;
+  <div class="emptyListings">
+    <div class="emptyListingsIcon"><i data-lucide="home"></i></div>
+    <div class="emptyListingsTitle">No listings yet</div>
+    <div class="emptyListingsSub">Create your first listing to start accepting bookings.</div>
+  </div>
+`;
+        renderOccupancySections([]);
         return;
       }
 
@@ -657,6 +658,13 @@
 
       row.hidden = false;
 
+      // Hide individual cards if they have no data
+      const reservedAlbum = document.getElementById("reservedAlbum");
+      const occupiedAlbum = document.getElementById("occupiedAlbum");
+
+      if (reservedAlbum) reservedAlbum.style.display = reserved.length === 0 ? "none" : "";
+      if (occupiedAlbum) occupiedAlbum.style.display = occupied.length === 0 ? "none" : "";
+
       // Build mosaics
       buildMosaic("reservedMosaic", reserved);
       buildMosaic("occupiedMosaic", occupied);
@@ -670,8 +678,8 @@
       window._occData = { reserved, occupied };
 
       // Album click handlers
-      document.getElementById("reservedAlbum").onclick = () => openOccExpanded("Reserved", reserved);
-      document.getElementById("occupiedAlbum").onclick = () => openOccExpanded("Occupied", occupied);
+      if (reserved.length) reservedAlbum.onclick = () => openOccExpanded("Reserved", reserved);
+      if (occupied.length) occupiedAlbum.onclick = () => openOccExpanded("Occupied", occupied);
 
       // Close handler
       document.getElementById("occExpandedClose").onclick = () => {
@@ -1135,8 +1143,20 @@
       if (key === "today") { window.DashToday?.render(); window.DashToday?.bindFilterBar?.(); }
       if (key === "listings") renderListings();
 
-      if (key === "calendar" && window.DashboardCalendar?.render) {
-        window.DashboardCalendar.render();
+      if (key === "calendar") {
+        if (window.DashboardCalendar?.render) {
+          window.DashboardCalendar.render();
+        } else {
+          // Script not ready yet — wait for it
+          const waitForCalendar = setInterval(() => {
+            if (window.DashboardCalendar?.render) {
+              clearInterval(waitForCalendar);
+              window.DashboardCalendar.render();
+            }
+          }, 50);
+          // Give up after 3 seconds
+          setTimeout(() => clearInterval(waitForCalendar), 3000);
+        }
       }
     }
 
@@ -1315,7 +1335,7 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return;
 
-      const notifs = data.notifications || [];
+      const notifs = (data.notifications || []).filter(n => !_deletedNotifIds.has(String(n.id)));
       const unread = data.unread ?? 0;
 
       // Update badge
@@ -1424,14 +1444,21 @@
     }
   });
 
-  // Initial load + poll every 10s
+  // Initial load + poll every 60s (only when panel is closed)
   loadNotifications();
-  setInterval(loadNotifications, 10_000);
+  setInterval(() => {
+    const panel = elN("notifPanel");
+    if (panel && !panel.hidden) return; // don't clobber open panel
+    loadNotifications();
+  }, 60_000);
+
+  const _deletedNotifIds = new Set();
 
   document.addEventListener("click", (e) => {
     const delBtn = e.target.closest("[data-notif-del]");
     if (!delBtn) return;
     const id = delBtn.dataset.notifDel;
+    _deletedNotifIds.add(String(id)); // track locally
     const item = delBtn.closest(".notif-item");
     if (item) {
       item.style.transform = "translateX(-100%)";

@@ -82,7 +82,7 @@
             </div>
         </aside>
 
-        <!-- RIGHT: Chat area -->
+        <!-- CENTER: Chat area -->
         <main class="rm-main" id="rmMain">
 
             <!-- Empty state -->
@@ -133,17 +133,36 @@
                 <!-- Bubble list -->
                 <div class="rm-bubbles" id="rmBubbles"></div>
 
+                <!-- Typing indicator -->
+                <div id="rmTypingIndicator" hidden>
+                    <div class="rm-typing-bubble">
+                        <span class="rm-typing-dot"></span>
+                        <span class="rm-typing-dot"></span>
+                        <span class="rm-typing-dot"></span>
+                    </div>
+                </div>
+
                 <!-- Input area -->
                 <div class="rm-input-area">
+                    <input type="file" id="rmPhotoInput" accept="image/*" hidden>
+                    <button class="rm-photo-btn" id="rmPhotoBtn" type="button" aria-label="Attach photo">
+                        <i data-lucide="image" style="pointer-events:none;width:18px;height:18px;"></i>
+                    </button>
                     <textarea class="rm-input" id="rmInput" placeholder="Type a message…" rows="1"
                         maxlength="2000"></textarea>
                     <button class="rm-send-btn" id="rmSendBtn" disabled>
-                        <i data-lucide="send"></i>
+                        <i data-lucide="send" style="pointer-events:none;"></i>
                     </button>
                 </div>
 
             </div>
         </main>
+
+        <!-- RIGHT: Owner + Listing info panel -->
+        <div class="rm-info-panel" id="rmInfoPanel" hidden>
+            <div class="rm-info-inner" id="rmInfoInner"></div>
+        </div>
+
     </div>
 
     <!-- Delete conversation confirm modal -->

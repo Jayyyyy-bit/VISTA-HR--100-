@@ -1691,3 +1691,10 @@ button.disabled {
     background: #fff7ed;
     color: #c2410c;
 }
+
+/* ── Hidden attribute fix ── */
+#occupancyRow[hidden],
+#reservedAlbum[hidden],
+#occupiedAlbum[hidden] {
+    display: none !important;
+}

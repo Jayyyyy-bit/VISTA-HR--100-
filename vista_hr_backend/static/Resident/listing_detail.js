@@ -224,7 +224,7 @@ function render(l) {
     const cap = l.capacity || {};
 
     // Now cap is available — append student discount badge if applicable
-    const discountPct = cap.student_discount_pct || 0;
+    const discountPct = cap.student_discount_pct || listing.student_discount || 0;
     if (discountPct > 0) {
         $("ldBadges").innerHTML += `<span class="ld-badge disc">${discountPct}% student discount</span>`;
     }
@@ -419,8 +419,7 @@ function render(l) {
     // Booking card price — apply student discount if resident is student-verified
     const rent = cap.monthly_rent || cap.price;
     const isStudentVerified = currentUser?.student_status === "APPROVED";
-    const discPct2 = cap.student_discount_pct || 0;
-    const discountedRent = (isStudentVerified && discPct2 > 0)
+    const discPct2 = cap.student_discount_pct || listing.student_discount || 0; const discountedRent = (isStudentVerified && discPct2 > 0)
         ? Math.round(rent * (1 - discPct2 / 100))
         : null;
 

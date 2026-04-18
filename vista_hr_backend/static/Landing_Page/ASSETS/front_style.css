@@ -377,9 +377,9 @@ body.dark-slide .btn-pill:hover {
 ════════════════════════════════ */
 .hero-layout {
     display: grid !important;
-    grid-template-columns: 1fr;
-    align-items: center;
-    gap: 32px;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: 40px;
 }
 
 .eyebrow {
@@ -567,7 +567,73 @@ body.dark-slide .btn-pill:hover {
 
 /* Hero visual */
 .hero-visual {
-    display: none;
+    display: block;
+    height: 100%;
+}
+
+.hero-map-card {
+    position: relative;
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    border: 1px solid var(--ink-10);
+    box-shadow: 0 24px 64px rgba(10, 10, 10, 0.12);
+    height: 420px;
+    margin-top: 44px;
+}
+
+.hero-map {
+    width: 100%;
+    height: 100%;
+}
+
+.hero-map-overlay {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    justify-content: flex-start;
+    pointer-events: none;
+    z-index: 999;
+}
+
+.hero-map-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--ink-10);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.hero-map-badge svg {
+    width: 13px;
+    height: 13px;
+    color: var(--navy);
+    stroke-width: 2.5;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    font-family: var(--font-b);
+}
+
+.leaflet-control-zoom {
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+    border: none !important;
 }
 
 .visual-card {
@@ -1515,6 +1581,19 @@ body.dark-slide .btn-pill:hover {
 @media (max-width: 640px) {
     .faq-wrap {
         padding: 80px 20px 40px;
+    }
+
+    .hero-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    .hero-visual {
+        width: 100%;
+    }
+
+    .hero-map-card {
+        height: 260px;
+        margin-top: 24px;
     }
 }
 

@@ -818,6 +818,7 @@ def resident_feed():
             "id": d["id"],
             "title": d.get("title") or "Untitled space",
             "place_type": d.get("place_type") or "",
+            "location": d.get("location") or {},
             "city": (d.get("location") or {}).get("city") or "",
             "barangay": (d.get("location") or {}).get("barangay") or "",
             "price": price,

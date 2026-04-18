@@ -28,8 +28,9 @@ class Message(db.Model):
         index=True,
     )
 
-    text     = db.Column(db.String(MESSAGE_MAX_LENGTH), nullable=False)
-    is_read  = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    text      = db.Column(db.String(MESSAGE_MAX_LENGTH), nullable=True)
+    image_url = db.Column(db.String(500), nullable=True)
+    is_read   = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     # Soft-delete per participant (delete for me only)
     deleted_by_sender   = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
@@ -62,7 +63,8 @@ class Message(db.Model):
             "sender_id":   self.sender_id,
             "receiver_id": self.receiver_id,
             "listing_id":  self.listing_id,
-            "text":        "[Message deleted]" if deleted else self.text,
+            "text":        "[Message deleted]" if deleted else (self.text or ""),
+            "image_url":   None if deleted else self.image_url,
             "is_read":     bool(self.is_read),
             "from":        "me" if is_own else "them",
             "sender_name": sender_name,

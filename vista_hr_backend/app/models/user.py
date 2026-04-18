@@ -80,8 +80,9 @@ class User(db.Model):
         server_default="NONE",
     )
     # ── Google OAuth ──────────────────────────────────────────────
-    google_id        = db.Column(db.String(100), nullable=True, unique=True, index=True)
-    avatar_url_google = db.Column(db.String(500), nullable=True)
+    google_id           = db.Column(db.String(100), unique=True, nullable=True)
+    avatar_url_google   = db.Column(db.String(500), nullable=True)
+    typing_until        = db.Column(db.DateTime(timezone=True), nullable=True)
 
     # ── Profile extras ────────────────────────────────────────────
     based_in = db.Column(db.String(100), nullable=True)

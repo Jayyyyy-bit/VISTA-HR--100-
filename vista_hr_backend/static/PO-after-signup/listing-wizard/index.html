@@ -143,7 +143,106 @@
 
     <script src="core/bg-motion.js"></script>
     <script src="core/router.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const overlay = document.getElementById("faqOverlay");
+            const body = document.getElementById("faqBody");
+
+            const FAQS = [
+                {
+                    group: "Getting started", items: [
+                        ["Can I save my progress and continue later?", "Yes. Use \"Save & exit\" anytime — your draft is preserved and you can resume from where you left off."],
+                        ["How many steps does the wizard have?", "10 steps: category, space type, location, capacity, amenities, highlights, photos, details, pricing, and preview."],
+                    ]
+                },
+                {
+                    group: "Listing details", items: [
+                        ["Can I edit my listing after publishing?", "Yes. All fields are editable from your Owner dashboard after your listing goes live."],
+                        ["What property types are supported?", "Bedspace, Studio, 1BR, 2BR, Dormitory, and Apartment."],
+                        ["Is a virtual tour required?", "No — optional, but recommended as it significantly increases resident interest."],
+                    ]
+                },
+                {
+                    group: "Verification & publishing", items: [
+                        ["Why is the Publish button locked?", "Publishing requires KYC (identity verification) approval first. Submit via Account Settings → Verification."],
+                        ["How long does KYC approval take?", "Typically 1–2 business days after submission."],
+                        ["What happens after I submit my listing?", "It goes to Admin review before going live to residents."],
+                    ]
+                },
+                {
+                    group: "Photos & media", items: [
+                        ["What photo format is accepted?", "JPG or PNG, max 10MB per file. A minimum of 3 photos is recommended."],
+                        ["How do I add a 360° virtual tour?", "In the Photos step, toggle \"Add virtual tour\" and upload a panoramic image."],
+                    ]
+                },
+                {
+                    group: "Pricing", items: [
+                        ["Can I offer a student discount?", "Yes — set a discount percentage in the Pricing step. Applies to residents with approved student verification."],
+                        ["Can I change my price after publishing?", "Yes. Price updates apply to new bookings only."],
+                    ]
+                },
+            ];
+
+            function buildFAQ() {
+                body.innerHTML = FAQS.map(({ group, items }) => `
+      <p style="font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#999;padding:16px 0 6px;margin:0;">${group}</p>
+      ${items.map(([q, a]) => `
+        <div class="faq-item" style="border-bottom:0.5px solid #e5e5e5;">
+          <button class="faq-btn" style="width:100%;background:none;border:none;text-align:left;padding:12px 0;font-size:14px;font-weight:500;cursor:pointer;display:flex;justify-content:space-between;gap:12px;">${q}<span class="faq-icon" style="flex-shrink:0;transition:transform .2s;font-size:18px;color:#aaa;">+</span></button>
+          <div class="faq-ans" style="font-size:13px;color:#666;line-height:1.65;max-height:0;overflow:hidden;transition:max-height .25s ease,padding .2s;">${a}</div>
+        </div>`).join("")}
+    `).join("");
+
+                body.querySelectorAll(".faq-btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        const item = btn.closest(".faq-item");
+                        const isOpen = item.dataset.open === "1";
+                        body.querySelectorAll(".faq-item").forEach(el => {
+                            el.dataset.open = "0";
+                            el.querySelector(".faq-ans").style.maxHeight = "0";
+                            el.querySelector(".faq-ans").style.paddingBottom = "0";
+                            el.querySelector(".faq-icon").style.transform = "";
+                        });
+                        if (!isOpen) {
+                            item.dataset.open = "1";
+                            item.querySelector(".faq-ans").style.maxHeight = "120px";
+                            item.querySelector(".faq-ans").style.paddingBottom = "12px";
+                            item.querySelector(".faq-icon").style.transform = "rotate(45deg)";
+                        }
+                    });
+                });
+            }
+
+            document.getElementById("questionsBtn").addEventListener("click", () => {
+                buildFAQ();
+                overlay.style.cssText = "display:flex; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center;";
+            });
+
+            document.getElementById("faqClose").addEventListener("click", () => {
+                overlay.style.cssText = "display:none;";
+            });
+
+            overlay.addEventListener("click", e => {
+                if (e.target === overlay) overlay.style.cssText = "display:none;";
+            });
+        });
+    </script>
     <script>lucide.createIcons();</script>
+
+    <!-- FAQ Modal -->
+    <div id="faqOverlay"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center;">
+        <div <div
+            style="background:#ffffff; border-radius:16px; width:min(560px, 92vw); max-height:80vh; overflow-y:auto; padding:28px 28px 20px; font-family:'Plus Jakarta Sans', sans-serif; box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <span style="font-size:16px; font-weight:600;">Frequently asked questions</span>
+                <button id="faqClose"
+                    style="background:none; border:none; cursor:pointer; font-size:22px; line-height:1; color:#888;">&times;</button>
+            </div>
+            <div id="faqBody"></div>
+        </div>
+    </div>
+
 </body>
 
 </html>

@@ -352,66 +352,200 @@
     <script src="/auth/user-avatar.js"></script>
     <script src="/auth/sessionGuard.js"></script>
     <script src="/Resident/resident_home.js"></script>
-</body>
-<!-- ══ FOOTER ══ -->
-<footer class="site-footer">
-    <div class="ft-inner">
-        <div class="ft-top">
 
-            <div class="ft-brand-col">
-                <a class="ft-brand" href="#">
-                    <span class="brand-mark"></span>
-                    VISTA<b>-HR</b>
-                </a>
-                <p class="ft-tagline">Find your home near campus — rooms, boarding houses, and apartments made easy.</p>
-                <div class="ft-badge">
-                    <span class="ft-badge-dot"></span> Live listings updated daily
+    <!-- ══ FOOTER ══ -->
+    <footer class="site-footer">
+        <div class="ft-inner">
+            <div class="ft-top">
+
+                <div class="ft-brand-col">
+                    <a class="ft-brand" href="/Resident/resident_home.html">
+                        <span class="brand-mark"></span>
+                        VISTA<b>-HR</b>
+                    </a>
+                    <p class="ft-tagline">Find your home near campus — rooms, boarding houses, and apartments made easy.
+                    </p>
+                    <div class="ft-badge">
+                        <span class="ft-badge-dot"></span> Live listings updated daily
+                    </div>
+                </div>
+
+                <div class="ft-col">
+                    <p class="ft-col-title">Explore</p>
+                    <ul class="ft-links">
+                        <li><a href="/Resident/resident_home.html">All listings</a></li>
+                        <li><a href="/Resident/resident_home.html?city=caloocan">Near UE Caloocan</a></li>
+                        <li><a href="/Resident/resident_home.html?max_price=4000">Budget picks</a></li>
+                        <li><a href="/Resident/resident_home.html?tour=1">With virtual tour</a></li>
+                        <li><a href="/Resident/resident_home.html">Available now</a></li>
+                    </ul>
+                </div>
+
+                <div class="ft-col">
+                    <p class="ft-col-title">Renters</p>
+                    <ul class="ft-links">
+                        <li><a href="#" id="ftHowItWorks">How it works</a></li>
+                        <li><a href="/Resident/my-bookings.html">My bookings</a></li>
+                        <li><a href="/Resident/saved_listings.html">Saved listings</a></li>
+                        <li><a href="/shared/my_tickets.html">Submit a ticket</a></li>
+                        <li><a href="#" id="ftFaqs">FAQs</a></li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <div class="ft-bottom">
+                <span class="ft-copy">© 2026 VISTA-HR. All rights reserved.</span>
+                <div class="ft-bottom-links">
+                    <a href="#" id="ftPrivacy">Privacy policy</a>
+                    <a href="#" id="ftTerms">Terms of service</a>
+                    <a href="#" id="ftCookies">Cookie settings</a>
                 </div>
             </div>
-
-            <div class="ft-col">
-                <p class="ft-col-title">Explore</p>
-                <ul class="ft-links">
-                    <li><a href="#">All listings</a></li>
-                    <li><a href="#">Near UE Caloocan</a></li>
-                    <li><a href="#">Budget picks</a></li>
-                    <li><a href="#">With virtual tour</a></li>
-                    <li><a href="#">Available now</a></li>
-                </ul>
-            </div>
-
-            <div class="ft-col">
-                <p class="ft-col-title">Renters</p>
-                <ul class="ft-links">
-                    <li><a href="#">How it works</a></li>
-                    <li><a href="#">My bookings</a></li>
-                    <li><a href="#">Saved listings</a></li>
-                    <li><a href="#">Submit a ticket</a></li>
-                    <li><a href="#">FAQs</a></li>
-                </ul>
-            </div>
-
-            <div class="ft-col">
-                <p class="ft-col-title">Landlords</p>
-                <ul class="ft-links">
-                    <li><a href="#">List your property</a></li>
-                    <li><a href="#">Owner dashboard</a></li>
-                    <li><a href="#">Pricing</a></li>
-                    <li><a href="#">Contact us</a></li>
-                </ul>
-            </div>
-
         </div>
+    </footer>
 
-        <div class="ft-bottom">
-            <span class="ft-copy">© 2025 VISTA-HR. All rights reserved.</span>
-            <div class="ft-bottom-links">
-                <a href="#">Privacy policy</a>
-                <a href="#">Terms of service</a>
-                <a href="#">Cookie settings</a>
+    <div id="infoModalOverlay"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+        <div
+            style="background:#fff;border-radius:20px;width:min(600px,94vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.18);font-family:'DM Sans',sans-serif;">
+            <div
+                style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid #f3f4f6;">
+                <span id="infoModalTitle" style="font-weight:700;font-size:15px;color:#111827;"></span>
+                <button id="infoModalClose"
+                    style="background:none;border:none;cursor:pointer;font-size:22px;color:#6b7280;line-height:1;">&times;</button>
             </div>
+            <div id="infoModalBody"
+                style="overflow-y:auto;padding:1.5rem;font-size:14px;color:#374151;line-height:1.7;"></div>
         </div>
     </div>
-</footer>
+
+    <script>
+        (function () {
+            const overlay = document.getElementById("infoModalOverlay");
+            const titleEl = document.getElementById("infoModalTitle");
+            const body = document.getElementById("infoModalBody");
+
+            function openInfo(title, html) {
+                titleEl.textContent = title;
+                body.innerHTML = html;
+                overlay.style.display = "flex";
+                document.body.style.overflow = "hidden";
+            }
+
+            function closeInfo() {
+                overlay.style.display = "none";
+                document.body.style.overflow = "";
+            }
+
+            document.getElementById("infoModalClose")?.addEventListener("click", closeInfo);
+            overlay?.addEventListener("click", e => { if (e.target === overlay) closeInfo(); });
+
+            document.getElementById("ftHowItWorks")?.addEventListener("click", e => {
+                e.preventDefault();
+                openInfo("How it works", `
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;color:#1B3F6E;">1</div>
+                    <div><strong>Create an account</strong><br>Sign up as a Resident, verify your email, and complete KYC verification.</div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;color:#1B3F6E;">2</div>
+                    <div><strong>Browse listings</strong><br>Search by location, type, and budget. View 360° tours before visiting in person.</div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;color:#1B3F6E;">3</div>
+                    <div><strong>Send a booking request</strong><br>Reserve a listing — the owner reviews and approves within 3 days.</div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;color:#1B3F6E;">4</div>
+                    <div><strong>Schedule a viewing</strong><br>Once approved, the owner sets a viewing date. Confirm it and submit your payment proof.</div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;color:#1B3F6E;">5</div>
+                    <div><strong>Move in</strong><br>After the owner verifies your payment, you're confirmed as moved in. Welcome home!</div>
+                </div>
+            </div>
+        `);
+            });
+
+            document.getElementById("ftFaqs")?.addEventListener("click", e => {
+                e.preventDefault();
+                openInfo("Frequently Asked Questions", `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                ${[
+                        ["How do I book a room?", "Browse listings, open one you like, and click Reserve. You can only have one active booking at a time."],
+                        ["What happens after I submit a booking request?", "Your request enters Pending status. The owner reviews and approves or rejects it within 3 days."],
+                        ["How do I submit payment proof?", "Go to My Bookings, open your approved booking, and tap Upload Payment Proof."],
+                        ["Can I get a student discount?", "Yes — go to Account Settings → Verification, toggle 'I am a student', and upload your School ID and CoR."],
+                        ["How do I move out early?", "Go to My Bookings and tap Move Out on your active booking."],
+                        ["How do I message a property owner?", "Open any listing and use the message button, or go to your Messages tab."],
+                        ["How do I file a support ticket?", "Go to My Tickets from the menu. Describe your issue and submit — admins reply within 24 hours."],
+                        ["What is KYC verification?", "KYC verifies your identity using a government-issued ID. It is required before making a booking."],
+                    ].map(([q, a]) => `
+                    <div style="border:1px solid #f3f4f6;border-radius:10px;padding:12px 14px;">
+                        <div style="font-weight:600;font-size:13px;color:#111827;margin-bottom:4px;">${q}</div>
+                        <div style="font-size:13px;color:#6b7280;">${a}</div>
+                    </div>
+                `).join("")}
+            </div>
+        `);
+            });
+
+            document.getElementById("ftPrivacy")?.addEventListener("click", e => {
+                e.preventDefault();
+                openInfo("Privacy Policy", `
+            <p style="margin-bottom:12px;font-size:13px;color:#6b7280;">Last updated: April 2026</p>
+            ${[
+                        ["Information We Collect", "We collect your name, email, phone number, government-issued ID (for KYC), student documents, profile photo, listing details, booking records, and messages sent through the platform."],
+                        ["How We Use Your Information", "Your data is used to operate VISTA-HR, verify your identity, process bookings, send notifications, and comply with the Data Privacy Act of 2012 (RA 10173)."],
+                        ["Data Sharing", "We do not sell your data. We share it only with Cloudinary (media storage) and Gmail (email delivery). All third-party services are bound by their own privacy policies."],
+                        ["Security", "We use bcrypt password hashing, HTTPS encryption, HttpOnly JWT cookies, and role-based access controls to protect your data."],
+                        ["Your Rights", "Under RA 10173, you have the right to access, correct, or request deletion of your personal data. Contact us at privacy@vista-hr.ph."],
+                        ["Contact", "For privacy inquiries, email privacy@vista-hr.ph or submit a support ticket through the platform."],
+                    ].map(([h, t]) => `<div style="margin-bottom:14px;"><strong style="display:block;margin-bottom:4px;">${h}</strong>${t}</div>`).join("")}
+        `);
+            });
+
+            document.getElementById("ftTerms")?.addEventListener("click", e => {
+                e.preventDefault();
+                openInfo("Terms of Service", `
+            <p style="margin-bottom:12px;font-size:13px;color:#6b7280;">Last updated: April 2026</p>
+            ${[
+                        ["Acceptance", "By using VISTA-HR, you agree to these Terms. If you do not agree, you may not use the platform."],
+                        ["Eligibility", "You must be at least 18 years old to create an account. You agree to provide accurate information and keep it updated."],
+                        ["Resident Obligations", "Residents must use listings only for lawful residential purposes and maintain the property in good condition during their stay."],
+                        ["Bookings & Payments", "VISTA-HR does not process payments. All financial transactions occur directly between Residents and Property Owners."],
+                        ["Cancellations", "Pending and Approved bookings may be cancelled by the Resident. Active bookings require a move-out request."],
+                        ["Strikes & Suspension", "Policy violations result in strikes. Accumulating 5 strikes results in permanent account suspension."],
+                        ["Governing Law", "These terms are governed by the laws of the Republic of the Philippines. Disputes are subject to the courts of Metro Manila."],
+                    ].map(([h, t]) => `<div style="margin-bottom:14px;"><strong style="display:block;margin-bottom:4px;">${h}</strong>${t}</div>`).join("")}
+        `);
+            });
+
+            document.getElementById("ftCookies")?.addEventListener("click", e => {
+                e.preventDefault();
+                openInfo("Cookie Settings", `
+            <p style="margin-bottom:16px;">VISTA-HR uses the following cookies:</p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid #f3f4f6;border-radius:10px;">
+                    <div><strong style="display:block;font-size:13px;">Essential cookies</strong><span style="font-size:12px;color:#6b7280;">Required for login sessions and security.</span></div>
+                    <span style="font-size:12px;font-weight:600;color:#15803d;background:#f0fdf4;padding:3px 10px;border-radius:999px;">Always on</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid #f3f4f6;border-radius:10px;">
+                    <div><strong style="display:block;font-size:13px;">Performance cookies</strong><span style="font-size:12px;color:#6b7280;">Help us understand how the platform is used.</span></div>
+                    <span style="font-size:12px;font-weight:600;color:#15803d;background:#f0fdf4;padding:3px 10px;border-radius:999px;">Always on</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid #f3f4f6;border-radius:10px;">
+                    <div><strong style="display:block;font-size:13px;">Advertising cookies</strong><span style="font-size:12px;color:#6b7280;">VISTA-HR does not use advertising cookies.</span></div>
+                    <span style="font-size:12px;font-weight:600;color:#6b7280;background:#f9fafb;padding:3px 10px;border-radius:999px;">Not used</span>
+                </div>
+            </div>
+        `);
+            });
+        })();
+    </script>
+
+</body>
 
 </html>

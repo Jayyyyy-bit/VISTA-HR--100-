@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import or_, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -142,8 +143,10 @@ def get_thread(listing_id: int, other_user_id: int):
         .filter(
             Message.listing_id == listing_id,
             or_(
-                and_(Message.sender_id == me.id,       Message.receiver_id == other_user_id),
-                and_(Message.sender_id == other_user_id, Message.receiver_id == me.id),
+                and_(Message.sender_id == me.id,         Message.receiver_id == other_user_id,
+                     Message.deleted_by_sender == False),
+                and_(Message.sender_id == other_user_id, Message.receiver_id == me.id,
+                     Message.deleted_by_receiver == False),
             )
         )
         .order_by(Message.created_at.asc())
@@ -170,6 +173,36 @@ def get_thread(listing_id: int, other_user_id: int):
 # POST /messages
 # Send a message
 # ══════════════════════════════════════════════
+@messages_bp.post("/messages/typing")
+@require_role("OWNER", "RESIDENT")
+def set_typing():
+    """POST { receiver_id, listing_id } — marks sender as typing for 4s."""
+    from datetime import timedelta
+    me   = g.current_user
+    data = request.get_json(silent=True) or {}
+    me.typing_until = datetime.now(timezone.utc) + timedelta(seconds=4)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+    return jsonify({"ok": True}), 200
+
+
+@messages_bp.get("/messages/typing/<int:other_user_id>")
+@require_role("OWNER", "RESIDENT")
+def get_typing(other_user_id: int):
+    """GET — returns whether other_user is currently typing."""
+    other = db.session.get(User, other_user_id)
+    if not other:
+        return jsonify({"is_typing": False}), 200
+    if other.typing_until is None:
+        is_typing = False
+    else:
+        until = other.typing_until if other.typing_until.tzinfo else other.typing_until.replace(tzinfo=timezone.utc)
+        is_typing = until > datetime.now(timezone.utc)
+    return jsonify({"is_typing": is_typing}), 200
+
+
 @messages_bp.post("/messages")
 @require_role("OWNER", "RESIDENT")
 def send_message():
@@ -179,14 +212,15 @@ def send_message():
     receiver_id = data.get("receiver_id")
     listing_id  = data.get("listing_id")
     text        = (data.get("text") or "").strip()
+    image_url   = (data.get("image_url") or "").strip() or None
 
     if not receiver_id or not isinstance(receiver_id, int):
         return json_error("Validation failed", 400, fields={"receiver_id": "Required integer."})
     if not listing_id or not isinstance(listing_id, int):
         return json_error("Validation failed", 400, fields={"listing_id": "Required integer."})
-    if not text:
+    if not text and not image_url:
         return json_error("Validation failed", 400, fields={"text": "Message cannot be empty."})
-    if len(text) > MESSAGE_MAX_LENGTH:
+    if text and len(text) > MESSAGE_MAX_LENGTH:
         return json_error(
             "Validation failed", 400,
             fields={"text": f"Message cannot exceed {MESSAGE_MAX_LENGTH} characters."}
@@ -194,12 +228,10 @@ def send_message():
     if receiver_id == me.id:
         return json_error("Cannot send a message to yourself.", 400)
 
-    # Verify listing exists
     listing = db.session.get(Listing, listing_id)
     if not listing:
         return json_error("Listing not found.", 404)
 
-    # Verify receiver exists
     receiver = db.session.get(User, receiver_id)
     if not receiver:
         return json_error("Recipient not found.", 404)
@@ -208,7 +240,8 @@ def send_message():
         sender_id=me.id,
         receiver_id=receiver_id,
         listing_id=listing_id,
-        text=text,
+        text=text or "",
+        image_url=image_url,
         is_read=False,
     )
 

@@ -5,6 +5,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VISTA-HR | Find Your Stay in Metro Manila</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -92,12 +94,13 @@
                 </div>
 
                 <div class="hero-visual">
-                    <div class="visual-card" id="visualCard">
-                        <div id="panorama" style="width: 100%; height: 100%; border-radius: 16px; overflow: hidden;">
-                        </div>
-                        <div class="visual-overlay">
-                            <div class="visual-chip"><i data-lucide="star"></i><span><b>4.9</b> near UE</span></div>
-                            <div class="visual-chip"><i data-lucide="map-pin"></i><span>Metro Manila</span></div>
+                    <div class="hero-map-card">
+                        <div id="heroMap" class="hero-map"></div>
+                        <div class="hero-map-overlay">
+                            <div class="hero-map-badge">
+                                <i data-lucide="map-pin"></i>
+                                <span id="mapListingCount">—</span> listings near you
+                            </div>
                         </div>
                     </div>
                 </div>

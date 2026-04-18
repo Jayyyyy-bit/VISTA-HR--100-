@@ -1,9 +1,9 @@
 /* ─────────────────────────────────────────────────────────────
    VISTA-HR · Property Owner Dashboard — Messages tab
-   Full rewrite v1: All .msg* classes, matches design system
+   dashboard-messages.css
 ───────────────────────────────────────────────────────────── */
 
-/* ── Override tabPanel padding for messages — needs full height, no scroll ── */
+/* ── Override tabPanel for messages — needs full height ── */
 .tabPanel.active#tab-messages {
     padding: 0;
     overflow: hidden;
@@ -11,27 +11,31 @@
     flex-direction: column;
 }
 
-/* ════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    SHELL — 3-column layout
-════════════════════════════════════════════ */
+══════════════════════════════════════════════ */
 .msgShell {
     display: flex;
     flex: 1 1 auto;
     min-height: 0;
     height: 100%;
-    background: var(--bg, #F1EFEC);
+    gap: 10px;
+    padding: 12px;
+    background: #F0F2F5;
 }
 
-/* ════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    LEFT — Sidebar / Conversation List
-════════════════════════════════════════════ */
+══════════════════════════════════════════════ */
 .msgSidebar {
     width: 300px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid var(--line, rgba(3, 3, 3, 0.08));
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(3, 3, 3, 0.08);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     overflow: hidden;
 }
 
@@ -39,21 +43,21 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 28px 20px 14px;
+    padding: 18px 20px 12px;
     flex-shrink: 0;
 }
 
 .msgSidebarTitle {
     font-size: 20px;
     font-weight: 800;
-    color: var(--dash-ink-strong, #030303);
+    color: #030303;
     margin: 0;
     flex: 1;
     letter-spacing: -0.4px;
 }
 
 .msgUnreadPill {
-    background: var(--dash-brand, #123458);
+    background: #123458;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -70,17 +74,22 @@
     align-items: center;
     gap: 8px;
     margin: 0 14px 10px;
-    background: var(--bg, #F1EFEC);
-    border: 1px solid var(--line, rgba(3, 3, 3, 0.08));
-    border-radius: 12px;
+    background: #F0F2F5;
+    border: 1px solid rgba(3, 3, 3, 0.08);
+    border-radius: 10px;
     padding: 8px 12px;
     flex-shrink: 0;
+    transition: border-color 150ms;
+}
+
+.msgSearchWrap:focus-within {
+    border-color: #1B3F6E;
 }
 
 .msgSearchIcon {
     width: 15px;
     height: 15px;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     flex-shrink: 0;
     stroke-width: 2;
 }
@@ -90,15 +99,50 @@
     background: transparent;
     font-family: inherit;
     font-size: 13px;
-    color: var(--text, #0f172a);
+    color: #0f172a;
     outline: none;
     width: 100%;
     font-weight: 500;
 }
 
 .msgSearchInput::placeholder {
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 400;
+}
+
+/* Tab bar */
+.msgTabBar {
+    display: flex;
+    gap: 4px;
+    padding: 0 14px 10px;
+    border-bottom: 1px solid rgba(3, 3, 3, 0.06);
+    flex-shrink: 0;
+}
+
+.msgTab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(18, 52, 88, 0.5);
+    cursor: pointer;
+    transition: background 150ms, color 150ms;
+}
+
+.msgTab:hover {
+    background: #F0F2F5;
+    color: #1B3F6E;
+}
+
+.msgTab.active {
+    background: #1B3F6E;
+    color: #fff;
 }
 
 /* Thread list scroll */
@@ -110,7 +154,7 @@
 }
 
 .msgThreadList::-webkit-scrollbar {
-    width: 4px;
+    width: 3px;
 }
 
 .msgThreadList::-webkit-scrollbar-track {
@@ -129,8 +173,8 @@
     gap: 12px;
     padding: 12px 16px;
     cursor: pointer;
-    border-radius: 0;
-    transition: background 120ms ease;
+    border-bottom: 1px solid rgba(3, 3, 3, 0.05);
+    transition: background 140ms;
     position: relative;
 }
 
@@ -138,26 +182,31 @@
     background: rgba(18, 52, 88, 0.04);
 }
 
+.msgThread:active {
+    background: rgba(18, 52, 88, 0.07);
+}
+
 .msgThread.isActive {
-    background: rgba(18, 52, 88, 0.08);
+    background: rgba(18, 52, 88, 0.07);
+    border-left: 3px solid #1B3F6E;
 }
 
 .msgThread.isUnread .msgThreadName {
     font-weight: 800;
-    color: var(--dash-ink-strong, #030303);
+    color: #030303;
 }
 
 .msgThread.isUnread .msgThreadPreview {
     font-weight: 600;
-    color: var(--text, #0f172a);
+    color: #0f172a;
 }
 
-/* Avatar circle */
+/* Avatar */
 .msgThreadAvatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: var(--dash-brand, #123458);
+    background: linear-gradient(135deg, #123458, #2d6bc4);
     color: #fff;
     font-size: 13px;
     font-weight: 700;
@@ -165,7 +214,17 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    letter-spacing: 0.3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.msgThreadAvatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .msgThreadBody {
@@ -173,7 +232,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
 }
 
 .msgThreadRow {
@@ -186,7 +245,7 @@
 .msgThreadName {
     font-size: 13.5px;
     font-weight: 600;
-    color: var(--text, #0f172a);
+    color: #0f172a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -195,7 +254,7 @@
 
 .msgThreadTime {
     font-size: 11px;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 500;
     white-space: nowrap;
     flex-shrink: 0;
@@ -203,7 +262,7 @@
 
 .msgThreadPreview {
     font-size: 12.5px;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 400;
     white-space: nowrap;
     overflow: hidden;
@@ -213,7 +272,7 @@
 .msgThreadTag {
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--dash-brand, #123458);
+    color: #123458;
     background: rgba(18, 52, 88, 0.07);
     border-radius: 6px;
     padding: 2px 7px;
@@ -229,7 +288,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--dash-brand, #123458);
+    background: #123458;
     flex-shrink: 0;
     align-self: center;
 }
@@ -250,39 +309,111 @@
     line-height: 1.6;
 }
 
-/* ════════════════════════════════════════════
+/* Thread actions */
+.msgThreadActions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.msgThread:hover .msgThreadActions {
+    opacity: 1;
+}
+
+.msgThreadActionBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: rgba(18, 52, 88, 0.4);
+    transition: background 0.12s, color 0.12s;
+}
+
+.msgThreadActionBtn:hover {
+    background: #f1f5f9;
+    color: #1B3F6E;
+}
+
+.msgDeleteBtn:hover {
+    color: #dc2626 !important;
+    background: #fef2f2 !important;
+}
+
+.msgThreadActionBtn i {
+    width: 13px;
+    height: 13px;
+}
+
+/* ══════════════════════════════════════════════
    CENTER — Chat Area
-════════════════════════════════════════════ */
+══════════════════════════════════════════════ */
 .msgMain {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background: var(--bg, #F1EFEC);
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(3, 3, 3, 0.08);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     position: relative;
+    overflow: hidden;
 }
 
-/* Empty state — hidden, chat fills full height */
+/* Empty state */
+/* Empty state */
 .msgMainEmpty {
-    display: none;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #F0F2F5;
+    font-size: 13px;
+    color: rgba(18, 52, 88, 0.4);
+    font-weight: 500;
+    text-align: center;
+    padding: 32px;
 }
 
-/* Chat wrap (shown when conversation is open) */
+.msgMainEmpty[hidden] {
+    display: none !important;
+}
+
+/* Chat wrap fills full space */
 .msgChatWrap {
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
 }
 
-/* ── Chat Header ── */
+
+.msgChatWrap[hidden] {
+    display: none !important;
+}
+
+/* Chat header */
 .msgChatHeader {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--line, rgba(3, 3, 3, 0.08));
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(3, 3, 3, 0.08);
+    background: #fff;
     flex-shrink: 0;
 }
 
@@ -290,7 +421,7 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: var(--dash-brand, #123458);
+    background: linear-gradient(135deg, #123458, #2d6bc4);
     color: #fff;
     font-size: 13px;
     font-weight: 700;
@@ -298,6 +429,17 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.msgChatHeaderAvatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .msgChatHeaderInfo {
@@ -308,12 +450,12 @@
 .msgChatHeaderName {
     font-size: 14px;
     font-weight: 700;
-    color: var(--text, #0f172a);
+    color: #0f172a;
 }
 
 .msgChatHeaderSub {
     font-size: 12px;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 400;
     white-space: nowrap;
     overflow: hidden;
@@ -326,7 +468,7 @@
     gap: 5px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--dash-brand, #123458);
+    color: #123458;
     background: rgba(18, 52, 88, 0.07);
     border-radius: 20px;
     padding: 5px 11px;
@@ -337,7 +479,7 @@
     flex-shrink: 0;
 }
 
-/* ── Bubble list ── */
+/* Bubble list */
 .msgBubbleList {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -345,11 +487,12 @@
     padding: 20px 24px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    background: #F0F2F5;
 }
 
 .msgBubbleList::-webkit-scrollbar {
-    width: 4px;
+    width: 3px;
 }
 
 .msgBubbleList::-webkit-scrollbar-track {
@@ -366,36 +509,43 @@
     text-align: center;
     font-size: 11.5px;
     font-weight: 600;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     margin: 12px 0 4px;
     letter-spacing: 0.3px;
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .msgDateDivider::before,
 .msgDateDivider::after {
     content: '';
-    position: absolute;
-    top: 50%;
-    width: calc(50% - 56px);
+    flex: 1;
     height: 1px;
-    background: var(--line, rgba(3, 3, 3, 0.08));
-}
-
-.msgDateDivider::before {
-    left: 0;
-}
-
-.msgDateDivider::after {
-    right: 0;
+    background: rgba(3, 3, 3, 0.08);
 }
 
 /* Bubble group */
 .msgBubbleGroup {
     display: flex;
     flex-direction: column;
-    max-width: 68%;
-    gap: 4px;
+    max-width: 65%;
+    gap: 2px;
+    align-self: flex-start;
+    animation: msgBubbleIn 180ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes msgBubbleIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .msgBubbleGroup.isOwn {
@@ -408,7 +558,7 @@
     align-items: flex-start;
 }
 
-/* Bubble wrap + react bar */
+/* Bubble wrap */
 .msgBubbleWrap {
     display: flex;
     flex-direction: column;
@@ -420,12 +570,13 @@
     align-items: flex-end;
 }
 
+/* React bar */
 .msgReactBar {
     display: none;
     gap: 4px;
     padding: 4px 6px;
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
-    border: 1px solid var(--line, rgba(3, 3, 3, 0.08));
+    background: #fff;
+    border: 1px solid rgba(3, 3, 3, 0.08);
     border-radius: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
     position: absolute;
@@ -476,19 +627,45 @@
     line-height: 1.55;
     word-break: break-word;
     white-space: pre-wrap;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: table;
+    transition: filter 120ms;
+}
+
+.msgBubble:hover {
+    filter: brightness(.97);
+}
+
+.msgBubble img {
+    max-width: 220px;
+    max-height: 200px;
+    border-radius: 10px;
+    display: block;
 }
 
 .msgBubbleGroup.isOwn .msgBubble {
-    background: var(--dash-brand, #123458);
+    background: #1B3F6E;
     color: #fff;
     border-bottom-right-radius: 5px;
 }
 
+.msgBubbleGroup.isOwn .msgBubble a {
+    color: #a8c8ff;
+    text-decoration: underline;
+}
+
 .msgBubbleGroup.isOther .msgBubble {
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
-    color: var(--text, #0f172a);
-    border: 1px solid var(--line, rgba(3, 3, 3, 0.08));
+    background: #fff;
+    color: #0f172a;
+    border: 1px solid rgba(3, 3, 3, 0.08);
     border-bottom-left-radius: 5px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.msgBubbleGroup.isOther .msgBubble a {
+    color: #1B3F6E;
+    text-decoration: underline;
 }
 
 /* Reactions */
@@ -503,8 +680,8 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
-    border: 1px solid var(--line, rgba(3, 3, 3, 0.08));
+    background: #fff;
+    border: 1px solid rgba(3, 3, 3, 0.08);
     border-radius: 20px;
     padding: 2px 8px;
     font-size: 13px;
@@ -519,16 +696,16 @@
 .msgReactionChip span {
     font-size: 11px;
     font-weight: 700;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
 }
 
-/* Meta row (time + receipt) */
+/* Meta row */
 .msgBubbleMeta {
     display: flex;
     align-items: center;
     gap: 5px;
     font-size: 11px;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 500;
     padding: 0 2px;
 }
@@ -543,16 +720,16 @@
 }
 
 .msgReceipt.isSent {
-    color: var(--muted, #6b7280);
+    color: #6b7280;
 }
 
-/* Jump-to-unread button */
+/* Jump-to-unread */
 .msgJumpBtn {
     position: absolute;
     bottom: 130px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--dash-brand, #123458);
+    background: #123458;
     color: #fff;
     border: none;
     border-radius: 20px;
@@ -572,7 +749,7 @@
     transform: translateX(-50%) translateY(6px);
 }
 
-/* ── Quick Replies ── */
+/* Quick Replies */
 .msgQuickReplies {
     display: none;
     flex-wrap: wrap;
@@ -586,13 +763,13 @@
 }
 
 .msgQuickReply {
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
-    border: 1.5px solid var(--line, rgba(3, 3, 3, 0.08));
+    background: #fff;
+    border: 1.5px solid rgba(3, 3, 3, 0.08);
     border-radius: 20px;
     padding: 6px 14px;
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--dash-brand, #123458);
+    color: #123458;
     cursor: pointer;
     transition: border-color 120ms ease, background 120ms ease;
     font-family: inherit;
@@ -603,40 +780,156 @@
     border-color: rgba(18, 52, 88, 0.25);
 }
 
-/* ── Composer ── */
+/* Typing indicator */
+#msgTypingIndicator {
+    padding: 4px 24px 6px;
+    flex-shrink: 0;
+}
+
+.msgTypingBubble {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid rgba(3, 3, 3, 0.08);
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.msgTypingDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(18, 52, 88, 0.35);
+    animation: msgTypingBounce 1.2s infinite ease-in-out;
+}
+
+.msgTypingDot:nth-child(2) {
+    animation-delay: .2s;
+}
+
+.msgTypingDot:nth-child(3) {
+    animation-delay: .4s;
+}
+
+@keyframes msgTypingBounce {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: .4;
+    }
+
+    30% {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
+}
+
+/* Photo preview bar */
+.msgPhotoPreview {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: #F0F2F5;
+    border-top: 1px solid rgba(3, 3, 3, 0.08);
+    flex-shrink: 0;
+}
+
+.msgPhotoPreview.isVisible {
+    display: flex;
+}
+
+.msgPhotoPreviewImg {
+    height: 56px;
+    width: auto;
+    max-width: 80px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.msgPhotoPreviewLabel {
+    font-size: 12px;
+    color: #6b7280;
+    flex: 1;
+}
+
+.msgPhotoPreviewRemove {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+    padding: 0;
+}
+
+/* Composer */
 .msgComposer {
     display: flex;
     align-items: flex-end;
     gap: 10px;
-    padding: 12px 20px 16px;
-    border-top: 1px solid var(--line, rgba(3, 3, 3, 0.08));
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
+    padding: 12px 20px 14px;
+    border-top: 1px solid rgba(3, 3, 3, 0.08);
+    background: #fff;
     flex-shrink: 0;
+}
+
+.msgPhotoBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    color: rgba(18, 52, 88, 0.4);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    border-radius: 8px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.msgPhotoBtn:hover {
+    color: #1B3F6E;
+    background: rgba(18, 52, 88, 0.06);
 }
 
 .msgInput {
     flex: 1;
-    background: var(--bg, #F1EFEC);
-    border: 1.5px solid var(--line, rgba(3, 3, 3, 0.08));
+    background: #F0F2F5;
+    border: 1.5px solid rgba(3, 3, 3, 0.08);
     border-radius: 14px;
     padding: 10px 14px;
     font-family: inherit;
     font-size: 13.5px;
     font-weight: 450;
-    color: var(--text, #0f172a);
+    color: #0f172a;
     resize: none;
     outline: none;
     line-height: 1.5;
+    min-height: 42px;
     max-height: 120px;
     transition: border-color 150ms ease;
 }
 
 .msgInput:focus {
     border-color: rgba(18, 52, 88, 0.3);
+    background: #fff;
 }
 
 .msgInput::placeholder {
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 400;
 }
 
@@ -644,7 +937,7 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: var(--dash-brand, #123458);
+    background: #123458;
     color: #fff;
     border: none;
     display: flex;
@@ -652,12 +945,13 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: transform 120ms ease, opacity 120ms ease;
+    transition: transform 120ms ease, opacity 120ms ease, background 140ms;
 }
 
 .msgSendBtn:hover {
     opacity: 0.88;
     transform: scale(1.06);
+    background: #0d2640;
 }
 
 .msgSendBtn:active {
@@ -669,22 +963,29 @@
     width: 16px;
     height: 16px;
     stroke-width: 2;
+    pointer-events: none;
 }
 
-/* ════════════════════════════════════════════
-   RIGHT — Info / Tenant Panel
-════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   RIGHT — Info Panel
+══════════════════════════════════════════════ */
 .msgInfoPanel {
     width: 264px;
     flex-shrink: 0;
-    border-left: 1px solid var(--line, rgba(3, 3, 3, 0.08));
-    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(3, 3, 3, 0.08);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     overflow-y: auto;
     overflow-x: hidden;
 }
 
+.msgInfoPanel[hidden] {
+    display: none !important;
+}
+
 .msgInfoPanel::-webkit-scrollbar {
-    width: 4px;
+    width: 3px;
 }
 
 .msgInfoPanel::-webkit-scrollbar-track {
@@ -697,7 +998,35 @@
 }
 
 .msgInfoInner {
-    padding: 28px 18px 32px;
+    padding: 0 0 32px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Hero image */
+.msgInfoHero {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
+    border-radius: 12px 12px 0 0;
+}
+
+.msgInfoHeroPlaceholder {
+    width: 100%;
+    height: 140px;
+    background: linear-gradient(135deg, rgba(212, 201, 190, 0.8), rgba(180, 170, 155, 0.6));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Body below hero */
+.msgInfoBody {
+    padding: 14px 18px 16px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -705,43 +1034,53 @@
 
 /* Tenant avatar */
 .msgInfoAvatar {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: var(--dash-brand, #123458);
+    background: linear-gradient(135deg, #123458, #2d6bc4);
     color: #fff;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
-    align-self: center;
-    margin-bottom: 8px;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    margin: 0 auto 6px;
+    box-shadow: 0 3px 10px rgba(18, 52, 88, 0.22);
+}
+
+.msgInfoAvatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .msgInfoName {
-    font-size: 15px;
-    font-weight: 800;
-    color: var(--text, #0f172a);
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
     text-align: center;
-    letter-spacing: -0.3px;
 }
 
 .msgInfoRole {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted, #6b7280);
+    font-size: 11.5px;
+    color: #6b7280;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 4px;
 }
 
 /* Sections */
 .msgInfoSection {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line, rgba(3, 3, 3, 0.08));
+    gap: 7px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(3, 3, 3, 0.08);
     margin-top: 8px;
 }
 
@@ -749,8 +1088,8 @@
     font-size: 10.5px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--muted, #6b7280);
+    letter-spacing: .8px;
+    color: #6b7280;
 }
 
 .msgInfoRow {
@@ -763,14 +1102,14 @@
 .msgInfoRowLabel {
     font-size: 12px;
     font-weight: 500;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     flex-shrink: 0;
 }
 
 .msgInfoRowValue {
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--text, #0f172a);
+    color: #0f172a;
     text-align: right;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -790,7 +1129,7 @@
     height: 52px;
     border-radius: 8px;
     flex-shrink: 0;
-    background: var(--dash-surface-soft, #D4C9BE);
+    background: #D4C9BE;
     overflow: hidden;
 }
 
@@ -811,7 +1150,7 @@
 .msgPropertyName {
     font-size: 12.5px;
     font-weight: 700;
-    color: var(--text, #0f172a);
+    color: #0f172a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -819,14 +1158,14 @@
 
 .msgPropertyMeta {
     font-size: 11.5px;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 400;
 }
 
 .msgPropertyStatus {
     font-size: 10.5px;
     font-weight: 700;
-    color: var(--dash-brand, #123458);
+    color: #123458;
     background: rgba(18, 52, 88, 0.07);
     border-radius: 6px;
     padding: 2px 7px;
@@ -836,58 +1175,18 @@
     align-self: flex-start;
 }
 
-/* Action buttons */
-.msgActionBtns {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-.msgActionBtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 9px 14px;
-    border-radius: 10px;
-    font-size: 12.5px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    border: 1.5px solid var(--line, rgba(3, 3, 3, 0.1));
-    background: transparent;
-    color: var(--text, #0f172a);
-    transition: background 120ms ease, border-color 120ms ease;
-}
-
-.msgActionBtn:hover {
-    background: rgba(18, 52, 88, 0.05);
-    border-color: rgba(18, 52, 88, 0.2);
-}
-
-.msgActionBtn.isPrimary {
-    background: var(--dash-brand, #123458);
-    color: #fff;
-    border-color: var(--dash-brand, #123458);
-}
-
-.msgActionBtn.isPrimary:hover {
-    background: #0d2640;
-    border-color: #0d2640;
-}
-
 /* Private notes */
 .msgNotesTextarea {
     width: 100%;
     min-height: 80px;
-    background: var(--bg, #F1EFEC);
-    border: 1.5px solid var(--line, rgba(3, 3, 3, 0.08));
+    background: #F0F2F5;
+    border: 1.5px solid rgba(3, 3, 3, 0.08);
     border-radius: 10px;
     padding: 10px 12px;
     font-family: inherit;
     font-size: 12.5px;
     font-weight: 400;
-    color: var(--text, #0f172a);
+    color: #0f172a;
     resize: vertical;
     outline: none;
     line-height: 1.5;
@@ -900,7 +1199,7 @@
 }
 
 .msgNotesTextarea::placeholder {
-    color: var(--muted, #6b7280);
+    color: #6b7280;
 }
 
 /* Starred messages */
@@ -917,24 +1216,31 @@
     padding: 8px 10px;
     font-size: 12px;
     font-weight: 500;
-    color: var(--text, #0f172a);
+    color: #0f172a;
     line-height: 1.4;
     word-break: break-word;
 }
 
 .msgStarredTime {
     font-size: 10.5px;
-    color: var(--muted, #6b7280);
+    color: #6b7280;
     font-weight: 500;
     margin-top: 4px;
 }
 
-/* ════════════════════════════════════════════
-   RESPONSIVE — collapse info panel at 1100px
-════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   DELETE MODAL
+══════════════════════════════════════════════ */
+.msgDeleteOverlay[hidden] {
+    display: none !important;
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════ */
 @media (max-width: 1100px) {
     .msgInfoPanel {
-        display: none;
+        display: none !important;
     }
 }
 
@@ -947,91 +1253,23 @@
 @media (max-width: 560px) {
     .msgShell {
         flex-direction: column;
+        padding: 0;
+        gap: 0;
     }
 
     .msgSidebar {
         width: 100%;
         height: 240px;
+        border-radius: 0;
+        border-left: none;
         border-right: none;
-        border-bottom: 1px solid var(--line, rgba(3, 3, 3, 0.08));
+        border-top: none;
+        border-bottom: 1px solid rgba(3, 3, 3, 0.08);
     }
-}
 
-.msgDeleteOverlay[hidden] {
-    display: none !important;
-}
-
-.msgTabBar {
-    display: flex;
-    gap: 4px;
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.msgTab {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    border: none;
-    background: transparent;
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(18, 52, 88, 0.5);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-}
-
-.msgTab:hover {
-    background: #f1f5f9;
-    color: #1B3F6E;
-}
-
-.msgTab.active {
-    background: #1B3F6E;
-    color: #fff;
-}
-
-/* Thread action buttons */
-.msgThreadActions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    opacity: 0;
-    transition: opacity 0.15s;
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-.msgThread:hover .msgThreadActions {
-    opacity: 1;
-}
-
-.msgThreadActionBtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: rgba(18, 52, 88, 0.4);
-    transition: background 0.12s, color 0.12s;
-}
-
-.msgThreadActionBtn:hover {
-    background: #f1f5f9;
-    color: #1B3F6E;
-}
-
-.msgDeleteBtn:hover {
-    color: #dc2626 !important;
-}
-
-.msgThreadActionBtn i {
-    width: 13px;
-    height: 13px;
+    .msgMain {
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
 }

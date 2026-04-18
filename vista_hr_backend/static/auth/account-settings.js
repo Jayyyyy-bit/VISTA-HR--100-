@@ -1093,9 +1093,12 @@ function _warmFaceApi() { _FaceValidator.warm(); }
         if (user.role === "OWNER") {
             const sub = el("kycCardSub");
             if (sub) sub.textContent = "Required to publish listings to all residents";
-            // Show owner copy in kycStateNone
             if (el("kycNoneOwner")) el("kycNoneOwner").hidden = false;
             if (el("kycNoneResident")) el("kycNoneResident").hidden = true;
+            // Hide student tab — OWNER only
+            const stuTab = el("verifTabStudent");
+            if (stuTab) stuTab.hidden = true;
+            if (el("studentCard")) el("studentCard").hidden = true;
             showKycState(user.kyc_status || "NONE", user.kyc_reject_reason);
 
         } else if (user.role === "RESIDENT") {

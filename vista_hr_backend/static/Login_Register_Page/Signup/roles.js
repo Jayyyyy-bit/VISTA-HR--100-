@@ -53,7 +53,7 @@ document.querySelectorAll(".google-sso-btn").forEach(btn => {
     });
 });
 document.getElementById("backBtn")?.addEventListener("click", () => {
-    safeGoTo("/Landing_Page/ASSETS/front_index.html");
+    safeGoTo("/auth/login.html");
 });
 
 /* ── Hover blur effect ── */

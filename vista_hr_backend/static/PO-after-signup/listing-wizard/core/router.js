@@ -120,6 +120,7 @@
             route.init({ stepId: route.id, nextBtn, backBtn });
         }
 
+
         if (window.lucide?.createIcons) window.lucide.createIcons();
 
         renderDots(idx);
@@ -177,8 +178,6 @@
         window.ListingStore?.saveDraft?.({ status: "DRAFT" });
         location.href = `${DASHBOARD_URL}#/listings`;
     });
-
-    on($("#questionsBtn"), "click", () => showInfo("FAQ coming soon."));
 
     on($("#btsDismiss"), "click", () => {
         window.SidePanel?.dismissTips?.();

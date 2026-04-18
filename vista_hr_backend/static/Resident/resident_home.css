@@ -549,10 +549,11 @@ body {
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     padding-bottom: 4px;
-    /* so shadow shows */
     margin: 0 -48px;
     padding-left: 48px;
     padding-right: 48px;
+    align-items: stretch;
+    /* force equal height */
 }
 
 .row-scroll::-webkit-scrollbar {
@@ -614,6 +615,8 @@ body {
     scroll-snap-align: start;
     width: 300px;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Photo area */
@@ -2974,4 +2977,47 @@ body {
     font-size: 13px;
     color: var(--ink-60);
     padding: 4px 2px 8px;
+}
+
+/* ── Row pagination arrows ── */
+.row-wrap {
+    position: relative;
+}
+
+.row-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-60%);
+    /* offset for card text below photo */
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 200ms;
+}
+
+.row-wrap:hover .row-arrow {
+    opacity: 1;
+}
+
+.row-arrow.prev {
+    left: 8px;
+}
+
+.row-arrow.next {
+    right: 8px;
+}
+
+.row-arrow svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5;
 }

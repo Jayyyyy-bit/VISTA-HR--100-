@@ -128,7 +128,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     document.querySelectorAll(".text-btn[data-goto]").forEach(btn => {
-        btn.addEventListener("click", () => switchView(btn.dataset.goto));
+        btn.addEventListener("click", () => {
+            const goto = btn.dataset.goto;
+            if (goto === "kyc") {
+                switchView("users");
+                // Wait for the users view to initialize, then click the KYC sub-tab
+                setTimeout(() => {
+                    const kycTab = document.querySelector(".um-subtab[data-utab='kyc']");
+                    if (kycTab) kycTab.click();
+                }, 50);
+            } else if (goto === "users") {
+                switchView("users");
+            } else {
+                switchView(goto);
+            }
+        });
     });
 
     // ── Role/status helpers ─────────────────────────────────
@@ -406,6 +420,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (u.kyc_status === "APPROVED") verifiedCount++;
 
             const verifColor = verifiedCount === 2 ? "var(--success, #10b981)" : "var(--muted, #64748b)";
+            const isStudentVerified = u.role === "Resident" && u.student_verified;
             // -----------------------------------
 
             return `<div class="um-card" data-id="${u.id}">
@@ -550,6 +565,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         method: "PATCH",
                         body: JSON.stringify({ is_suspended: false }),
                     });
+                    addActivity("uplifted", user);
                     await loadUsers();
                 } catch (err) { showError(err?.error || err?.message || "An error occurred."); }
             });
@@ -658,6 +674,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 await apiFetch(`/users/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
             } else {
                 await apiFetch("/users", { method: "POST", body: JSON.stringify(payload) });
+                addActivity("created", { name, role });
             }
             closeModal();
             await loadUsers();
@@ -682,6 +699,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.querySelectorAll("#kycFilterBar .filter-pill").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
             kycStatusFilter = btn.dataset.status;
+            _kycPage = 1;
             loadKyc();
         });
     });
@@ -1007,23 +1025,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
 
+    let _kycPage = 1;
+    const KYC_PER_PAGE = 5;
+    let _kycItems = [];
+
     async function loadKyc() {
         const list = document.getElementById("kycList");
         if (!list) return;
         list.innerHTML = `<div class="verifyLoading">Loading…</div>`;
         try {
             const data = await apiFetch(`/admin/kyc?status=${kycStatusFilter}`);
-            const items = data.kyc_applications || [];
-            if (!items.length) {
-                list.innerHTML = `<div class="verifyEmpty">No ${kycStatusFilter.toLowerCase()} KYC applications.</div>`;
-                return;
-            }
-            list.innerHTML = items.map(u => kycCardHTML(u)).join("");
-            bindVerifyActions(list, "kyc");
-            if (window.lucide?.createIcons) lucide.createIcons();
+            _kycItems = data.kyc_applications || [];
+            _kycPage = 1;
+            _renderKycPage();
         } catch (err) {
             list.innerHTML = `<div class="verifyEmpty">Failed to load. ${err.message}</div>`;
         }
+    }
+
+    function _renderKycPage() {
+        const list = document.getElementById("kycList");
+        if (!list) return;
+        if (!_kycItems.length) {
+            list.innerHTML = `<div class="verifyEmpty">No ${kycStatusFilter.toLowerCase()} KYC applications.</div>`;
+            _renderVerifyPagination("kycPagination", 0, _kycPage, null);
+            return;
+        }
+        const totalPages = Math.ceil(_kycItems.length / KYC_PER_PAGE);
+        const slice = _kycItems.slice((_kycPage - 1) * KYC_PER_PAGE, _kycPage * KYC_PER_PAGE);
+        list.innerHTML = slice.map(u => kycCardHTML(u)).join("");
+        bindVerifyActions(list, "kyc");
+        if (window.lucide?.createIcons) lucide.createIcons();
+        _renderVerifyPagination("kycPagination", totalPages, _kycPage, (p) => { _kycPage = p; _renderKycPage(); });
     }
 
     function kycCardHTML(u) {
@@ -1068,9 +1101,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.querySelectorAll("#studentFilterBar .filter-pill").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
             studentStatusFilter = btn.dataset.status;
+            _studentPage = 1;
             loadStudent();
         });
     });
+
+    let _studentPage = 1;
+    const STUDENT_PER_PAGE = 5;
+    let _studentItems = [];
 
     async function loadStudent() {
         const list = document.getElementById("studentList");
@@ -1078,17 +1116,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         list.innerHTML = `<div class="verifyLoading">Loading…</div>`;
         try {
             const data = await apiFetch(`/admin/student?status=${studentStatusFilter}`);
-            const items = data.student_applications || [];
-            if (!items.length) {
-                list.innerHTML = `<div class="verifyEmpty">No ${studentStatusFilter.toLowerCase()} student applications.</div>`;
-                return;
-            }
-            list.innerHTML = items.map(u => studentCardHTML(u)).join("");
-            bindVerifyActions(list, "student");
-            if (window.lucide?.createIcons) lucide.createIcons();
+            _studentItems = data.student_applications || [];
+            _studentPage = 1;
+            _renderStudentPage();
         } catch (err) {
             list.innerHTML = `<div class="verifyEmpty">Failed to load. ${err.message}</div>`;
         }
+    }
+
+    function _renderStudentPage() {
+        const list = document.getElementById("studentList");
+        if (!list) return;
+        if (!_studentItems.length) {
+            list.innerHTML = `<div class="verifyEmpty">No ${studentStatusFilter.toLowerCase()} student applications.</div>`;
+            _renderVerifyPagination("studentPagination", 0, _studentPage, null);
+            return;
+        }
+        const totalPages = Math.ceil(_studentItems.length / STUDENT_PER_PAGE);
+        const slice = _studentItems.slice((_studentPage - 1) * STUDENT_PER_PAGE, _studentPage * STUDENT_PER_PAGE);
+        list.innerHTML = slice.map(u => studentCardHTML(u)).join("");
+        bindVerifyActions(list, "student");
+        if (window.lucide?.createIcons) lucide.createIcons();
+        _renderVerifyPagination("studentPagination", totalPages, _studentPage, (p) => { _studentPage = p; _renderStudentPage(); });
     }
 
     function studentCardHTML(u) {
@@ -1132,29 +1181,43 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.querySelectorAll("#residentFilterBar .filter-pill").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
             residentStatusFilter = btn.dataset.status;
+            _residentPage = 1;
             loadResident();
         });
     });
+
+    let _residentPage = 1;
+    const RESIDENT_PER_PAGE = 5;
+    let _residentItems = [];
 
     async function loadResident() {
         const list = document.getElementById("residentList");
         if (!list) return;
         list.innerHTML = `<div class="verifyLoading">Loading…</div>`;
         try {
-            // ⚠️ Side-note: Verify this endpoint matches your actual backend route for Admin Resident KYC.
             const data = await apiFetch(`/admin/resident-kyc?status=${residentStatusFilter}`);
-            const items = data.resident_kyc || data.applications || [];
-
-            if (!items.length) {
-                list.innerHTML = `<div class="verifyEmpty">No ${residentStatusFilter.toLowerCase()} resident verifications.</div>`;
-                return;
-            }
-            list.innerHTML = items.map(u => residentCardHTML(u)).join("");
-            bindVerifyActions(list, "resident");
-            if (window.lucide?.createIcons) lucide.createIcons();
+            _residentItems = data.resident_kyc || data.applications || [];
+            _residentPage = 1;
+            _renderResidentPage();
         } catch (err) {
             list.innerHTML = `<div class="verifyEmpty">Failed to load. ${err.message}</div>`;
         }
+    }
+
+    function _renderResidentPage() {
+        const list = document.getElementById("residentList");
+        if (!list) return;
+        if (!_residentItems.length) {
+            list.innerHTML = `<div class="verifyEmpty">No ${residentStatusFilter.toLowerCase()} resident verifications.</div>`;
+            _renderVerifyPagination("residentPagination", 0, _residentPage, null);
+            return;
+        }
+        const totalPages = Math.ceil(_residentItems.length / RESIDENT_PER_PAGE);
+        const slice = _residentItems.slice((_residentPage - 1) * RESIDENT_PER_PAGE, _residentPage * RESIDENT_PER_PAGE);
+        list.innerHTML = slice.map(u => residentCardHTML(u)).join("");
+        bindVerifyActions(list, "resident");
+        if (window.lucide?.createIcons) lucide.createIcons();
+        _renderVerifyPagination("residentPagination", totalPages, _residentPage, (p) => { _residentPage = p; _renderResidentPage(); });
     }
 
     function residentCardHTML(u) {
@@ -1671,6 +1734,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     method: "PATCH",
                     body: JSON.stringify(payload),
                 });
+                addActivity(isBanned ? "banned" : "suspended", user);
                 modal.remove();
                 await loadUsers();
             } catch (err) {
@@ -1960,14 +2024,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 if (tab === "kyc") loadKyc();
                 if (tab === "student") loadStudent();
-                if (tab === "resident") loadResident(); // <--- This was missing
-                if (tab === "history") loadActivityLog();
+                if (tab === "resident") loadResident();
+                if (tab === "history") { _activityPage = 1; loadActivityLog(); }
             });
         });
+
+        document.getElementById("historyRoleFilter")?.addEventListener("change", loadActivityLog);
+        document.getElementById("historyActionFilter")?.addEventListener("change", loadActivityLog);
     }
 
     // ══ Activity log (client-side — from loaded users) ═══════
-    const _activityLog = [];
+    const ACTIVITY_LOG_KEY = "vista_activity_log";
+
+    function _loadStoredLog() {
+        try { return JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || "[]"); }
+        catch { return []; }
+    }
+
+    const _activityLog = _loadStoredLog();
 
     function addActivity(action, user) {
         _activityLog.unshift({
@@ -1978,7 +2052,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             timestamp: new Date().toISOString(),
         });
         if (_activityLog.length > 100) _activityLog.pop();
+        try { localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(_activityLog)); }
+        catch { /* storage full */ }
     }
+
+    let _activityPage = 1;
+    const ACTIVITY_PER_PAGE = 10;
 
     function loadActivityLog() {
         const list = document.getElementById("activityLogList");
@@ -1994,39 +2073,88 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!filtered.length) {
             list.innerHTML = `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:13px">
-                No activity recorded yet in this session.
-            </div>`;
+            No activity recorded yet in this session.
+        </div>`;
+            _renderActivityPagination(0);
             return;
         }
 
-        list.innerHTML = filtered.map(e => {
+        const totalPages = Math.ceil(filtered.length / ACTIVITY_PER_PAGE);
+        if (_activityPage > totalPages) _activityPage = 1;
+        const pageSlice = filtered.slice((_activityPage - 1) * ACTIVITY_PER_PAGE, _activityPage * ACTIVITY_PER_PAGE);
+
+        list.innerHTML = pageSlice.map(e => {
             const time = new Date(e.timestamp).toLocaleString("en-PH", {
                 month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila"
             });
-            const icons = { suspended: "ban", uplifted: "check-circle-2", created: "user-plus", deleted: "trash-2" };
-            const colors = { suspended: "#dc2626", uplifted: "#16a34a", created: "#123458", deleted: "#9ca3af" };
+            const icons = { suspended: "ban", banned: "shield-off", uplifted: "check-circle-2", created: "user-plus", deleted: "trash-2" };
+            const colors = { suspended: "#dc2626", banned: "#7f1d1d", uplifted: "#16a34a", created: "#123458", deleted: "#9ca3af" };
             const icon = icons[e.action] || "activity";
             const color = colors[e.action] || "#6b7280";
             return `<div class="um-history-row">
-                <div class="um-history-icon" style="background:${color}20;color:${color}">
-                    <i data-lucide="${icon}"></i>
+            <div class="um-history-icon" style="background:${color}20;color:${color}">
+                <i data-lucide="${icon}"></i>
+            </div>
+            <div class="um-history-body">
+                <div class="um-history-text">
+                    <strong>${escHtml(e.userName)}</strong>
+                    <span class="badge ${e.userRole === 'Property Owner' ? 'role-owner' : e.userRole === 'Admin' ? 'role-admin' : 'role-resident'}" style="font-size:10px;padding:1px 6px">${escHtml(e.userRole || "")}</span>
+                    was <strong>${e.action}</strong>
                 </div>
-                <div class="um-history-body">
-                    <div class="um-history-text">
-                        <strong>${escHtml(e.userName)}</strong>
-                        <span class="badge ${e.userRole === 'Property Owner' ? 'role-owner' : e.userRole === 'Admin' ? 'role-admin' : 'role-resident'}" style="font-size:10px;padding:1px 6px">${escHtml(e.userRole || "")}</span>
-                        was <strong>${e.action}</strong>
-                    </div>
-                    <div class="um-history-time">${time}</div>
-                </div>
-            </div>`;
+                <div class="um-history-time">${time}</div>
+            </div>
+        </div>`;
         }).join("");
 
         if (window.lucide?.createIcons) lucide.createIcons();
+        _renderActivityPagination(totalPages);
+    }
 
-        // Wire filters
-        ["historyRoleFilter", "historyActionFilter"].forEach(id => {
-            document.getElementById(id)?.addEventListener("change", loadActivityLog);
+    function _renderVerifyPagination(elId, totalPages, currentPage, onPageChange) {
+        let pagEl = document.getElementById(elId);
+        if (!pagEl) {
+            pagEl = document.createElement("div");
+            pagEl.id = elId;
+            pagEl.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding-bottom:8px;";
+            // Insert after the relevant list's parent panel
+            const listId = elId.replace("Pagination", "List").replace("kyc", "kyc").replace("student", "student").replace("resident", "resident");
+            document.getElementById(listId)?.closest(".panel")?.appendChild(pagEl);
+        }
+        if (!onPageChange || totalPages <= 1) { pagEl.hidden = true; return; }
+        pagEl.hidden = false;
+        pagEl.innerHTML = `
+        <button id="${elId}Prev" style="padding:6px 14px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;" ${currentPage <= 1 ? "disabled" : ""}>&larr; Prev</button>
+        <span style="font-size:13px;color:#6b7280;font-weight:500;">Page ${currentPage} of ${totalPages}</span>
+        <button id="${elId}Next" style="padding:6px 14px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;" ${currentPage >= totalPages ? "disabled" : ""}>Next &rarr;</button>`;
+        document.getElementById(`${elId}Prev`)?.addEventListener("click", () => { if (currentPage > 1) onPageChange(currentPage - 1); });
+        document.getElementById(`${elId}Next`)?.addEventListener("click", () => { if (currentPage < totalPages) onPageChange(currentPage + 1); });
+    }
+
+    function _renderActivityPagination(totalPages) {
+        let pagEl = document.getElementById("activityPagination");
+        if (!pagEl) {
+            pagEl = document.createElement("div");
+            pagEl.id = "activityPagination";
+            pagEl.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;";
+            document.getElementById("activityLogList")?.insertAdjacentElement("afterend", pagEl);
+        }
+
+        if (totalPages <= 1) { pagEl.hidden = true; return; }
+        pagEl.hidden = false;
+        pagEl.innerHTML = `
+        <button id="actPagPrev" style="padding:6px 14px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;" ${_activityPage <= 1 ? "disabled" : ""}>
+            &larr; Prev
+        </button>
+        <span style="font-size:13px;color:#6b7280;font-weight:500;">Page ${_activityPage} of ${totalPages}</span>
+        <button id="actPagNext" style="padding:6px 14px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;" ${_activityPage >= totalPages ? "disabled" : ""}>
+            Next &rarr;
+        </button>`;
+
+        document.getElementById("actPagPrev")?.addEventListener("click", () => {
+            if (_activityPage > 1) { _activityPage--; loadActivityLog(); }
+        });
+        document.getElementById("actPagNext")?.addEventListener("click", () => {
+            if (_activityPage < totalPages) { _activityPage++; loadActivityLog(); }
         });
     }
 

@@ -402,13 +402,103 @@ function initTourPanorama() {
 }
 
 /* ════════════════════════════════════════
+   HERO MAP — Leaflet + OpenStreetMap
+════════════════════════════════════════ */
+let _heroMap = null;
+
+function initHeroMap() {
+    const mapEl = document.getElementById("heroMap");
+    if (!mapEl || !window.L) return;
+
+    _heroMap = L.map("heroMap", {
+        center: [14.6042, 120.9822],
+        zoom: 13,
+        zoomControl: true,
+        scrollWheelZoom: false,
+        attributionControl: false,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+    }).addTo(_heroMap);
+
+    const pinIcon = L.divIcon({
+        className: "",
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:#1B3F6E;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+    });
+
+    _loadMapPins(pinIcon);
+}
+
+async function _loadMapPins(pinIcon) {
+    if (!_heroMap) return;
+
+    const redPin = L.divIcon({
+        className: '',
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
+            <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z"
+                fill="#EA4335" stroke="#c0392b" stroke-width="1"/>
+            <circle cx="14" cy="14" r="5.5" fill="#fff"/>
+        </svg>`,
+        iconSize: [28, 36],
+        iconAnchor: [14, 36],
+        popupAnchor: [0, -38]
+    });
+
+    try {
+        const r = await fetch(`${API}/listings/feed?limit=60`);
+        if (!r.ok) return;
+        const d = await r.json();
+        const listings = d.listings || [];
+
+        const bounds = [];
+        let pinCount = 0;
+
+        listings.forEach(l => {
+            const loc = l.location || {};
+            // Try all possible key names used across the codebase
+            const lat = parseFloat(loc.lat ?? loc.latitude ?? loc.Lat ?? 0);
+            const lng = parseFloat(loc.lng ?? loc.longitude ?? loc.lon ?? loc.Lng ?? 0);
+            console.log("[HeroMap]", l.title, "→ lat:", lat, "lng:", lng, "raw:", JSON.stringify(loc));
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+
+            const price = l.price ? `₱${Number(l.price).toLocaleString()}/mo` : "";
+            const area = [l.barangay, l.city].filter(Boolean).join(", ");
+
+            L.marker([lat, lng], { icon: redPin })
+                .addTo(_heroMap)
+                .bindPopup(`
+                    <div style="font-family:'DM Sans',sans-serif;min-width:150px;padding:2px 0;">
+                        <div style="font-weight:700;font-size:13px;color:#0A0A0A;margin-bottom:2px;">${esc(l.title || "Listing")}</div>
+                        ${area ? `<div style="font-size:11px;color:#666;margin-bottom:4px;">${esc(area)}</div>` : ""}
+                        ${price ? `<div style="font-weight:700;font-size:13px;color:#1B3F6E;">${price}</div>` : ""}
+                    </div>
+                `, { maxWidth: 200 });
+
+            bounds.push([lat, lng]);
+            pinCount++;
+        });
+
+        const badge = document.getElementById("mapListingCount");
+        if (badge) badge.textContent = pinCount || listings.length;
+
+        _heroMap.setView([14.5995, 120.9842], 12);
+
+    } catch (e) {
+        console.warn("[HeroMap] failed to load pins", e);
+    }
+}
+
+/* ════════════════════════════════════════
    BOOT
 ════════════════════════════════ */
 function bootPage() {
     lucide.createIcons();
     fp.init();
     initTilt();
-    initPanorama();
+    initHeroMap();
     initTourPanorama();
     initAuth();
 

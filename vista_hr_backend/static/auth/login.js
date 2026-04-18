@@ -13,6 +13,14 @@
     const emailEl = document.getElementById("email");
     const pwEl = document.getElementById("password");
     const errBox = document.getElementById("errBox");
+    const rememberEl = document.getElementById("rememberMe"); // add this
+
+    // Pre-fill email if previously remembered
+    const rememberedEmail = localStorage.getItem("vista_remembered_email");
+    if (rememberedEmail && emailEl) {
+        emailEl.value = rememberedEmail;
+        if (rememberEl) rememberEl.checked = true;
+    }
 
     const togglePw = document.getElementById("togglePw");
     const goRolesBtn = document.getElementById("goRolesBtn");
@@ -351,6 +359,13 @@
             );
 
             localStorage.setItem(LS_LAST_USER_ID_KEY, newUserId);
+
+            // Remember Me
+            if (rememberEl?.checked) {
+                localStorage.setItem("vista_remembered_email", email);
+            } else {
+                localStorage.removeItem("vista_remembered_email");
+            }
 
             redirectByRole(data.user);
         } catch (err) {

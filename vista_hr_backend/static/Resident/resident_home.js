@@ -295,13 +295,22 @@ function renderDefaultRows() {
     if (l.city) cityCount[l.city] = (cityCount[l.city] || 0) + 1;
   });
 
-  const topCity = Object.entries(cityCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
-  const nearCity = topCity ? all.filter(l => l.city === topCity).slice(0, 8) : [];
+  const topCities = Object.entries(cityCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([city]) => city);
+
+  // Pick up to 2 listings from each of the top 5 cities
+  const nearCity = topCities.flatMap(city =>
+    all.filter(l => l.city === city).slice(0, 2)
+  ).slice(0, 10);
 
   const rowUETitleEl = document.querySelector("#rowUE .row-title");
   const rowUEBtn = document.querySelector("#rowUE .row-see-all");
-  if (rowUETitleEl) rowUETitleEl.textContent = topCity ? `Listings in ${topCity}` : "Top listings";
-  if (rowUEBtn) rowUEBtn.dataset.city = topCity;
+  if (rowUETitleEl) rowUETitleEl.textContent = topCities.length
+    ? `Top listings · ${topCities.slice(0, 3).join(", ")}${topCities.length > 3 ? " & more" : ""}`
+    : "Top listings";
+  if (rowUEBtn) rowUEBtn.dataset.city = "";
 
   // Row 2: Budget picks
   const prices = all.map(l => l.price).filter(Boolean).sort((a, b) => a - b);
@@ -351,6 +360,7 @@ function renderDefaultRows() {
     })
     .catch(() => { });
 
+  ["scrollUE", "scrollBudget", "scrollTour", "scrollAvail"].forEach(addRowArrows);
   lucide.createIcons();
 }
 
@@ -386,6 +396,35 @@ function fillRow(containerId, listings) {
   if (!listings.length) {
     el.innerHTML = "";
     return;
+  }
+
+  function addRowArrows(scrollId) {
+    const el = $(scrollId);
+    if (!el) return;
+    const wrap = el.parentElement;
+    if (!wrap || wrap.querySelector(".row-arrow")) return;
+
+    const prev = document.createElement("button");
+    prev.className = "row-arrow prev";
+    prev.innerHTML = `<i data-lucide="chevron-left"></i>`;
+    prev.setAttribute("aria-label", "Previous");
+
+    const next = document.createElement("button");
+    next.className = "row-arrow next";
+    next.innerHTML = `<i data-lucide="chevron-right"></i>`;
+    next.setAttribute("aria-label", "Next");
+
+    prev.addEventListener("click", () => {
+      el.scrollBy({ left: -(300 + 16) * 3, behavior: "smooth" });
+    });
+    next.addEventListener("click", () => {
+      el.scrollBy({ left: (300 + 16) * 3, behavior: "smooth" });
+    });
+
+    wrap.style.position = "relative";
+    wrap.appendChild(prev);
+    wrap.appendChild(next);
+    if (window.lucide?.createIcons) lucide.createIcons();
   }
 
   el.innerHTML = listings.map(l => rowCardHTML(l)).join("");

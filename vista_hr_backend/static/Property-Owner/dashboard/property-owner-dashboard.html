@@ -514,11 +514,25 @@
                         <div class="msgBubbleList" id="msgBubbleList"></div>
                         <button class="msgJumpBtn isHidden" id="msgJumpBtn" type="button">&#8595; unread</button>
                         <div class="msgQuickReplies" id="msgQuickReplies"></div>
+
+                        <div id="msgTypingIndicator" hidden style="padding:4px 24px 6px;">
+                            <div class="msgTypingBubble">
+                                <span class="msgTypingDot"></span>
+                                <span class="msgTypingDot"></span>
+                                <span class="msgTypingDot"></span>
+                            </div>
+                        </div>
+                        <div class="msgPhotoPreview" id="msgPhotoPreview"></div>
                         <div class="msgComposer">
+                            <input type="file" id="msgPhotoInput" accept="image/*" hidden>
+                            <button class="msgPhotoBtn" id="msgPhotoBtn" type="button" aria-label="Attach photo"
+                                style="background:none;border:none;cursor:pointer;padding:6px;color:rgba(18,52,88,0.4);display:flex;align-items:center;">
+                                <i data-lucide="image" style="width:18px;height:18px;pointer-events:none;"></i>
+                            </button>
                             <textarea class="msgInput" id="msgInput" placeholder="Write a message&#8230;"
                                 rows="1"></textarea>
                             <button class="msgSendBtn" id="msgSendBtn" type="button" aria-label="Send">
-                                <i data-lucide="send"></i>
+                                <i data-lucide="send" style="pointer-events:none;"></i>
                             </button>
                         </div>
                     </div>
@@ -830,8 +844,8 @@
     <script src="/auth/user-avatar.js"></script>
     <script src="/auth/sessionGuard.js" defer></script>
     <script src="/PO-after-signup/listing-wizard/core/store.js" defer></script>
-    <script src="/Property-Owner/dashboard/property-owner-dashboard.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-calendar.js" defer></script>
+    <script src="/Property-Owner/dashboard/property-owner-dashboard.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-messages.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-today.js" defer></script>
 

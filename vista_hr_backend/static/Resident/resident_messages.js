@@ -12,7 +12,7 @@
         messages: [],
         searchQuery: "",
         meId: null,
-        showArchived: false,  // toggle between inbox and archived
+        showArchived: false,
     };
 
     let pollTimer = null;
@@ -54,6 +54,13 @@
 
     function threadKey(t) { return `${t.listing_id}_${t.other_user_id}`; }
 
+    function linkify(text) {
+        return esc(text).replace(
+            /(https?:\/\/[^\s<>"]+)/g,
+            '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+        );
+    }
+
     // ── API ────────────────────────────────────────────────
     async function apiFetch(path, opts = {}) {
         const res = await fetch(`${API}${path}`, {
@@ -85,16 +92,16 @@
         }
     }
 
-    async function sendMessage(text) {
-        if (!state.activeThread || !text.trim()) return;
+    async function sendMessage(text, image_url = null) {
+        if (!state.activeThread) return;
         const { listing_id, other_user_id } = state.activeThread;
         try {
-            const data = await apiFetch("/messages", {
-                method: "POST",
-                body: JSON.stringify({ receiver_id: other_user_id, listing_id, text: text.trim() }),
-            });
+            const body = { receiver_id: other_user_id, listing_id };
+            if (text) body.text = text.trim();
+            if (image_url) body.image_url = image_url;
+            const data = await apiFetch("/messages", { method: "POST", body: JSON.stringify(body) });
             const sent = data.data || data.message_obj || data;
-            if (sent && (sent.id || sent.text || sent.body)) state.messages.push(sent);
+            if (sent && (sent.id || sent.text || sent.image_url)) state.messages.push(sent);
             renderBubbles();
             scrollToBottom();
             await loadConversations();
@@ -102,7 +109,62 @@
         } catch (e) {
             console.error("[Messages] sendMessage failed", e);
             if (window.showError) showError("Failed to send. Please try again.");
-            else console.error("[Messages] sendMessage failed", e);
+        }
+    }
+
+    // ── Typing indicator ──────────────────────────────────
+    let _typingTimer = null;
+    let _typingPoll = null;
+
+    function startTyping() {
+        if (!state.activeThread) return;
+        if (_typingTimer) return;
+        apiFetch("/messages/typing", {
+            method: "POST",
+            body: JSON.stringify({ other_user_id: state.activeThread.other_user_id }),
+        }).catch(() => { });
+        _typingTimer = setTimeout(() => { _typingTimer = null; }, 3000);
+    }
+
+    function startTypingPoll() {
+        stopTypingPoll();
+        if (!state.activeThread) return;
+        const { other_user_id } = state.activeThread;
+        _typingPoll = setInterval(async () => {
+            try {
+                const d = await apiFetch(`/messages/typing/${other_user_id}`);
+                const indicator = el("rmTypingIndicator");
+                if (indicator) indicator.hidden = !d.is_typing;
+            } catch { }
+        }, 2000);
+    }
+
+    function stopTypingPoll() {
+        if (_typingPoll) { clearInterval(_typingPoll); _typingPoll = null; }
+    }
+
+    // ── Photo upload ──────────────────────────────────────
+    async function uploadPhoto(file) {
+        try {
+            const sigRes = await apiFetch("/uploads/sign", {
+                method: "POST",
+                body: JSON.stringify({ folder: "messages" }),
+            });
+            const { signature, timestamp, cloud_name, api_key } = sigRes;
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("signature", signature);
+            fd.append("timestamp", timestamp);
+            fd.append("api_key", api_key);
+            const up = await fetch(
+                `https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`,
+                { method: "POST", body: fd }
+            );
+            const upData = await up.json();
+            return upData.secure_url || null;
+        } catch (e) {
+            console.error("Photo upload failed", e);
+            return null;
         }
     }
 
@@ -119,14 +181,12 @@
             (t.listing_title || "").toLowerCase().includes(q)
         );
 
-        // Unread pill
         const unreadCount = state.conversations.filter(t => t.unread && t.last_message).length;
         const pill = el("rmUnreadPill");
         if (pill) { pill.textContent = unreadCount; pill.hidden = unreadCount === 0; }
 
         if (!filtered.length) {
-            listEl.innerHTML = `<div class="rm-empty-threads">${state.conversations.length ? "No conversations match your search." : "No messages yet."
-                }</div>`;
+            listEl.innerHTML = `<div class="rm-empty-threads">${state.conversations.length ? "No conversations match your search." : "No messages yet."}</div>`;
             return;
         }
 
@@ -149,12 +209,8 @@
                 ${t.unread ? '<span class="rm-unread-dot"></span>' : ""}
                 <div class="rm-thread-actions">
                     ${t.is_archived
-                    ? `<button class="rm-thread-action rm-thread-unarchive" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Unarchive">
-                            <i data-lucide="inbox"></i>
-                           </button>`
-                    : `<button class="rm-thread-action rm-thread-archive" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Archive">
-                            <i data-lucide="archive"></i>
-                           </button>`
+                    ? `<button class="rm-thread-action rm-thread-unarchive" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Unarchive"><i data-lucide="inbox"></i></button>`
+                    : `<button class="rm-thread-action rm-thread-archive" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Archive"><i data-lucide="archive"></i></button>`
                 }
                     <button class="rm-thread-action rm-thread-delete" data-listing="${t.listing_id}" data-other="${t.other_user_id}" title="Delete conversation">
                         <i data-lucide="trash-2"></i>
@@ -165,13 +221,11 @@
 
         listEl.querySelectorAll(".rm-thread[data-listing]").forEach(row => {
             row.addEventListener("click", e => {
-                // Don't open thread if clicking action buttons
                 if (e.target.closest(".rm-thread-actions")) return;
                 openThread(Number(row.dataset.listing), Number(row.dataset.other));
             });
         });
 
-        // Archive buttons
         listEl.querySelectorAll(".rm-thread-archive").forEach(btn => {
             btn.addEventListener("click", async e => {
                 e.stopPropagation();
@@ -184,6 +238,7 @@
                     if (state.activeThread?.listing_id === lid && state.activeThread?.other_user_id === oid) {
                         el("rmEmpty").hidden = false;
                         el("rmChat").hidden = true;
+                        const ip = el("rmInfoPanel"); if (ip) ip.hidden = true;
                         state.activeThread = null;
                     }
                     if (window.showSuccess) showSuccess("Conversation archived.");
@@ -191,7 +246,6 @@
             });
         });
 
-        // Unarchive buttons
         listEl.querySelectorAll(".rm-thread-unarchive").forEach(btn => {
             btn.addEventListener("click", async e => {
                 e.stopPropagation();
@@ -206,13 +260,10 @@
             });
         });
 
-        // Delete buttons
         listEl.querySelectorAll(".rm-thread-delete").forEach(btn => {
-            btn.addEventListener("click", async e => {
+            btn.addEventListener("click", e => {
                 e.stopPropagation();
-                const lid = Number(btn.dataset.listing);
-                const oid = Number(btn.dataset.other);
-                openDeleteModal(lid, oid);
+                openDeleteModal(Number(btn.dataset.listing), Number(btn.dataset.other));
             });
         });
 
@@ -232,8 +283,9 @@
         }
 
         let lastDate = null;
-        bubblesEl.innerHTML = state.messages.map(m => {
-            const isOwn = m.sender_id === state.meId || m.from === "me";  // support both field shapes
+        const visibleMessages = state.messages.filter(m => !m.is_deleted && m.text !== "[Message deleted]" && m.body !== "[Message deleted]");
+        bubblesEl.innerHTML = visibleMessages.map(m => {
+            const isOwn = m.sender_id === state.meId || m.from === "me";
             const msgDateStr = m.created_at ? new Date(
                 m.created_at.includes("+") || m.created_at.endsWith("Z") ? m.created_at : m.created_at + "Z"
             ).toDateString() : null;
@@ -248,9 +300,13 @@
                 ? `<span class="rm-receipt ${m.is_read ? "read" : "sent"}">${m.is_read ? "✓✓" : "✓"}</span>`
                 : "";
 
+            const msgText = m.text || m.body || "";
             return `${divider}
             <div class="rm-bubble-group ${isOwn ? "is-own" : "is-other"}">
-                <div class="rm-bubble">${esc(m.text || m.body || "")}</div>
+                <div class="rm-bubble">
+                    ${m.image_url ? `<img src="${esc(m.image_url)}" style="max-width:220px;max-height:200px;border-radius:10px;display:block;${msgText ? "margin-bottom:6px;" : ""}">` : ""}
+                    ${msgText ? `<span>${linkify(msgText)}</span>` : ""}
+                </div>
                 <div class="rm-bubble-meta">
                     ${receipt}
                     <span>${esc(fmtTime(m.created_at))}</span>
@@ -266,6 +322,54 @@
         if (b) b.scrollTop = b.scrollHeight;
     }
 
+    // ── Info panel ─────────────────────────────────────────
+    function renderInfoPanel() {
+        const panel = el("rmInfoInner");
+        const t = state.activeThread;
+        if (!panel || !t) return;
+
+        const ini = initials(t.other_name || "");
+        const avatarHtml = t.other_avatar
+            ? `<img src="${esc(t.other_avatar)}" alt="">`
+            : esc(ini);
+
+        const heroHtml = t.listing_cover
+            ? `<img class="rm-info-hero" src="${esc(t.listing_cover)}" alt="">`
+            : `<div class="rm-info-hero-ph"><i data-lucide="home"></i></div>`;
+
+        panel.innerHTML = `
+            ${heroHtml}
+            <div class="rm-info-body">
+                <div class="rm-info-avatar">${avatarHtml}</div>
+                <div class="rm-info-name">${esc(t.other_name || "Property Owner")}</div>
+                <div class="rm-info-role">Property Owner</div>
+
+                <div class="rm-info-section">
+                    <div class="rm-info-section-label">Contact</div>
+                    <div class="rm-info-row">
+                        <span class="rm-info-row-label">Email</span>
+                        <span class="rm-info-row-value" style="font-size:11px">${esc(t.other_email || "—")}</span>
+                    </div>
+                    <div class="rm-info-row">
+                        <span class="rm-info-row-label">Phone</span>
+                        <span class="rm-info-row-value">${esc(t.other_phone || "—")}</span>
+                    </div>
+                </div>
+
+                <div class="rm-info-section">
+                    <div class="rm-info-section-label">Listing</div>
+                    <div class="rm-info-listing-title">${esc(t.listing_title || "—")}</div>
+                    <div class="rm-info-listing-meta">${esc(t.listing_meta || "")}</div>
+                    ${t.listing_status ? `<span class="rm-info-listing-status">${esc(t.listing_status)}</span>` : ""}
+                    <a class="rm-info-view-link" href="/Resident/listing_detail.html?id=${t.listing_id}" target="_blank">
+                        <i data-lucide="external-link"></i> View listing
+                    </a>
+                </div>
+            </div>`;
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
     // ── Open thread ────────────────────────────────────────
     async function openThread(listing_id, other_user_id) {
         const meta = state.conversations.find(
@@ -273,18 +377,17 @@
         );
         state.activeThread = meta || { listing_id, other_user_id };
 
-        // Show chat, hide empty
         el("rmEmpty").hidden = true;
         el("rmChat").hidden = false;
+        const infoPanel = el("rmInfoPanel");
+        if (infoPanel) infoPanel.hidden = false;
+        renderInfoPanel();
 
-        // Mobile: show main panel
         document.querySelector(".rm-shell")?.classList.add("chat-open");
 
-        // Mark thread as read locally
         if (meta) meta.unread = 0;
         renderThreadList();
 
-        // Populate header
         const t = state.activeThread;
         const ini = t.initials || initials(t.other_name || "");
         if (el("rmChatAv")) el("rmChatAv").textContent = ini;
@@ -292,7 +395,6 @@
         if (el("rmChatSub")) el("rmChatSub").textContent = t.other_email || "Property Owner";
         if (el("rmListingChipTitle")) el("rmListingChipTitle").textContent = t.listing_title || "—";
 
-        // Listing info bar
         if (el("rmListingBarTitle")) el("rmListingBarTitle").textContent = t.listing_title || "—";
         if (el("rmListingBarMeta")) el("rmListingBarMeta").textContent = t.listing_meta || "";
         if (el("rmListingBarLink")) el("rmListingBarLink").href = `/Resident/listing_detail.html?id=${listing_id}`;
@@ -307,14 +409,13 @@
             if (ph) ph.hidden = false;
         }
 
-        // Load messages
         el("rmBubbles").innerHTML = `<div class="rm-bubble-loading"><i data-lucide="loader-2" class="rm-spin"></i> Loading…</div>`;
         if (window.lucide?.createIcons) lucide.createIcons();
 
         await loadThread(listing_id, other_user_id);
         renderBubbles();
 
-        // Poll for new messages every 8 seconds
+        startTypingPoll();
         clearInterval(pollTimer);
         pollTimer = setInterval(async () => {
             if (!state.activeThread) return;
@@ -326,7 +427,7 @@
                 await loadConversations();
                 renderThreadList();
             }
-        }, 8000);  // 8s — avoid hammering the server
+        }, 8000);
 
         if (window.lucide?.createIcons) lucide.createIcons();
         el("rmInput")?.focus();
@@ -337,8 +438,10 @@
         document.querySelector(".rm-shell")?.classList.remove("chat-open");
         el("rmEmpty").hidden = false;
         el("rmChat").hidden = true;
+        const ip = el("rmInfoPanel"); if (ip) ip.hidden = true;
         state.activeThread = null;
         clearInterval(pollTimer);
+        stopTypingPoll();
     });
 
     // ── Search ─────────────────────────────────────────────
@@ -350,13 +453,15 @@
     // ── Send message ───────────────────────────────────────
     const input = el("rmInput");
     const sendBtn = el("rmSendBtn");
+    const photoBtn = el("rmPhotoBtn");
+    const photoInput = el("rmPhotoInput");
 
     input?.addEventListener("input", () => {
         const hasText = input.value.trim().length > 0;
         if (sendBtn) sendBtn.disabled = !hasText;
-        // Auto-grow textarea
         input.style.height = "auto";
         input.style.height = Math.min(input.scrollHeight, 120) + "px";
+        if (hasText) startTyping();
     });
 
     input?.addEventListener("keydown", e => {
@@ -374,10 +479,22 @@
         if (input) { input.value = ""; input.style.height = "auto"; }
         if (sendBtn) sendBtn.disabled = true;
         await sendMessage(text);
+        if (sendBtn) sendBtn.disabled = false;
     }
 
-    // ── Delete confirmation modal ────────────────────────────
-    let _deleteTarget = null; // { lid, oid }
+    photoBtn?.addEventListener("click", () => photoInput?.click());
+    photoInput?.addEventListener("change", async () => {
+        const file = photoInput.files?.[0];
+        if (!file) return;
+        photoInput.value = "";
+        if (sendBtn) sendBtn.disabled = true;
+        const url = await uploadPhoto(file);
+        if (url) await sendMessage("", url);
+        if (sendBtn) sendBtn.disabled = false;
+    });
+
+    // ── Delete confirmation modal ─────────────────────────
+    let _deleteTarget = null;
 
     function openDeleteModal(lid, oid) {
         _deleteTarget = { lid, oid };
@@ -407,6 +524,7 @@
             if (state.activeThread?.listing_id === lid && state.activeThread?.other_user_id === oid) {
                 el("rmEmpty").hidden = false;
                 el("rmChat").hidden = true;
+                const ip = el("rmInfoPanel"); if (ip) ip.hidden = true;
                 state.activeThread = null;
                 clearInterval(pollTimer);
             }
@@ -422,7 +540,6 @@
 
     // ── Boot ───────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
-        // Auth guard
         if (!window.AuthGuard) { location.href = "/auth/login.html"; return; }
         const me = await window.AuthGuard.fetchMe();
         if (!me.ok || !me.data?.user) { location.href = "/auth/login.html"; return; }
@@ -432,7 +549,6 @@
 
         state.meId = user.id;
 
-        // Propagate avatar photo or initials
         if (window.UserAvatar) {
             UserAvatar.apply(user);
         } else {
@@ -440,11 +556,9 @@
             if (el("rmAvatar")) el("rmAvatar").textContent = init;
         }
 
-        // Load conversations
         await loadConversations(state.showArchived);
         renderThreadList();
 
-        // Inbox / Archived tab toggle
         const archiveTab = el("rmArchiveTab");
         const inboxTab = el("rmInboxTab");
         archiveTab?.addEventListener("click", async () => {
@@ -454,6 +568,7 @@
             state.activeThread = null;
             el("rmEmpty").hidden = false;
             el("rmChat").hidden = true;
+            const ip = el("rmInfoPanel"); if (ip) ip.hidden = true;
             clearInterval(pollTimer);
             await loadConversations(true);
             renderThreadList();
@@ -465,18 +580,16 @@
             state.activeThread = null;
             el("rmEmpty").hidden = false;
             el("rmChat").hidden = true;
+            const ip = el("rmInfoPanel"); if (ip) ip.hidden = true;
             clearInterval(pollTimer);
             await loadConversations(false);
             renderThreadList();
         });
 
-        // Check for ?listing=X&owner=Y in URL (open thread directly from listing detail)
         const params = new URLSearchParams(location.search);
         const lid = params.get("listing");
         const oid = params.get("owner");
-        if (lid && oid) {
-            await openThread(Number(lid), Number(oid));
-        }
+        if (lid && oid) await openThread(Number(lid), Number(oid));
 
         if (window.lucide?.createIcons) lucide.createIcons();
     });
