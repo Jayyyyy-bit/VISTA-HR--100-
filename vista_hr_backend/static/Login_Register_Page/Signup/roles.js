@@ -44,6 +44,14 @@ async function handleRoleSelect(role) {
 
 document.getElementById("btnOwner")?.addEventListener("click", () => handleRoleSelect("OWNER"));
 document.getElementById("btnResident")?.addEventListener("click", () => handleRoleSelect("RESIDENT"));
+
+// Google SSO buttons — normal signup flow (not google mode)
+document.querySelectorAll(".google-sso-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const role = btn.dataset.role?.toUpperCase() || "RESIDENT";
+        window.location.href = `/api/auth/google?role=${role}`;
+    });
+});
 document.getElementById("backBtn")?.addEventListener("click", () => {
     safeGoTo("/Landing_Page/ASSETS/front_index.html");
 });

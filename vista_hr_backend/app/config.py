@@ -40,7 +40,7 @@ class Config:
     # Gmail SMTP — set in .env
     # Gmail SMTP — kept for reference, not used (Resend handles email now)
     # Gmail SMTP (App Password)
-    #GMAIL_USER         = os.getenv("GMAIL_USER", "")
+    #MAIL_USER         = os.getenv("GMAIL_USER", "")
     #GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 
     # Resend
