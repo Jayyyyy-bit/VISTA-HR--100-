@@ -496,13 +496,13 @@ async function _loadMapPins(pinIcon) {
 /* ════════════════════════════════════════
    BOOT
 ════════════════════════════════ */
-function bootPage() {
+async function bootPage() {
     lucide.createIcons();
     fp.init();
     initTilt();
     initHeroMap();
     initTourPanorama();
-    initAuth();
+    initAuth().catch(() => { });
 
     // Deferred init (after page is interactive)
     setTimeout(() => {
