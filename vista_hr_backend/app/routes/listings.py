@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import Listing
+from ..models.user import User
 from ..auth.jwt import require_role
 from ..utils.errors import json_error
 
