@@ -206,9 +206,12 @@
         el.innerHTML = filtered.map(t => {
             const key = threadKey(t);
             const ini = t.initials || initials(t.other_name);
+            const avInner = t.other_avatar
+                ? `<img src="${esc(t.other_avatar)}" alt="${esc(ini)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+                : esc(ini);
             return `
-            <div class="msgThread${t.unread ? " isUnread" : ""}${key === activeKey ? " isActive" : ""}" data-listing="${t.listing_id}" data-other="${t.other_user_id}">
-                <div class="msgThreadAvatar">${esc(ini)}</div>
+<div class="msgThread${t.unread ? " isUnread" : ""}${key === activeKey ? " isActive" : ""}" data-listing="${t.listing_id}" data-other="${t.other_user_id}">
+    <div class="msgThreadAvatar" style="overflow:hidden;padding:0;">${avInner}</div>
                 <div class="msgThreadBody">
                     <div class="msgThreadRow">
                         <span class="msgThreadName">${esc(t.other_name)}</span>

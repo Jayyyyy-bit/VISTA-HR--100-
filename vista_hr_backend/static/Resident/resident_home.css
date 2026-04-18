@@ -802,8 +802,38 @@ body {
 .filtered-head {
     display: flex;
     align-items: baseline;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.filtered-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-family: var(--font-b);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 120ms, border-color 120ms;
+}
+
+.filtered-back:hover {
+    background: var(--bg);
+    border-color: var(--ink);
+}
+
+.filtered-back svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.5;
 }
 
 .filtered-title {
@@ -2628,10 +2658,11 @@ body {
 /* ══ FOOTER ══ */
 .site-footer {
     font-family: 'DM Sans', sans-serif;
-    border-top: 0.5px solid var(--border);
-    background: var(--surface-subtle);
-    padding: 3rem 2rem 1.5rem;
-    margin-top: 4rem;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    background: var(--bg);
+    padding: 3rem 2rem 2rem;
+    margin-top: 2rem;
 }
 
 .ft-inner {
@@ -2788,7 +2819,7 @@ body {
 ════════════════════════════════ */
 .type-bubble {
     position: fixed;
-    z-index: 200;
+    z-index: 500;
     background: var(--white);
     border-radius: 20px;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);

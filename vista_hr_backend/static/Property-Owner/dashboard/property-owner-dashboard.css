@@ -1409,14 +1409,14 @@ button.disabled {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f3f4f6;
+    background: #999;
 }
 
 .occAlbumPlaceholder i {
     width: 24px;
     height: 24px;
     color: #9ca3af;
-    opacity: 0.5;
+    opacity: 1;
 }
 
 .occAlbumLabel {

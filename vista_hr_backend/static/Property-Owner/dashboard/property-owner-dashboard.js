@@ -703,7 +703,7 @@
         if (photos[i]) {
           html += `<img src="${escapeHtml(photos[i])}" alt="Listing" loading="lazy" />`;
         } else {
-          html += `<div class="occAlbumPlaceholder"><i data-lucide="image"></i></div>`;
+          html += `<div class="occAlbumPlaceholder"></div>`;
         }
       }
       el.innerHTML = html;

@@ -106,6 +106,7 @@ def list_conversations():
             "other_email":     other_user.email,
             "other_phone":     other_user.phone or "",
             "other_role":      other_role,
+            "other_avatar":    other_user.avatar_url or "",
             "unread":          unread,
             "last_message":    last_msg.text,
             "last_time":       last_msg.created_at.isoformat() if last_msg.created_at else None,

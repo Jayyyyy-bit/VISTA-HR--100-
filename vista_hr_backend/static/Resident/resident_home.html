@@ -114,18 +114,10 @@
         <!-- ── All listings grid (default view) ── -->
         <div class="section-block" id="defaultView">
 
-            <!-- Row: Near UE Caloocan -->
-            <section class="listing-row" id="rowUE">
-                <div class="row-head">
-                    <h2 class="row-title">Near UE Caloocan</h2>
-                    <button class="row-see-all" data-city="Caloocan">Show all <i data-lucide="arrow-right"></i></button>
-                </div>
-                <div class="row-scroll" id="scrollUE">
-                    <!-- cards injected -->
-                </div>
-            </section>
+            <!-- City rows injected dynamically by JS (5 cities, 5 cards each) -->
+            <div id="cityRowsContainer"></div>
 
-            <!-- Row: Budget picks under ₱4k -->
+            <!-- Row: Budget picks -->
             <section class="listing-row" id="rowBudget">
                 <div class="row-head">
                     <h2 class="row-title">Budget picks · Under ₱4,000</h2>
@@ -147,10 +139,10 @@
                 </div>
             </section>
 
-            <!-- Row: Available now -->
+            <!-- Row: Recently added -->
             <section class="listing-row" id="rowAvail">
                 <div class="row-head">
-                    <h2 class="row-title">Available now</h2>
+                    <h2 class="row-title">Recently added</h2>
                     <button class="row-see-all" data-available="true">Show all <i
                             data-lucide="arrow-right"></i></button>
                 </div>
@@ -164,6 +156,9 @@
         <!-- ── Filtered / search results grid ── -->
         <div class="section-block" id="filteredView" hidden>
             <div class="filtered-head">
+                <button class="filtered-back" id="filteredBack">
+                    <i data-lucide="arrow-left"></i> Back
+                </button>
                 <h2 class="filtered-title" id="filteredTitle">All listings</h2>
                 <span class="filtered-count" id="filteredCount"></span>
             </div>

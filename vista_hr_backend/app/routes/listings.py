@@ -770,9 +770,12 @@ def resident_feed():
     )
 
     listings = (
-        Listing.query
+    Listing.query
+        .join(User, User.id == Listing.owner_id)
         .filter(Listing.status == "PUBLISHED")
         .filter(~Listing.id.in_(booked_subq))
+        .filter(User.is_suspended == False)
+        .filter(User.is_active == True)
         .order_by(Listing.updated_at.desc())
         .limit(200)
         .all()

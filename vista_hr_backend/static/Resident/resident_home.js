@@ -270,7 +270,7 @@ function normalizeAPIListing(l) {
 }
 
 function showRowSkeletons() {
-  ["scrollUE", "scrollBudget", "scrollTour", "scrollAvail"].forEach(id => {
+  ["scrollBudget", "scrollTour", "scrollAvail"].forEach(id => {
     const el = $(id);
     if (!el) return;
     el.innerHTML = Array.from({ length: 5 }, () => `
@@ -286,69 +286,89 @@ function showRowSkeletons() {
 /* ════════════════════════════════════════
    RENDER DEFAULT ROWS
 ════════════════════════════════════════ */
+
+// 5 target NCR cities shown as dedicated rows
+const CITY_ROWS = [
+  { city: "Quezon City", label: "Quezon City" },
+  { city: "Caloocan", label: "Caloocan" },
+  { city: "Manila", label: "Manila" },
+  { city: "Mandaluyong", label: "Mandaluyong" },
+  { city: "Pasig", label: "Pasig" },
+];
+
 function renderDefaultRows() {
   const all = state.all;
 
-  // Row 1: Top city
-  const cityCount = {};
-  all.forEach(l => {
-    if (l.city) cityCount[l.city] = (cityCount[l.city] || 0) + 1;
-  });
+  // ── City rows (5 fixed cities, 5 cards each, vertical stacking) ──
+  const container = $("cityRowsContainer");
+  if (container) {
+    container.innerHTML = "";
+    CITY_ROWS.forEach(({ city, label }) => {
+      const cards = all.filter(l => (l.city || "").toLowerCase() === city.toLowerCase()).slice(0, 5);
+      if (!cards.length) return;
 
-  const topCities = Object.entries(cityCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([city]) => city);
+      const rowId = `cityRow_${city.replace(/\s/g, "_")}`;
+      const scrollId = `cityScroll_${city.replace(/\s/g, "_")}`;
 
-  // Pick up to 2 listings from each of the top 5 cities
-  const nearCity = topCities.flatMap(city =>
-    all.filter(l => l.city === city).slice(0, 2)
-  ).slice(0, 10);
+      const section = document.createElement("section");
+      section.className = "listing-row";
+      section.id = rowId;
+      section.innerHTML = `
+        <div class="row-head">
+          <h2 class="row-title">${label}</h2>
+          <button class="row-see-all" data-city="${city}">Show all <i data-lucide="arrow-right"></i></button>
+        </div>
+        <div class="row-scroll" id="${scrollId}"></div>
+      `;
+      container.appendChild(section);
 
-  const rowUETitleEl = document.querySelector("#rowUE .row-title");
-  const rowUEBtn = document.querySelector("#rowUE .row-see-all");
-  if (rowUETitleEl) rowUETitleEl.textContent = topCities.length
-    ? `Top listings · ${topCities.slice(0, 3).join(", ")}${topCities.length > 3 ? " & more" : ""}`
-    : "Top listings";
-  if (rowUEBtn) rowUEBtn.dataset.city = "";
+      fillRow(scrollId, cards);
 
-  // Row 2: Budget picks
+      // Wire "Show all" button
+      section.querySelector(".row-see-all")?.addEventListener("click", () => {
+        state.filters.city = city;
+        state.mode = "filtered";
+        applyFilters();
+      });
+
+      addRowArrows(scrollId);
+    });
+  }
+
+  // ── Budget picks ──
   const prices = all.map(l => l.price).filter(Boolean).sort((a, b) => a - b);
   const threshold = prices.length
     ? Math.max(3000, prices[Math.floor(prices.length * 0.4)] || 5000)
     : 5000;
   const rounded = Math.ceil(threshold / 500) * 500;
-  const budget = all.filter(l => l.price && l.price <= rounded).slice(0, 8);
+  const budget = all.filter(l => l.price && l.price <= rounded).slice(0, 5);
 
   const rowBudgetTitleEl = document.querySelector("#rowBudget .row-title");
   const rowBudgetBtn = document.querySelector("#rowBudget .row-see-all");
   if (rowBudgetTitleEl) rowBudgetTitleEl.textContent = `Budget picks · Under ₱${rounded.toLocaleString()}`;
   if (rowBudgetBtn) rowBudgetBtn.dataset.maxprice = rounded;
 
-  // Row 3: Tour
-  const tours = all.filter(l => l.tour).slice(0, 8);
+  // ── Tour + Recent ──
+  const tours = all.filter(l => l.tour).slice(0, 5);
+  const recent = all.slice(0, 5);
 
-  // Row 4: Recent
-  const recent = all.slice(0, 8);
-  const rowAvailTitleEl = document.querySelector("#rowAvail .row-title");
-  if (rowAvailTitleEl) rowAvailTitleEl.textContent = "Recently added";
-
-  fillRow("scrollUE", nearCity);
   fillRow("scrollBudget", budget);
   fillRow("scrollTour", tours);
   fillRow("scrollAvail", recent);
 
-  hideEmptyRow("rowUE", nearCity);
   hideEmptyRow("rowBudget", budget);
   hideEmptyRow("rowTour", tours);
   hideEmptyRow("rowAvail", recent);
 
-  // Build city list from API data + fetch unique cities from API
+  addRowArrows("scrollBudget");
+  addRowArrows("scrollTour");
+  addRowArrows("scrollAvail");
+
+  // ── City chips for search dropdown ──
   const localCities = [...new Set(all.map(l => l.city).filter(Boolean))].sort();
   state.realCities = localCities;
   renderCityChips(localCities);
 
-  // Also fetch from API for full city list (may have more than current feed)
   fetch(`${API}/locations/cities`, { credentials: "include" })
     .then(r => r.ok ? r.json() : null)
     .then(data => {
@@ -360,7 +380,6 @@ function renderDefaultRows() {
     })
     .catch(() => { });
 
-  ["scrollUE", "scrollBudget", "scrollTour", "scrollAvail"].forEach(addRowArrows);
   lucide.createIcons();
 }
 
@@ -389,6 +408,35 @@ function renderCityChips(cities) {
   });
 }
 
+function addRowArrows(scrollId) {
+  const el = $(scrollId);
+  if (!el) return;
+  const wrap = el.parentElement;
+  if (!wrap || wrap.querySelector(".row-arrow")) return;
+
+  const prev = document.createElement("button");
+  prev.className = "row-arrow prev";
+  prev.innerHTML = `<i data-lucide="chevron-left"></i>`;
+  prev.setAttribute("aria-label", "Previous");
+
+  const next = document.createElement("button");
+  next.className = "row-arrow next";
+  next.innerHTML = `<i data-lucide="chevron-right"></i>`;
+  next.setAttribute("aria-label", "Next");
+
+  prev.addEventListener("click", () => {
+    el.scrollBy({ left: -(300 + 16) * 3, behavior: "smooth" });
+  });
+  next.addEventListener("click", () => {
+    el.scrollBy({ left: (300 + 16) * 3, behavior: "smooth" });
+  });
+
+  wrap.style.position = "relative";
+  wrap.appendChild(prev);
+  wrap.appendChild(next);
+  if (window.lucide?.createIcons) lucide.createIcons();
+}
+
 function fillRow(containerId, listings) {
   const el = $(containerId);
   if (!el) return;
@@ -396,35 +444,6 @@ function fillRow(containerId, listings) {
   if (!listings.length) {
     el.innerHTML = "";
     return;
-  }
-
-  function addRowArrows(scrollId) {
-    const el = $(scrollId);
-    if (!el) return;
-    const wrap = el.parentElement;
-    if (!wrap || wrap.querySelector(".row-arrow")) return;
-
-    const prev = document.createElement("button");
-    prev.className = "row-arrow prev";
-    prev.innerHTML = `<i data-lucide="chevron-left"></i>`;
-    prev.setAttribute("aria-label", "Previous");
-
-    const next = document.createElement("button");
-    next.className = "row-arrow next";
-    next.innerHTML = `<i data-lucide="chevron-right"></i>`;
-    next.setAttribute("aria-label", "Next");
-
-    prev.addEventListener("click", () => {
-      el.scrollBy({ left: -(300 + 16) * 3, behavior: "smooth" });
-    });
-    next.addEventListener("click", () => {
-      el.scrollBy({ left: (300 + 16) * 3, behavior: "smooth" });
-    });
-
-    wrap.style.position = "relative";
-    wrap.appendChild(prev);
-    wrap.appendChild(next);
-    if (window.lucide?.createIcons) lucide.createIcons();
   }
 
   el.innerHTML = listings.map(l => rowCardHTML(l)).join("");
@@ -542,12 +561,24 @@ async function setupCategoryBar() {
     });
   });
 
+  $("filteredBack")?.addEventListener("click", () => {
+    // Reset city/type/price filter state
+    state.filters = { type: "", city: "", minPrice: 0, maxPrice: 0, availOnly: false, tourOnly: false };
+    set("spWhereVal", "Search destinations");
+    $("spWhereVal")?.classList.remove("active");
+    set("spTypeVal", "Any type");
+    $("spTypeVal")?.classList.remove("active");
+    set("spBudgetVal", "Add budget");
+    $("spBudgetVal")?.classList.remove("active");
+    showDefaultView();
+  });
+
   document.querySelectorAll(".row-see-all").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (btn.dataset.city) state.filters.city = btn.dataset.city;
       if (btn.dataset.maxprice) state.filters.maxPrice = parseInt(btn.dataset.maxprice, 10);
       if (btn.dataset.tour) state.filters.tourOnly = true;
       if (btn.dataset.available) state.filters.availOnly = true;
+      if (btn.dataset.city) state.filters.city = btn.dataset.city;
 
       state.mode = "filtered";
       applyFilters();

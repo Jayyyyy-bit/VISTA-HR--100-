@@ -371,6 +371,7 @@ window.DashToday = (() => {
                     yLeft: {
                         type: "linear", position: "left",
                         min: 0,
+                        suggestedMax: 4,
                         grid: { color: "rgba(0,0,0,0.05)", drawBorder: false },
                         border: { display: false },
                         ticks: {
@@ -622,9 +623,9 @@ window.DashToday = (() => {
 
         // APPROVED: Schedule Viewing only
         const scheduleViewingBtn = b.status === "APPROVED"
-            ? `<button class="bk-action-btn bk-action-btn--schedule" data-id="${b.id}" type="button">
-                    <i data-lucide="eye"></i> Schedule Viewing
-               </button>` : "";
+            ? `<button class="bk-action-btn bk-action-btn--schedule bk-action-btn--primary" data-id="${b.id}" type="button">
+            <i data-lucide="eye"></i> Schedule Viewing
+       </button>` : "";
 
         // VIEWING_SCHEDULED: show viewing date + Confirm Move-in (if payment verified)
         const viewingInfo = b.status === "VIEWING_SCHEDULED" && b.viewing_date
@@ -661,9 +662,9 @@ window.DashToday = (() => {
                </button>` : "";
 
         const printContractBtn = ["APPROVED", "ACTIVE"].includes(b.status)
-            ? `<button class="bk-action-btn bk-action-btn--print" data-print-id="${b.id}" type="button">
-                    <i data-lucide="printer"></i> Print Contract
-               </button>` : "";
+            ? `<button class="bk-action-btn bk-action-btn--print bk-action-btn--ghost" data-print-id="${b.id}" type="button">
+            <i data-lucide="printer"></i> Print Contract
+       </button>` : "";
 
 
         const price = (listing.price || b.listing?.price)
