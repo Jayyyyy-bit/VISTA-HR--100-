@@ -502,7 +502,7 @@ async function bootPage() {
     initTilt();
     initHeroMap();
     initTourPanorama();
-    initAuth().catch(() => { });
+    await initAuth();
 
     // Deferred init (after page is interactive)
     setTimeout(() => {
