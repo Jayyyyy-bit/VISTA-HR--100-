@@ -2,7 +2,7 @@
    VISTA-HR | Landing Page — Fullpage Slide Engine
 ============================================================ */
 
-const API = "http://127.0.0.1:5000/api";
+const API = "/api";
 const PATHS = {
     login: "/auth/login.html",
     signup: "/Login_Register_Page/Signup/roles.html",
