@@ -500,377 +500,6 @@
                         <p class="panelSub">Identity and student status verification</p>
                     </div>
                 </div>
-                <div id="verifCardsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-
-                    <!-- ── Email verification card ─────────────── -->
-                    <div class="settingsCard" id="emailVerifCard" style="grid-column:1/-1;">
-                        <div class="cardSectionLabel">Email verification</div>
-                        <div class="cardSectionSub">Some features are restricted until your email is verified</div>
-
-                        <div id="emailVerifiedState" hidden>
-                            <div class="statusBanner statusBanner--approved">
-                                <div class="statusBannerIcon"><i data-lucide="mail-check"></i></div>
-                                <div>
-                                    <div class="statusBannerTitle">Email verified</div>
-                                    <div class="statusBannerSub" id="emailVerifiedAddress"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="emailUnverifiedState" hidden>
-                            <div class="statusBanner statusBanner--pending">
-                                <div class="statusBannerIcon"><i data-lucide="mail-warning"></i></div>
-                                <div>
-                                    <div class="statusBannerTitle">Email not verified</div>
-                                    <div class="statusBannerSub">Verify your email to unlock booking, publishing, and
-                                        other
-                                        key features.</div>
-                                </div>
-                            </div>
-
-                            <p class="globalErr" id="resendErr" hidden></p>
-                            <p class="saveMsg" id="resendMsg" hidden></p>
-
-                            <!-- Step 1: send code -->
-                            <div id="otpSendStep" style="margin-top:18px;">
-                                <button class="btnPrimary" id="resendOtpBtn" type="button">
-                                    <span class="btnLabel">Send verification code</span>
-                                    <span class="btnSpinner" hidden></span>
-                                </button>
-                                <p class="disclaimer" style="margin-top:14px">
-                                    <i data-lucide="info"></i>
-                                    A 6-digit code will be sent to your registered email address.
-                                </p>
-                            </div>
-
-                            <!-- Step 2: enter code (shown after send) -->
-                            <div id="otpEnterStep" hidden style="margin-top:18px;">
-                                <label class="fieldLabel" for="otpCodeInput"
-                                    style="display:block;margin-bottom:8px;font-size:13px;font-weight:500;">
-                                    Enter the 6-digit code sent to your email
-                                </label>
-                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                                    <input id="otpCodeInput" type="text" inputmode="numeric"
-                                        autocomplete="one-time-code" maxlength="6" placeholder="000000"
-                                        style="width:140px;letter-spacing:0.2em;font-size:18px;font-weight:600;text-align:center;padding:10px 14px;border:1.5px solid rgba(3,3,3,0.15);border-radius:10px;outline:none;font-family:inherit;" />
-                                    <button class="btnPrimary" id="verifyOtpBtn" type="button" disabled>
-                                        <span class="btnLabel">Verify email</span>
-                                        <span class="btnSpinner" hidden></span>
-                                    </button>
-                                </div>
-                                <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
-                                    <button class="btnGhost" id="resendOtpAgainBtn" type="button"
-                                        style="font-size:12px;padding:6px 10px;background:none;border:none;cursor:pointer;color:inherit;text-decoration:underline;opacity:0.6;">
-                                        Resend code
-                                    </button>
-                                    <span id="resendCooldown" hidden style="font-size:12px;opacity:0.5;">Wait <span
-                                            id="cooldownSecs">60</span>s</span>
-                                </div>
-                                <p class="disclaimer" style="margin-top:10px">
-                                    <i data-lucide="info"></i>
-                                    Check your spam folder if you don't see the email after a few minutes.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Owner KYC -->
-                    <div id="kycCard" hidden>
-                        <div class="settingsCard">
-                            <div class="cardSectionLabel">Identity verification</div>
-                            <div class="cardSectionSub" id="kycCardSub">Verify your identity to access all features
-                            </div>
-
-                            <div id="kycStateNone">
-                                <!-- Owner copy -->
-                                <div id="kycNoneOwner">
-                                    <div class="infoCallout">
-                                        <i data-lucide="info"></i>
-                                        <div><strong>Verification is optional</strong> — but your listings won't be
-                                            publicly visible until your identity is approved by an admin.</div>
-                                    </div>
-                                    <ul class="checkList">
-                                        <li><i data-lucide="check"></i> Create and manage listings right away</li>
-                                        <li><i data-lucide="check"></i> Get verified to publish to all residents</li>
-                                        <li><i data-lucide="check"></i> One-time process — approved within 1–2 days</li>
-                                    </ul>
-                                </div>
-                                <!-- Resident copy -->
-                                <div id="kycNoneResident" hidden>
-                                    <div class="infoCallout infoCallout--blue">
-                                        <i data-lucide="shield-check"></i>
-                                        <div>Verify your identity before making a booking. Upload a government-issued ID
-                                            — reviewed within 1–2 business days.</div>
-                                    </div>
-                                </div>
-                                <button class="btnPrimary" id="kycStartBtn" type="button" style="margin-top:16px;">
-                                    <i data-lucide="shield-check"></i> Verify my identity
-                                </button>
-                            </div>
-
-                            <div id="kycStatePending" hidden>
-                                <div class="statusBanner statusBanner--pending">
-                                    <div class="statusBannerIcon"><i data-lucide="clock"></i></div>
-                                    <div>
-                                        <div class="statusBannerTitle">Documents under review</div>
-                                        <div class="statusBannerSub">Your ID was submitted and is being reviewed.
-                                            Usually
-                                            takes 1–2 business days.</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="kycStateApproved" hidden>
-                                <div class="statusBanner statusBanner--approved">
-                                    <div class="statusBannerIcon"><i data-lucide="shield-check"></i></div>
-                                    <div>
-                                        <div class="statusBannerTitle">Identity verified</div>
-                                        <div class="statusBannerSub">Your account is fully verified. Published listings
-                                            are
-                                            visible to all residents.</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="kycStateRejected" hidden>
-                                <div class="statusBanner statusBanner--rejected">
-                                    <div class="statusBannerIcon"><i data-lucide="x-circle"></i></div>
-                                    <div>
-                                        <div class="statusBannerTitle">Verification not approved</div>
-                                        <div class="statusBannerSub" id="kycRejectReason">Please re-submit with clearer
-                                            photos.</div>
-                                    </div>
-                                </div>
-                                <button class="btnSecondary" id="kycResubmitBtn" type="button"
-                                    style="margin-top:16px;display:inline-flex;">
-                                    <i data-lucide="refresh-cw"></i> Re-submit documents
-                                </button>
-                            </div>
-
-                            <!-- Inline KYC upload form (shown for None→Start and Rejected→Re-submit) -->
-                            <div id="kycStateForm" hidden>
-                                <div class="infoCallout infoCallout--blue" style="margin-bottom:20px">
-                                    <i data-lucide="camera"></i>
-                                    <div>Upload clear photos of your government-issued ID. Make sure all text is
-                                        legible and the photo is well-lit.</div>
-                                </div>
-
-                                <div class="uploadGroup">
-                                    <label class="uploadLabel">
-                                        <span class="uploadNum">1</span>
-                                        ID Front <span class="required">*</span>
-                                    </label>
-                                    <div class="dropzone" id="dropKycFront">
-                                        <input type="file" id="inputKycFront" accept="image/jpeg,image/png,image/webp"
-                                            hidden />
-                                        <div class="dropContent" id="dropContentKycFront">
-                                            <i data-lucide="id-card"></i>
-                                            <span class="dropText">Click or drag to upload front of ID</span>
-                                            <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
-                                        </div>
-                                        <div class="dropPreview" id="previewKycFront" hidden>
-                                            <img id="previewImgKycFront" alt="ID Front" />
-                                            <button class="removeBtn" id="removeKycFront" type="button">
-                                                <i data-lucide="x"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="fieldErr" id="errKycFront"></small>
-                                </div>
-
-                                <div class="uploadGroup">
-                                    <label class="uploadLabel">
-                                        <span class="uploadNum">2</span>
-                                        ID Back <span class="required">*</span>
-                                    </label>
-                                    <div class="dropzone" id="dropKycBack">
-                                        <input type="file" id="inputKycBack" accept="image/jpeg,image/png,image/webp"
-                                            hidden />
-                                        <div class="dropContent" id="dropContentKycBack">
-                                            <i data-lucide="id-card"></i>
-                                            <span class="dropText">Click or drag to upload back of ID</span>
-                                            <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
-                                        </div>
-                                        <div class="dropPreview" id="previewKycBack" hidden>
-                                            <img id="previewImgKycBack" alt="ID Back" />
-                                            <button class="removeBtn" id="removeKycBack" type="button">
-                                                <i data-lucide="x"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="fieldErr" id="errKycBack"></small>
-                                </div>
-
-                                <div class="uploadGroup">
-                                    <label class="uploadLabel">
-                                        <span class="uploadNum">3</span>
-                                        Selfie holding ID <span
-                                            style="font-weight:500;text-transform:none;letter-spacing:0;font-size:11px;color:#6b7280;">(optional)</span>
-                                    </label>
-                                    <div class="dropzone" id="dropKycSelfie">
-                                        <input type="file" id="inputKycSelfie" accept="image/jpeg,image/png,image/webp"
-                                            hidden />
-                                        <div class="dropContent" id="dropContentKycSelfie">
-                                            <i data-lucide="user-check"></i>
-                                            <span class="dropText">Click or drag to upload your selfie</span>
-                                            <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
-                                        </div>
-                                        <div class="dropPreview" id="previewKycSelfie" hidden>
-                                            <img id="previewImgKycSelfie" alt="Selfie" />
-                                            <button class="removeBtn" id="removeKycSelfie" type="button">
-                                                <i data-lucide="x"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="fieldErr" id="errKycSelfie"></small>
-                                </div>
-
-                                <p class="globalErr" id="kycGlobalErr" hidden></p>
-                                <button class="btnPrimary" id="submitKycBtn" type="button" disabled>
-                                    <span class="btnLabel">Submit for verification</span>
-                                    <span class="btnSpinner" hidden></span>
-                                </button>
-                                <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by
-                                    VISTA-HR admins.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Resident student verification (optional, collapsed by default) -->
-                    <div id="studentCard" hidden>
-                        <div class="settingsCard">
-                            <div class="cardSectionLabel">Student verification <span
-                                    style="font-size:11px;font-weight:500;color:#6b7280;text-transform:none;letter-spacing:0;">(Optional)</span>
-                            </div>
-                            <div class="cardSectionSub">Are you a student? Unlock exclusive discounts on eligible
-                                listings</div>
-
-                            <!-- Collapsed default state — toggle to expand -->
-                            <div id="studentToggleRow"
-                                style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.07);">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <div
-                                        style="width:36px;height:36px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;color:#16a34a;">
-                                        <i data-lucide="graduation-cap" style="width:18px;height:18px;"></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-size:14px;font-weight:600;">I am a student</div>
-                                        <div style="font-size:12px;color:#6b7280;">Submit your School ID and CoR to get
-                                            verified</div>
-                                    </div>
-                                </div>
-                                <button id="studentExpandBtn" type="button" style="
-                                padding:8px 16px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);
-                                background:#fff;font-size:13px;font-weight:600;cursor:pointer;
-                                display:inline-flex;align-items:center;gap:6px;color:#374151;">
-                                    <i data-lucide="chevron-down" style="width:14px;height:14px;"></i> Get verified
-                                </button>
-                            </div>
-
-                            <div id="studentStateForm" hidden>
-                                <div class="infoCallout infoCallout--green" style="margin:16px 0 20px">
-                                    <i data-lucide="tag"></i>
-                                    <div>Verified students get <strong>exclusive discounts</strong> on listings where
-                                        the owner has enabled student pricing.</div>
-                                </div>
-
-                                <div class="uploadGroup">
-                                    <label class="uploadLabel">
-                                        <span class="uploadNum">1</span>
-                                        School ID <span class="required">*</span>
-                                    </label>
-                                    <div class="dropzone" id="dropStudentId">
-                                        <input type="file" id="inputStudentId" accept="image/jpeg,image/png,image/webp"
-                                            hidden />
-                                        <div class="dropContent" id="dropContentStudentId">
-                                            <i data-lucide="id-card"></i>
-                                            <span class="dropText">Click or drag to upload your School ID</span>
-                                            <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
-                                        </div>
-                                        <div class="dropPreview" id="previewStudentId" hidden>
-                                            <img id="previewImgStudentId" alt="School ID" />
-                                            <button class="removeBtn" id="removeStudentId" type="button">
-                                                <i data-lucide="x"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="fieldErr" id="errStudentId"></small>
-                                </div>
-
-                                <div class="uploadGroup">
-                                    <label class="uploadLabel">
-                                        <span class="uploadNum">2</span>
-                                        Certificate of Registration (CoR) <span class="required">*</span>
-                                    </label>
-                                    <div class="dropzone" id="dropCor">
-                                        <input type="file" id="inputCor" accept="image/jpeg,image/png,image/webp"
-                                            hidden />
-                                        <div class="dropContent" id="dropContentCor">
-                                            <i data-lucide="file-text"></i>
-                                            <span class="dropText">Click or drag to upload your CoR</span>
-                                            <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
-                                        </div>
-                                        <div class="dropPreview" id="previewCor" hidden>
-                                            <img id="previewImgCor" alt="CoR" />
-                                            <button class="removeBtn" id="removeCor" type="button">
-                                                <i data-lucide="x"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="fieldErr" id="errCor"></small>
-                                </div>
-
-                                <p class="globalErr" id="studentGlobalErr" hidden></p>
-                                <button class="btnPrimary" id="submitStudentBtn" type="button" disabled>
-                                    <span class="btnLabel">Submit for verification</span>
-                                    <span class="btnSpinner" hidden></span>
-                                </button>
-                                <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by
-                                    VISTA-HR
-                                    admins.</p>
-                            </div>
-
-                            <div id="studentStatePending" hidden>
-                                <div class="statusBanner statusBanner--pending">
-                                    <div class="statusBannerIcon"><i data-lucide="clock"></i></div>
-                                    <div>
-                                        <div class="statusBannerTitle">Documents under review</div>
-                                        <div class="statusBannerSub">Usually takes 1–2 business days.</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="studentStateApproved" hidden>
-                                <div class="statusBanner statusBanner--approved">
-                                    <div class="statusBannerIcon"><i data-lucide="graduation-cap"></i></div>
-                                    <div>
-                                        <div class="statusBannerTitle">Student status verified!</div>
-                                        <div class="statusBannerSub">You're eligible for student discounts on
-                                            participating
-                                            listings.</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="studentStateRejected" hidden>
-                                <div class="statusBanner statusBanner--rejected">
-                                    <div class="statusBannerIcon"><i data-lucide="x-circle"></i></div>
-                                    <div>
-                                        <div class="statusBannerTitle">Verification not approved</div>
-                                        <div class="statusBannerSub" id="studentRejectReason">Please re-submit with
-                                            clearer
-                                            photos.</div>
-                                    </div>
-                                </div>
-                                <button class="btnSecondary" id="studentResubmitBtn" type="button"
-                                    style="margin-top:16px">
-                                    <i data-lucide="refresh-cw"></i> Re-submit documents
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                </div><!-- /verifCardsGrid -->
 
                 <!-- Admin placeholder -->
                 <div id="adminVerifPlaceholder" hidden>
@@ -880,6 +509,367 @@
                         <div class="emptyStateSub">Admin accounts are verified by default.</div>
                     </div>
                 </div>
+
+                <!-- Verification sub-tabs -->
+                <div id="verifTabsWrap">
+                    <div class="verifTabBar" id="verifTabBar">
+                        <button class="verifTab active" data-verif-tab="email">
+                            <i data-lucide="mail"></i>
+                            Email
+                            <span class="verifTabDot" id="verifDotEmail" hidden></span>
+                        </button>
+                        <button class="verifTab" data-verif-tab="kyc" id="verifTabKyc">
+                            <i data-lucide="shield-check"></i>
+                            Identity
+                            <span class="verifTabDot" id="verifDotKyc" hidden></span>
+                        </button>
+                        <button class="verifTab" data-verif-tab="student" id="verifTabStudent" hidden>
+                            <i data-lucide="graduation-cap"></i>
+                            Student
+                            <span class="verifTabDot" id="verifDotStudent" hidden></span>
+                        </button>
+                    </div>
+
+                    <!-- ── Email tab ── -->
+                    <div class="verifTabPanel active" id="verifPanel-email">
+                        <div class="settingsCard" style="max-width:none;margin-bottom:0;">
+                            <div class="cardSectionLabel">Email verification</div>
+                            <div class="cardSectionSub">Some features are restricted until your email is verified</div>
+
+                            <div id="emailVerifiedState" hidden>
+                                <div class="statusBanner statusBanner--approved">
+                                    <div class="statusBannerIcon"><i data-lucide="mail-check"></i></div>
+                                    <div>
+                                        <div class="statusBannerTitle">Email verified</div>
+                                        <div class="statusBannerSub" id="emailVerifiedAddress"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="emailUnverifiedState" hidden>
+                                <div class="statusBanner statusBanner--pending">
+                                    <div class="statusBannerIcon"><i data-lucide="mail-warning"></i></div>
+                                    <div>
+                                        <div class="statusBannerTitle">Email not verified</div>
+                                        <div class="statusBannerSub">Verify your email to unlock booking, publishing,
+                                            and other key features.</div>
+                                    </div>
+                                </div>
+
+                                <p class="globalErr" id="resendErr" hidden></p>
+                                <p class="saveMsg" id="resendMsg" hidden></p>
+
+                                <div id="otpSendStep" style="margin-top:18px;">
+                                    <button class="btnPrimary" id="resendOtpBtn" type="button">
+                                        <span class="btnLabel">Send verification code</span>
+                                        <span class="btnSpinner" hidden></span>
+                                    </button>
+                                    <p class="disclaimer" style="margin-top:14px">
+                                        <i data-lucide="info"></i>
+                                        A 6-digit code will be sent to your registered email address.
+                                    </p>
+                                </div>
+
+                                <div id="otpEnterStep" hidden style="margin-top:18px;">
+                                    <label class="fieldLabel" for="otpCodeInput"
+                                        style="display:block;margin-bottom:8px;font-size:13px;font-weight:500;">
+                                        Enter the 6-digit code sent to your email
+                                    </label>
+                                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                        <input id="otpCodeInput" type="text" inputmode="numeric"
+                                            autocomplete="one-time-code" maxlength="6" placeholder="000000"
+                                            style="width:140px;letter-spacing:0.2em;font-size:18px;font-weight:600;text-align:center;padding:10px 14px;border:1.5px solid rgba(3,3,3,0.15);border-radius:10px;outline:none;font-family:inherit;" />
+                                        <button class="btnPrimary" id="verifyOtpBtn" type="button" disabled>
+                                            <span class="btnLabel">Verify email</span>
+                                            <span class="btnSpinner" hidden></span>
+                                        </button>
+                                    </div>
+                                    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+                                        <button class="btnGhost" id="resendOtpAgainBtn" type="button"
+                                            style="font-size:12px;padding:6px 10px;background:none;border:none;cursor:pointer;color:inherit;text-decoration:underline;opacity:0.6;">
+                                            Resend code
+                                        </button>
+                                        <span id="resendCooldown" hidden style="font-size:12px;opacity:0.5;">Wait <span
+                                                id="cooldownSecs">60</span>s</span>
+                                    </div>
+                                    <p class="disclaimer" style="margin-top:10px">
+                                        <i data-lucide="info"></i>
+                                        Check your spam folder if you don't see the email after a few minutes.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Identity (KYC) tab ── -->
+                    <div class="verifTabPanel" id="verifPanel-kyc">
+                        <div id="kycCard" style="width:100%;">
+                            <div class="settingsCard" style="max-width:none;margin-bottom:0;">
+                                <div class="cardSectionLabel">Identity verification</div>
+                                <div class="cardSectionSub" id="kycCardSub">Verify your identity to access all features
+                                </div>
+
+                                <div id="kycStateNone">
+                                    <div id="kycNoneOwner">
+                                        <div class="infoCallout">
+                                            <i data-lucide="info"></i>
+                                            <div><strong>Verification is optional</strong> — but your listings won't be
+                                                publicly visible until your identity is approved by an admin.</div>
+                                        </div>
+                                        <ul class="checkList">
+                                            <li><i data-lucide="check"></i> Create and manage listings right away</li>
+                                            <li><i data-lucide="check"></i> Get verified to publish to all residents
+                                            </li>
+                                            <li><i data-lucide="check"></i> One-time process — approved within 1–2 days
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div id="kycNoneResident" hidden>
+                                        <div class="infoCallout infoCallout--blue">
+                                            <i data-lucide="shield-check"></i>
+                                            <div>Verify your identity before making a booking. Upload a
+                                                government-issued ID — reviewed within 1–2 business days.</div>
+                                        </div>
+                                    </div>
+                                    <button class="btnPrimary" id="kycStartBtn" type="button" style="margin-top:16px;">
+                                        <i data-lucide="shield-check"></i> Verify my identity
+                                    </button>
+                                </div>
+
+                                <div id="kycStatePending" hidden>
+                                    <div class="statusBanner statusBanner--pending">
+                                        <div class="statusBannerIcon"><i data-lucide="clock"></i></div>
+                                        <div>
+                                            <div class="statusBannerTitle">Documents under review</div>
+                                            <div class="statusBannerSub">Your ID was submitted and is being reviewed.
+                                                Usually takes 1–2 business days.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="kycStateApproved" hidden>
+                                    <div class="statusBanner statusBanner--approved">
+                                        <div class="statusBannerIcon"><i data-lucide="shield-check"></i></div>
+                                        <div>
+                                            <div class="statusBannerTitle">Identity verified</div>
+                                            <div class="statusBannerSub">Your account is fully verified. Published
+                                                listings are visible to all residents.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="kycStateRejected" hidden>
+                                    <div class="statusBanner statusBanner--rejected">
+                                        <div class="statusBannerIcon"><i data-lucide="x-circle"></i></div>
+                                        <div>
+                                            <div class="statusBannerTitle">Verification not approved</div>
+                                            <div class="statusBannerSub" id="kycRejectReason">Please re-submit with
+                                                clearer photos.</div>
+                                        </div>
+                                    </div>
+                                    <button class="btnSecondary" id="kycResubmitBtn" type="button"
+                                        style="margin-top:16px;display:inline-flex;">
+                                        <i data-lucide="refresh-cw"></i> Re-submit documents
+                                    </button>
+                                </div>
+
+                                <div id="kycStateForm" hidden>
+                                    <div class="infoCallout infoCallout--blue" style="margin-bottom:20px">
+                                        <i data-lucide="camera"></i>
+                                        <div>Upload clear photos of your government-issued ID. Make sure all text is
+                                            legible and the photo is well-lit.</div>
+                                    </div>
+                                    <div class="uploadGroup">
+                                        <label class="uploadLabel"><span class="uploadNum">1</span>ID Front <span
+                                                class="required">*</span></label>
+                                        <div class="dropzone" id="dropKycFront">
+                                            <input type="file" id="inputKycFront"
+                                                accept="image/jpeg,image/png,image/webp" hidden />
+                                            <div class="dropContent" id="dropContentKycFront">
+                                                <i data-lucide="id-card"></i>
+                                                <span class="dropText">Click or drag to upload front of ID</span>
+                                                <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                            </div>
+                                            <div class="dropPreview" id="previewKycFront" hidden>
+                                                <img id="previewImgKycFront" alt="ID Front" />
+                                                <button class="removeBtn" id="removeKycFront" type="button"><i
+                                                        data-lucide="x"></i></button>
+                                            </div>
+                                        </div>
+                                        <small class="fieldErr" id="errKycFront"></small>
+                                    </div>
+                                    <div class="uploadGroup">
+                                        <label class="uploadLabel"><span class="uploadNum">2</span>ID Back <span
+                                                class="required">*</span></label>
+                                        <div class="dropzone" id="dropKycBack">
+                                            <input type="file" id="inputKycBack"
+                                                accept="image/jpeg,image/png,image/webp" hidden />
+                                            <div class="dropContent" id="dropContentKycBack">
+                                                <i data-lucide="id-card"></i>
+                                                <span class="dropText">Click or drag to upload back of ID</span>
+                                                <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                            </div>
+                                            <div class="dropPreview" id="previewKycBack" hidden>
+                                                <img id="previewImgKycBack" alt="ID Back" />
+                                                <button class="removeBtn" id="removeKycBack" type="button"><i
+                                                        data-lucide="x"></i></button>
+                                            </div>
+                                        </div>
+                                        <small class="fieldErr" id="errKycBack"></small>
+                                    </div>
+                                    <div class="uploadGroup">
+                                        <label class="uploadLabel"><span class="uploadNum">3</span>Selfie holding ID
+                                            <span style="font-weight:400;opacity:.6;">(optional)</span></label>
+                                        <div class="dropzone" id="dropKycSelfie">
+                                            <input type="file" id="inputKycSelfie"
+                                                accept="image/jpeg,image/png,image/webp" hidden />
+                                            <div class="dropContent" id="dropContentKycSelfie">
+                                                <i data-lucide="user-check"></i>
+                                                <span class="dropText">Click or drag to upload your selfie</span>
+                                                <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                            </div>
+                                            <div class="dropPreview" id="previewKycSelfie" hidden>
+                                                <img id="previewImgKycSelfie" alt="Selfie" />
+                                                <button class="removeBtn" id="removeKycSelfie" type="button"><i
+                                                        data-lucide="x"></i></button>
+                                            </div>
+                                        </div>
+                                        <small class="fieldErr" id="errKycSelfie"></small>
+                                    </div>
+                                    <p class="globalErr" id="kycGlobalErr" hidden></p>
+                                    <button class="btnPrimary" id="submitKycBtn" type="button" disabled>
+                                        <span class="btnLabel">Submit for verification</span>
+                                        <span class="btnSpinner" hidden></span>
+                                    </button>
+                                    <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by
+                                        VISTA-HR admins.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Student tab ── -->
+                    <div class="verifTabPanel" id="verifPanel-student">
+                        <div id="studentCard" style="width:100%;">
+                            <div class="settingsCard" style="max-width:none;margin-bottom:0;">
+                                <div class="cardSectionLabel">Student verification <span
+                                        style="font-size:12px;font-weight:500;opacity:.6;">(Optional)</span></div>
+                                <div class="cardSectionSub">Are you a student? Unlock exclusive discounts on eligible
+                                    listings</div>
+
+                                <div id="studentToggleRow">
+                                    <div class="infoCallout infoCallout--green">
+                                        <i data-lucide="graduation-cap"></i>
+                                        <div>
+                                            <strong>I am a student</strong><br>
+                                            <span style="font-size:12px;">Submit your School ID and CoR to get
+                                                verified</span>
+                                        </div>
+                                    </div>
+                                    <button id="studentExpandBtn" type="button"
+                                        style="margin-top:12px;padding:8px 16px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);background:#fff;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#374151;">
+                                        <i data-lucide="chevron-down" style="width:14px;height:14px;"></i> Get verified
+                                    </button>
+                                    <div class="infoCallout" style="margin-top:14px;background:#f9fafb;">
+                                        <i data-lucide="tag"></i>
+                                        <div>Verified students get <strong>exclusive discounts</strong> on listings
+                                            where the owner has enabled student pricing.</div>
+                                    </div>
+                                </div>
+
+                                <div id="studentStateForm" hidden>
+                                    <div class="infoCallout infoCallout--green" style="margin:0 0 20px">
+                                        <i data-lucide="tag"></i>
+                                        <div>Verified students get <strong>exclusive discounts</strong> on listings
+                                            where the owner has enabled student pricing.</div>
+                                    </div>
+                                    <div class="uploadGroup">
+                                        <label class="uploadLabel"><span class="uploadNum">1</span>School ID <span
+                                                class="required">*</span></label>
+                                        <div class="dropzone" id="dropStudentId">
+                                            <input type="file" id="inputStudentId"
+                                                accept="image/jpeg,image/png,image/webp" hidden />
+                                            <div class="dropContent" id="dropContentStudentId">
+                                                <i data-lucide="id-card"></i>
+                                                <span class="dropText">Click or drag to upload your School ID</span>
+                                                <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                            </div>
+                                            <div class="dropPreview" id="previewStudentId" hidden>
+                                                <img id="previewImgStudentId" alt="School ID" />
+                                                <button class="removeBtn" id="removeStudentId" type="button"><i
+                                                        data-lucide="x"></i></button>
+                                            </div>
+                                        </div>
+                                        <small class="fieldErr" id="errStudentId"></small>
+                                    </div>
+                                    <div class="uploadGroup">
+                                        <label class="uploadLabel"><span class="uploadNum">2</span>Certificate of
+                                            Registration (CoR) <span class="required">*</span></label>
+                                        <div class="dropzone" id="dropCor">
+                                            <input type="file" id="inputCor" accept="image/jpeg,image/png,image/webp"
+                                                hidden />
+                                            <div class="dropContent" id="dropContentCor">
+                                                <i data-lucide="file-text"></i>
+                                                <span class="dropText">Click or drag to upload your CoR</span>
+                                                <span class="dropHint">JPG, PNG or WEBP · Max 5 MB</span>
+                                            </div>
+                                            <div class="dropPreview" id="previewCor" hidden>
+                                                <img id="previewImgCor" alt="CoR" />
+                                                <button class="removeBtn" id="removeCor" type="button"><i
+                                                        data-lucide="x"></i></button>
+                                            </div>
+                                        </div>
+                                        <small class="fieldErr" id="errCor"></small>
+                                    </div>
+                                    <p class="globalErr" id="studentGlobalErr" hidden></p>
+                                    <button class="btnPrimary" id="submitStudentBtn" type="button" disabled>
+                                        <span class="btnLabel">Submit for verification</span>
+                                        <span class="btnSpinner" hidden></span>
+                                    </button>
+                                    <p class="disclaimer"><i data-lucide="lock"></i> Your documents are only viewed by
+                                        VISTA-HR admins.</p>
+                                </div>
+
+                                <div id="studentStatePending" hidden>
+                                    <div class="statusBanner statusBanner--pending">
+                                        <div class="statusBannerIcon"><i data-lucide="clock"></i></div>
+                                        <div>
+                                            <div class="statusBannerTitle">Documents under review</div>
+                                            <div class="statusBannerSub">Usually takes 1–2 business days.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="studentStateApproved" hidden>
+                                    <div class="statusBanner statusBanner--approved">
+                                        <div class="statusBannerIcon"><i data-lucide="graduation-cap"></i></div>
+                                        <div>
+                                            <div class="statusBannerTitle">Student status verified!</div>
+                                            <div class="statusBannerSub">You're eligible for student discounts on
+                                                participating listings.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="studentStateRejected" hidden>
+                                    <div class="statusBanner statusBanner--rejected">
+                                        <div class="statusBannerIcon"><i data-lucide="x-circle"></i></div>
+                                        <div>
+                                            <div class="statusBannerTitle">Verification not approved</div>
+                                            <div class="statusBannerSub" id="studentRejectReason">Please re-submit with
+                                                clearer photos.</div>
+                                        </div>
+                                    </div>
+                                    <button class="btnSecondary" id="studentResubmitBtn" type="button"
+                                        style="margin-top:16px">
+                                        <i data-lucide="refresh-cw"></i> Re-submit documents
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /verifTabsWrap -->
             </section>
 
 

@@ -307,6 +307,17 @@ function _warmFaceApi() { _FaceValidator.warm(); }
         } catch {
             // Non-fatal — field still works as plain text input
         }
+        // ── Verification sub-tab switching ──────────────────────
+        document.querySelectorAll(".verifTab").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".verifTab").forEach(b => b.classList.remove("active"));
+                document.querySelectorAll(".verifTabPanel").forEach(p => p.classList.remove("active"));
+                btn.classList.add("active");
+                const panel = document.getElementById(`verifPanel-${btn.dataset.verifTab}`);
+                if (panel) panel.classList.add("active");
+                if (window.lucide?.createIcons) lucide.createIcons();
+            });
+        });
     })();
 
     // ── Fill profile ────────────────────────────────────────────
@@ -1080,10 +1091,6 @@ function _warmFaceApi() { _FaceValidator.warm(); }
     // ── Verification section ────────────────────────────────────
     function showVerificationSection(user) {
         if (user.role === "OWNER") {
-            // Owner: KYC only — single column layout
-            const grid = el("verifCardsGrid");
-            if (grid) grid.style.gridTemplateColumns = "1fr";
-            el("kycCard").hidden = false;
             const sub = el("kycCardSub");
             if (sub) sub.textContent = "Required to publish listings to all residents";
             // Show owner copy in kycStateNone
@@ -1104,6 +1111,8 @@ function _warmFaceApi() { _FaceValidator.warm(); }
             // Show student card — collapsed by default
             el("studentCard").hidden = false;
             const stu = user.student_status || "NONE";
+            const stuTab = el("verifTabStudent");
+            if (stuTab) stuTab.hidden = false;
 
             // showStudentState handles all visibility — no need to pre-set here
             showStudentState(stu, user.student_reject_reason);

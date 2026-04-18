@@ -456,7 +456,7 @@ window.DashToday = (() => {
             listEl.innerHTML = `
                 <div class="td-empty td-empty--box">
                     <i data-lucide="calendar-x-2"></i>
-                    <span>No requests${_bkStatus !== "ALL" ? ` · ${_bkStatus.toLowerCase()}` : ""} yet.</span>
+                    <span>No requests yet.</span>
                 </div>`;
             if (window.lucide?.createIcons) lucide.createIcons();
             return;
@@ -489,6 +489,92 @@ window.DashToday = (() => {
         });
 
         if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    // ── Automated Contract Generation ───────────────────────
+    // ── Automated Contract Generation ───────────────────────
+    function printContract(booking) {
+        // Grab the currently logged-in Property Owner's details
+        const u = window.AuthGuard?.getSession?.()?.user || {};
+        const ownerName = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || "_____________________";
+
+        const printWindow = window.open('', '_blank');
+        const dateStr = new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+
+        // Date handling
+        const moveIn = booking.move_in_date ? new Date(booking.move_in_date).toLocaleDateString('en-PH') : 'TBD';
+        const moveOut = booking.move_out_date ? new Date(booking.move_out_date).toLocaleDateString('en-PH') : 'Not specified / Open-ended';
+
+        const rent = booking.listing?.price ? `₱${Number(booking.listing.price).toLocaleString()}` : 'TBD';
+        const title = booking.listing?.title || 'TBD';
+        const locationStr = [booking.listing?.barangay, booking.listing?.city].filter(Boolean).join(', ');
+        const residentName = booking.resident_name || booking.resident_email || '_____________________';
+
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Lease Contract - BK-${booking.id}</title>
+            <style>
+                body { font-family: 'Times New Roman', serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #000; line-height: 1.6; }
+                .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+                h1 { font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+                .ref { font-size: 12px; color: #555; margin-top: 5px; }
+                .section { margin-bottom: 24px; text-align: justify; }
+                h3 { font-size: 16px; margin-bottom: 8px; text-transform: uppercase; }
+                .signature-block { margin-top: 60px; display: flex; justify-content: space-between; }
+                .sig-line { border-top: 1px solid #000; width: 250px; text-align: center; padding-top: 5px; font-weight: bold; }
+                .sig-name { text-align: center; margin-top: 5px; font-size: 14px; text-transform: uppercase; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Lease Agreement</h1>
+                <div class="ref">System Reference: VISTA-HR-BK-${booking.id} | Generated: ${dateStr}</div>
+            </div>
+
+            <div class="section">
+                <p>This Lease Agreement is made and entered into through the VISTA-HR platform on <strong>${dateStr}</strong>, by and between:</p>
+                <p><strong>Property Owner:</strong> ${ownerName}</p>
+                <p><strong>Resident (Lessee):</strong> ${residentName}</p>
+            </div>
+
+            <div class="section">
+                <h3>1. The Property</h3>
+                <p>The Property Owner agrees to lease the property officially listed as <strong>"${title}"</strong> located at <strong>${locationStr || '_____________________'}</strong> to the Resident.</p>
+            </div>
+
+            <div class="section">
+                <h3>2. Term and Rent</h3>
+                <p>The lease will officially commence on <strong>${moveIn}</strong> and is scheduled to conclude on <strong>${moveOut}</strong>. The agreed monthly rental rate is <strong>${rent}</strong>, payable as stipulated in the booking terms.</p>
+            </div>
+
+            <div class="section">
+                <h3>3. Platform Acknowledgment</h3>
+                <p>By signing below, both parties acknowledge that this booking was initiated and approved via VISTA-HR. Both parties agree to abide by the platform's standard terms of service, dispute resolution policies, and the house rules specified in the listing.</p>
+            </div>
+
+            <div class="signature-block">
+                <div>
+                    <br><br><br>
+                    <div class="sig-line">Property Owner Signature</div>
+                    <div class="sig-name">${ownerName}</div>
+                </div>
+                <div>
+                    <br><br><br>
+                    <div class="sig-line">Resident Signature</div>
+                    <div class="sig-name">${residentName}</div>
+                </div>
+            </div>
+
+            <script>
+                window.onload = function() { setTimeout(() => { window.print(); }, 500); };
+            </script>
+        </body>
+        </html>`;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
     }
 
     function _taskRowHTML(b) {
@@ -574,6 +660,10 @@ window.DashToday = (() => {
                     <i data-lucide="file-text"></i> Receipt
                </button>` : "";
 
+        const printContractBtn = ["APPROVED", "ACTIVE"].includes(b.status)
+            ? `<button class="bk-action-btn bk-action-btn--print" data-print-id="${b.id}" type="button">
+                    <i data-lucide="printer"></i> Print Contract
+               </button>` : "";
 
 
         const price = (listing.price || b.listing?.price)
@@ -583,7 +673,7 @@ window.DashToday = (() => {
             ? `<img class="bk-card-thumb" src="${esc(cover)}" alt="">`
             : `<div class="bk-card-thumb bk-card-thumb--ph"><i data-lucide="home"></i></div>`;
 
-        const hasActions = approveBtn || rejectBtn || scheduleViewingBtn || viewingInfo || confirmMoveInBtn || receiptBtn || deleteBtn;
+        const hasActions = approveBtn || rejectBtn || scheduleViewingBtn || viewingInfo || confirmMoveInBtn || receiptBtn || deleteBtn || printContractBtn;
 
         return `
             <div class="bk-card" data-id="${b.id}">
@@ -612,7 +702,7 @@ window.DashToday = (() => {
                     ${rejectBtn}
                     ${scheduleViewingBtn}
                     ${confirmMoveInBtn}
-                    ${receiptBtn}
+                    ${printContractBtn} ${receiptBtn}
                     ${deleteBtn}
                 </div>` : ""}
             </div>`;
@@ -647,49 +737,19 @@ window.DashToday = (() => {
             btn.addEventListener("click", () => _openReceipt(Number(btn.dataset.receiptId)));
         });
 
+        container.querySelectorAll(".bk-action-btn--print").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const id = Number(btn.dataset.printId);
+                const booking = _bookings.find(x => x.id === id);
+                if (booking) printContract(booking);
+            });
+        });
+
         // Schedule Viewing buttons (APPROVED → VIEWING_SCHEDULED)
         container.querySelectorAll(".bk-action-btn--schedule").forEach(btn => {
             btn.addEventListener("click", () => {
                 if (window.openScheduleViewingModal) {
                     openScheduleViewingModal(Number(btn.dataset.id));
-                }
-            });
-        });
-
-        // Confirm Move-in buttons (VIEWING_SCHEDULED → ACTIVE, payment_verified required)
-        // Verify payment button
-        container.querySelectorAll(".bk-action-btn--verify-payment").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                btn.disabled = true;
-                try {
-                    await apiFetch(`/bookings/${btn.dataset.id}/verify-payment`, {
-                        method: "PATCH",
-                        body: JSON.stringify({ verified: true }),
-                    });
-                    render();
-                    if (window.showSuccess) showSuccess("Payment verified! You can now confirm move-in.");
-                } catch (e) {
-                    if (window.showToast) showToast(e?.error || "Failed.", "error");
-                    btn.disabled = false;
-                }
-            });
-        });
-
-
-        // Verify payment button
-        container.querySelectorAll(".bk-action-btn--verify-payment").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                btn.disabled = true;
-                try {
-                    await apiFetch(`/bookings/${btn.dataset.id}/verify-payment`, {
-                        method: "PATCH",
-                        body: JSON.stringify({ verified: true }),
-                    });
-                    render();
-                    if (window.showSuccess) showSuccess("Payment verified! You can now confirm move-in.");
-                } catch (e) {
-                    if (window.showToast) showToast(e?.error || "Failed.", "error");
-                    btn.disabled = false;
                 }
             });
         });
@@ -702,21 +762,11 @@ window.DashToday = (() => {
             });
         });
 
-        // Verify payment button
         container.querySelectorAll(".bk-action-btn--verify-payment").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                btn.disabled = true;
-                try {
-                    await apiFetch(`/bookings/${btn.dataset.id}/verify-payment`, {
-                        method: "PATCH",
-                        body: JSON.stringify({ verified: true }),
-                    });
-                    render();
-                    if (window.showSuccess) showSuccess("Payment verified! You can now confirm move-in.");
-                } catch (e) {
-                    if (window.showToast) showToast(e?.error || "Failed.", "error");
-                    btn.disabled = false;
-                }
+            btn.addEventListener("click", () => {
+                const id = Number(btn.dataset.id);
+                const booking = _bookings.find(x => x.id === id);
+                if (booking) _openPaymentProofModal(booking);
             });
         });
 
@@ -973,6 +1023,83 @@ window.DashToday = (() => {
         if (overlay) { overlay.classList.remove("open"); overlay.hidden = true; }
         document.body.style.overflow = "";
     }
+
+    // ── Payment Proof modal ──────────────────────────────────
+    let _paymentProofTarget = null;
+
+    function _openPaymentProofModal(booking) {
+        const overlay = document.getElementById("paymentProofOverlay");
+        const img = document.getElementById("paymentProofImg");
+        const noImg = document.getElementById("paymentProofNoImg");
+        if (!overlay || !img || !noImg) return;
+
+        _paymentProofTarget = booking.id;
+
+        if (booking.payment_proof_url) {
+            img.src = booking.payment_proof_url;
+            img.style.display = "block";
+            noImg.style.display = "none";
+        } else {
+            img.src = "";
+            img.style.display = "none";
+            noImg.style.display = "flex";
+        }
+
+        overlay.hidden = false;
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    function _closePaymentProofModal() {
+        const overlay = document.getElementById("paymentProofOverlay");
+        if (overlay) { overlay.classList.remove("open"); overlay.hidden = true; }
+        document.body.style.overflow = "";
+        _paymentProofTarget = null;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("paymentProofDismissBtn")?.addEventListener("click", _closePaymentProofModal);
+        document.getElementById("paymentProofOverlay")?.addEventListener("click", e => {
+            if (e.target.id === "paymentProofOverlay") _closePaymentProofModal();
+        });
+
+        document.getElementById("paymentProofApproveBtn")?.addEventListener("click", async () => {
+            if (!_paymentProofTarget) return;
+            const btn = document.getElementById("paymentProofApproveBtn");
+            btn.disabled = true;
+            try {
+                await apiFetch(`/bookings/${_paymentProofTarget}/verify-payment`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ verified: true }),
+                });
+                _closePaymentProofModal();
+                render();
+                if (window.showSuccess) showSuccess("Payment verified! You can now confirm move-in.");
+            } catch (e) {
+                if (window.showToast) showToast(e?.error || "Failed to verify payment.", "error");
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById("paymentProofRejectBtn")?.addEventListener("click", async () => {
+            if (!_paymentProofTarget) return;
+            const btn = document.getElementById("paymentProofRejectBtn");
+            btn.disabled = true;
+            try {
+                await apiFetch(`/bookings/${_paymentProofTarget}/verify-payment`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ verified: false }),
+                });
+                _closePaymentProofModal();
+                render();
+                if (window.showToast) showToast("Payment marked as rejected. Resident notified.", "warning");
+            } catch (e) {
+                if (window.showToast) showToast(e?.error || "Failed.", "error");
+                btn.disabled = false;
+            }
+        });
+    });
 
     // Receipt modal event listeners (safe to bind early — elements may not exist yet on other tabs)
     document.addEventListener("click", (e) => {

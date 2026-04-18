@@ -420,21 +420,22 @@
                 </div>
                 ${price}
             </div>
-            ${messageBlock}
+            ${b.message ? `<div class="bc-message"><i data-lucide="quote" style="width:12px;height:12px;opacity:0.4;flex-shrink:0;"></i>${esc(b.message)}</div>` : ""}
             ${noteBlock}
             ${viewingResponseBlock}
             ${viewingDeclinedBlock}
-            ${viewingBlock}
             ${daysEarlyBlock}
             ${paymentProofBlock}
-            ${bookingTimelineHTML(status)}
+            <div class="bc-timeline-wrap">
+                ${bookingTimelineHTML(status)}
+            </div>
             <div class="bc-actions">
                 <span class="bc-timestamp">Requested ${fmtDate(b.created_at)}</span>
                 <div class="bc-actions-right">
                     ${receiptBtn}
                     ${moveOutBtn}
                     ${cancelBtn}
-                    ${isDeletable ? `<button class="bc-delete-btn" data-delete-id="${b.id}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;"><i data-lucide="trash-2"></i> Delete</button>` : ""}
+                    ${isDeletable ? `<button class="bc-delete-btn" data-delete-id="${b.id}"><i data-lucide="trash-2"></i> Delete</button>` : ""}
                     ${reviewBtnHTML(b)}
                 </div>
             </div>

@@ -39,11 +39,11 @@ class Config:
 
     # Gmail SMTP — set in .env
     # Gmail SMTP — kept for reference, not used (Resend handles email now)
-    MAIL_SENDER   = os.getenv("MAIL_SENDER", "")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+    # Gmail SMTP (App Password)
+    GMAIL_USER         = os.getenv("GMAIL_USER", "")
+    GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 
-    # Resend
-    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-    RESEND_FROM    = os.getenv("RESEND_FROM", "VISTA-HR <onboarding@resend.dev>")
+    # Abstract API — email validation (optional, falls back to regex if unset)
+    ABSTRACT_API_KEY   = os.getenv("ABSTRACT_API_KEY", "")
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-flask-session-key-change-me")

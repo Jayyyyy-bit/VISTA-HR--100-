@@ -93,6 +93,7 @@ def serialize_user(user: User):
         "student_id_url":    getattr(user, "student_id_url", None),
         "student_cor_url":   getattr(user, "student_cor_url", None),
         "student_reject_reason": getattr(user, "student_reject_reason", None),
+        "avatar_url":        getattr(user, "avatar_url", None),
         "created_at":        user.created_at.isoformat() if user.created_at else None,
         "updated_at":        user.updated_at.isoformat() if user.updated_at else None,
     }

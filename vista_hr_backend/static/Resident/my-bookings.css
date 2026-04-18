@@ -165,27 +165,34 @@ body {
 /* ── Filter tab bar ── */
 .filterBar {
     display: flex;
-    gap: 2px;
+    gap: 0;
     margin-bottom: 24px;
     border-bottom: 1px solid var(--line);
     overflow-x: auto;
     scrollbar-width: none;
     padding-bottom: 0;
+    -webkit-overflow-scrolling: touch;
 }
 
 .filterBar::-webkit-scrollbar {
     display: none;
 }
 
+.filterBar::after {
+    content: '';
+    flex-shrink: 0;
+    width: 1px;
+}
+
 .filterTab {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
+    gap: 5px;
+    padding: 10px 12px;
     border: none;
     background: none;
     font-family: var(--font);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--ink-60);
     cursor: pointer;
@@ -2020,4 +2027,171 @@ body {
 .bc-view-msg-btn svg {
     width: 13px;
     height: 13px;
+}
+
+/* ── Card section dividers ── */
+.bc-timeline-wrap {
+    border-top: 1px solid #f3f4f6;
+    padding: 4px 20px 0;
+}
+
+.bc-actions {
+    border-top: 1px solid #f3f4f6;
+    padding: 10px 20px;
+}
+
+/* ── Message block ── */
+.bc-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 20px;
+    padding: 10px 14px;
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #4b5563;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* ── Viewing block ── */
+.bc-viewing-block {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin: 0 20px 10px;
+    padding: 12px 14px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    font-size: 13px;
+}
+
+.bc-viewing-block>i {
+    width: 16px;
+    height: 16px;
+    color: #0284c7;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.bc-viewing-label {
+    font-weight: 700;
+    color: #0c4a6e;
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.bc-viewing-date {
+    font-size: 13px;
+    color: #0369a1;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.bc-viewing-notes {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+/* ── Payment proof row ── */
+.bc-proof-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 20px 10px;
+    padding: 10px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #15803d;
+}
+
+.bc-proof-prompt {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.bc-proof-row>i {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.bc-proof-row span {
+    flex: 1;
+}
+
+.bc-proof-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+    background: #fff;
+    color: #15803d;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.bc-proof-prompt .bc-proof-upload-btn {
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+/* ── Owner note ── */
+.bc-owner-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 20px 10px;
+    padding: 10px 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.bc-owner-note.rejected {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.bc-owner-note>i {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ── Delete button ── */
+.bc-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.bc-delete-btn:hover {
+    opacity: 0.8;
 }

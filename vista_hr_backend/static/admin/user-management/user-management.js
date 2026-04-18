@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     function apiStatusToUi(user) {
         if (user.is_suspended) return "Suspended";
         if (!user.is_verified) return "Pending";
-        return "Active";
+        return "Verified";
     }
 
     function roleBadgeClass(role) {
@@ -310,7 +310,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
         el.innerHTML = users.map(u => {
-            const statusCls = u.status === "Active" ? "active" : u.status === "Suspended" ? "suspended" : "pending";
+            const statusCls = u.status === "Verified" ? "active" : u.status === "Suspended" ? "suspended" : "pending";
             return `
             <div class="queue-item">
                 <div class="q-avatar ${avatarClass(u.role)}">${getInitials(u.name)}</div>
@@ -394,16 +394,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         grid.innerHTML = pageSlice.map(u => {
             const initials = (u.name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
-            const statusCls = u.status === "Active" ? "active" : u.status === "Suspended" ? "suspended" : "pending";
+            const statusCls = u.status === "Verified" ? "active" : u.status === "Suspended" ? "suspended" : "pending";
             const suspUntil = u.is_suspended && u.suspended_until
                 ? new Date((u.suspended_until.includes("+") || u.suspended_until.endsWith("Z") ? u.suspended_until : u.suspended_until + "Z"))
                     .toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" })
                 : null;
 
+            // --- INJECTED VERIFICATION LOGIC ---
+            let verifiedCount = 0;
+            if (u.email_verified) verifiedCount++;
+            if (u.kyc_status === "APPROVED") verifiedCount++;
+
+            const verifColor = verifiedCount === 2 ? "var(--success, #10b981)" : "var(--muted, #64748b)";
+            // -----------------------------------
+
             return `<div class="um-card" data-id="${u.id}">
                 <div class="um-card-top">
-                    <div class="um-avatar um-avatar--${u.role === 'Admin' ? 'admin' : u.role === 'Property Owner' ? 'owner' : 'resident'}">
-                        ${initials}
+                    <div class="um-avatar um-avatar--${u.role === 'Admin' ? 'admin' : u.role === 'Property Owner' ? 'owner' : 'resident'}" style="overflow:hidden;padding:0;position:relative;">
+                        ${u.avatar_url
+                    ? `<img src="${escHtml(u.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`
+                    : initials}
                     </div>
                     <div class="um-card-info">
                         <div class="um-card-name">${escHtml(u.name)}</div>
@@ -412,13 +422,20 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <span class="badge ${roleBadgeClass(u.role)}" style="margin-left:auto;flex-shrink:0">${escHtml(u.role)}</span>
                 </div>
 
-                <div class="um-card-mid">
+                <div class="um-card-mid" style="display:flex; align-items:center;">
                     <span class="badge ${statusCls}">${escHtml(u.status)}</span>
-                    ${suspUntil ? `<span style="font-size:11px;color:var(--muted)">Until ${suspUntil}</span>` : ""}
+                    ${suspUntil ? `<span style="font-size:11px;color:var(--muted);margin-left:6px;">Until ${suspUntil}</span>` : ""}
+                    
+                     ${u.role !== 'Admin' ? `
+                    <span style="font-size:12px; color:${verifColor}; margin-left:12px; display:flex; align-items:center; gap:4px; font-weight:500;">
+                        <i data-lucide="shield-check" style="width:14px; height:14px;"></i>
+                        ${verifiedCount}/2 Verified
+                    </span>
+
                     <div class="strike-row" style="margin-left:auto">
                         ${[1, 2, 3, 4, 5].map(i => `<span class="strike-pip${u.strike_count >= i ? " filled" : ""}" title="Strike ${i}"></span>`).join("")}
                         <span style="font-size:11px;color:var(--muted);margin-left:4px">${u.strike_count}/5</span>
-                    </div>
+                    </div>` : ''}
                 </div>
 
                 <div class="um-card-actions">
@@ -497,6 +514,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 kyc_status: u.kyc_status || "NONE",
                 email_verified: !!u.email_verified,
                 created_at: u.created_at,
+                avatar_url: u.avatar_url || null,
             }));
             renderUsers();
         } catch (err) {
@@ -575,10 +593,27 @@ document.addEventListener("DOMContentLoaded", async () => {
             const pwField = passwordInput.closest(".form-field, .field, div") || passwordInput.parentElement;
             if (pwField) pwField.hidden = true;
             roleInput.value = user.role;
+            roleInput.hidden = true;
+            let roleDisplay = document.getElementById("roleReadOnly");
+            if (!roleDisplay) {
+                roleDisplay = document.createElement("div");
+                roleDisplay.id = "roleReadOnly";
+                roleDisplay.style.cssText = "padding:0.5rem 0.75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;color:#374151;background:#f9fafb;";
+                roleInput.parentNode.insertBefore(roleDisplay, roleInput.nextSibling);
+            }
+            roleDisplay.textContent = user.role;
+            roleDisplay.hidden = false;
             statusInput.value = user.status;
             if (passwordHint) passwordHint.textContent = "leave blank to keep current";
         } else {
             editingId = null;
+            roleInput.hidden = false;
+            roleInput.disabled = false;
+            roleInput.style.opacity = "";
+            roleInput.style.cursor = "";
+            roleInput.style.pointerEvents = "";
+            const roleDisplay = document.getElementById("roleReadOnly");
+            if (roleDisplay) roleDisplay.hidden = true;
             modalTitle.textContent = "Add user";
             nameInput.value = "";
             emailInput.value = "";
@@ -590,7 +625,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const pwField = passwordInput.closest(".form-field, .field, div") || passwordInput.parentElement;
             if (pwField) pwField.hidden = false;
             roleInput.value = "Resident";
-            statusInput.value = "Active";
+            statusInput.value = "Verified";
             if (passwordHint) passwordHint.textContent = "required";
         }
         if (window.lucide?.createIcons) lucide.createIcons();
@@ -1087,6 +1122,76 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>`;
     }
 
+    // ══════════════════════════════════════════════════════════
+    // RESIDENT VERIF VIEW
+    // ══════════════════════════════════════════════════════════
+    let residentStatusFilter = "PENDING";
+
+    document.querySelectorAll("#residentFilterBar .filter-pill").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#residentFilterBar .filter-pill").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            residentStatusFilter = btn.dataset.status;
+            loadResident();
+        });
+    });
+
+    async function loadResident() {
+        const list = document.getElementById("residentList");
+        if (!list) return;
+        list.innerHTML = `<div class="verifyLoading">Loading…</div>`;
+        try {
+            // ⚠️ Side-note: Verify this endpoint matches your actual backend route for Admin Resident KYC.
+            const data = await apiFetch(`/admin/resident-kyc?status=${residentStatusFilter}`);
+            const items = data.resident_kyc || data.applications || [];
+
+            if (!items.length) {
+                list.innerHTML = `<div class="verifyEmpty">No ${residentStatusFilter.toLowerCase()} resident verifications.</div>`;
+                return;
+            }
+            list.innerHTML = items.map(u => residentCardHTML(u)).join("");
+            bindVerifyActions(list, "resident");
+            if (window.lucide?.createIcons) lucide.createIcons();
+        } catch (err) {
+            list.innerHTML = `<div class="verifyEmpty">Failed to load. ${err.message}</div>`;
+        }
+    }
+
+    function residentCardHTML(u) {
+        // Adjust these keys based on your actual backend JSON response
+        const statusCls = { PENDING: "pending", APPROVED: "active", REJECTED: "suspended" }[u.kyc_status] || "pending";
+        const submitted = u.kyc_submitted_at
+            ? new Date(u.kyc_submitted_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+            : "—";
+        const isPending = u.kyc_status === "PENDING";
+        const rejectNote = u.kyc_reject_reason
+            ? `<div class="verifyReason">Reason: ${escHtml(u.kyc_reject_reason)}</div>` : "";
+
+        return `
+        <div class="verifyCard" data-id="${u.id}">
+            <div class="verifyCardTop">
+                <div class="verifyCardInfo">
+                    <div class="verifyName">${escHtml(u.name)}</div>
+                    <div class="verifyEmail">${escHtml(u.email)}</div>
+                    <div class="verifyMeta">Submitted ${submitted}</div>
+                    ${rejectNote}
+                </div>
+                <span class="badge ${statusCls}">${escHtml(u.kyc_status)}</span>
+            </div>
+            <div class="verifyDocs">
+                ${u.kyc_id_front_url ? `<button class="docThumb" type="button" onclick="openLightbox('${u.kyc_id_front_url}','ID Front')"><img src="${u.kyc_id_front_url}" alt="ID Front"/><span>Front <i data-lucide="zoom-in"></i></span></button>` : ""}
+                ${u.kyc_id_back_url ? `<button class="docThumb" type="button" onclick="openLightbox('${u.kyc_id_back_url}','ID Back')"><img src="${u.kyc_id_back_url}"  alt="ID Back"/><span>Back <i data-lucide="zoom-in"></i></span></button>` : ""}
+                ${u.kyc_selfie_url ? `<button class="docThumb" type="button" onclick="openLightbox('${u.kyc_selfie_url}','Selfie')"><img src="${u.kyc_selfie_url}"   alt="Selfie"/><span>Selfie <i data-lucide="zoom-in"></i></span></button>` : ""}
+            </div>
+            ${isPending ? `
+            <div class="verifyActions">
+                <button class="btn verifyApprove" data-action="resident-approve" data-id="${u.id}">Approve</button>
+                <button class="btn ghost verifyReject" data-action="resident-reject" data-id="${u.id}">Reject</button>
+            </div>` : ""}
+        </div>`;
+    }
+
+    // ── Shared approve/reject handler ───────────────────────
     // ── Shared approve/reject handler ───────────────────────
     function bindVerifyActions(container, type) {
         container.querySelectorAll("[data-action]").forEach(btn => {
@@ -1095,31 +1200,35 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const action = btn.dataset.action;
 
                 if (action.endsWith("-approve")) {
-                    const approveTitle = type === "kyc" ? "Approve KYC Application" : "Approve Student Verification";
+                    const approveTitle = type === "kyc" ? "Approve KYC Application" : type === "student" ? "Approve Student Verification" : "Approve Resident Verification";
                     openApproveModal(approveTitle, async () => {
-                        const endpoint = type === "kyc"
-                            ? `/admin/kyc/${id}/approve`
-                            : `/admin/student/${id}/approve`;
+                        let endpoint = `/admin/${type}/${id}/approve`;
+                        if (type === "resident") endpoint = `/admin/resident-kyc/${id}/approve`; // ⚠️ Adjust to match backend route
+
                         try {
                             await apiFetch(endpoint, { method: "POST" });
-                            if (type === "kyc") loadKyc(); else loadStudent();
+                            if (type === "kyc") loadKyc();
+                            else if (type === "student") loadStudent();
+                            else loadResident();
                             refreshBadges();
                         } catch (err) { showError(err.message); }
                     });
                 }
 
                 if (action.endsWith("-reject")) {
-                    const modalTitle = type === "kyc" ? "Reject KYC Application" : "Reject Student Verification";
+                    const modalTitle = type === "kyc" ? "Reject KYC Application" : type === "student" ? "Reject Student Verification" : "Reject Resident Verification";
                     openRejectModal(modalTitle, async (reason) => {
-                        const endpoint = type === "kyc"
-                            ? `/admin/kyc/${id}/reject`
-                            : `/admin/student/${id}/reject`;
+                        let endpoint = `/admin/${type}/${id}/reject`;
+                        if (type === "resident") endpoint = `/admin/resident-kyc/${id}/reject`; // ⚠️ Adjust to match backend route
+
                         try {
                             await apiFetch(endpoint, {
                                 method: "POST",
                                 body: JSON.stringify({ reason }),
                             });
-                            if (type === "kyc") loadKyc(); else loadStudent();
+                            if (type === "kyc") loadKyc();
+                            else if (type === "student") loadStudent();
+                            else loadResident();
                             refreshBadges();
                         } catch (err) { showError(err.message); }
                     });
@@ -1732,7 +1841,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.label)}</div>
                     <div style="font-size:11px;color:#9ca3af;margin-top:2px;">
                         ${type === "highlight" ? "Highlight" : escHtml(r.category || "amenity")}
-                        · <span style="color:${r.is_active ? "#16a34a" : "#9ca3af"};font-weight:600;">${r.is_active ? "Active" : "Hidden"}</span>
+                        · <span style="color:${r.is_active ? "#16a34a" : "#9ca3af"};font-weight:600;">${r.is_active ? "Verified" : "Hidden"}</span>
                     </div>
                 </div>
                 <div style="display:flex;gap:6px;width:100%;">
@@ -1808,27 +1917,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     })();
 
-
-    // ══ User sub-tabs ═════════════════════════════════════════
-    function initUserSubTabs() {
-        const wrap = document.getElementById("userSubTabs");
-        if (!wrap || wrap.dataset.bound) return;
-        wrap.dataset.bound = "1";
-        wrap.querySelectorAll(".user-subtab[data-utab]").forEach(btn => {
-            btn.addEventListener("click", () => {
-                wrap.querySelectorAll(".user-subtab").forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                const tab = btn.dataset.utab;
-                document.getElementById("uTabList").hidden = tab !== "list";
-                document.getElementById("uTabKyc").hidden = tab !== "kyc";
-                document.getElementById("uTabStudent").hidden = tab !== "student";
-                document.getElementById("uTabResident").hidden = tab !== "resident";
-                if (tab === "kyc") loadKyc();
-                if (tab === "student") loadStudent();
-            });
-        });
-    }
-
     // ══ Content sub-tabs ══════════════════════════════════════
     function initContentSubTabs() {
         const wrap = document.getElementById("contentSubTabs");
@@ -1853,6 +1941,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
     // ══ User page sub-tabs ════════════════════════════════════
+    // ══ User page sub-tabs ════════════════════════════════════
     function initUserSubTabs() {
         const wrap = document.getElementById("userSubTabs");
         if (!wrap || wrap.dataset.bound) return;
@@ -1863,12 +1952,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                 wrap.querySelectorAll(".um-subtab").forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
                 const tab = btn.dataset.utab;
+
                 ["list", "kyc", "student", "resident", "history"].forEach(t => {
                     const el = document.getElementById(`uTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
                     if (el) el.hidden = t !== tab;
                 });
+
                 if (tab === "kyc") loadKyc();
                 if (tab === "student") loadStudent();
+                if (tab === "resident") loadResident(); // <--- This was missing
                 if (tab === "history") loadActivityLog();
             });
         });

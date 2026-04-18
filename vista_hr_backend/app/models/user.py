@@ -136,4 +136,5 @@ class User(db.Model):
             # Session
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
             "token_version": int(self.token_version or 0),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

@@ -12,7 +12,9 @@ from ..models import User
 from ..auth.jwt import create_access_token, require_auth, COOKIE_NAME
 from ..utils.errors import json_error
 from werkzeug.security import generate_password_hash
+#from ..utils.mail import send_otp_email, send_password_reset_email
 from ..utils.mail import send_otp_email, send_password_reset_email
+from ..utils.email_validator import validate_email
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -86,14 +88,9 @@ def register():
         return json_error("Invalid payload. Required: email, password, role (RESIDENT|OWNER)", 400)
 
     # Block obviously fake/disposable email domains
-    _BLOCKED_DOMAINS = {
-        "tite.com", "boobs.com", "mailinator.com", "guerrillamail.com",
-        "tempmail.com", "throwaway.email", "fakeinbox.com", "yopmail.com",
-        "sharklasers.com", "guerrillamailblock.com", "grr.la", "spam4.me",
-    }
-    _email_domain = email.split("@")[-1].lower() if "@" in email else ""
-    if _email_domain in _BLOCKED_DOMAINS:
-        return json_error("Please use a valid email address.", 400)
+    is_valid, reason = validate_email(email)
+    if not is_valid:
+        return json_error(reason, 400)
 
     if len(password) < 8:
         return json_error("Validation failed", 400, fields={"password": "Password must be at least 8 characters."})
@@ -665,29 +662,26 @@ def google_callback():
                 user.avatar_url = picture
             db.session.commit()
         else:
-            # ── STEP 3: Auto-register New User ──
+            # ── STEP 3: New user — store in signed JWT, redirect to roles.html ──
             is_new_user = True
-            user = User(
-                email          = email,
-                role           = role,
-                first_name     = first_name or None,
-                last_name      = last_name  or None,
-                google_id      = google_id,
-                avatar_url_google = picture,
-                avatar_url     = picture,
-                email_verified = bool(email_verified_google),
-                is_verified    = True if role == "RESIDENT" else False,
-                is_suspended   = False,
-                kyc_status     = "NONE",
-                student_status = "NONE",
-            )
-            user.password_hash = generate_password_hash(google_id + "_google_oauth_unusable")
-            try:
-                db.session.add(user)
-                db.session.commit()
-            except SQLAlchemyError:
-                db.session.rollback()
-                return _redirect_error("Registration failed. Please try again.")
+            import jwt as pyjwt, time
+            secret = current_app.config["JWT_SECRET"]
+            gpt_payload = {
+                "type":           "google_pending",
+                "google_id":      google_id,
+                "email":          email,
+                "first_name":     first_name,
+                "last_name":      last_name,
+                "picture":        picture,
+                "email_verified": email_verified_google,
+                "iat":            int(time.time()),
+                "exp":            int(time.time()) + 600,  # 10 min
+            }
+            gpt = pyjwt.encode(gpt_payload, secret, algorithm="HS256")
+            from urllib.parse import urlencode
+            from flask import redirect as flask_redirect
+            params = urlencode({"mode": "google", "gpt": gpt})
+            return flask_redirect(f"/Login_Register_Page/Signup/roles.html?{params}")
 
     # Final security checks
     if not getattr(user, "is_active", True):
@@ -703,11 +697,8 @@ def google_callback():
     role_val  = user.role.value if hasattr(user.role, "value") else str(user.role)
     done      = Number_bool(getattr(user, "has_completed_onboarding", False))
 
-    # ── STEP 4: Destination Logic ──
-    if is_new_user:
-        # Kapag bagong gawa ang account, dapat pumili muna ng role
-        dest = "/Login_Register_Page/Signup/roles.html"
-    elif role_val == "ADMIN":
+    # ── STEP 4: Destination Logic (existing users only) ──
+    if role_val == "ADMIN":
         dest = "/admin/user-management/user-management.html"
     elif role_val == "OWNER":
         dest = "/Property-Owner/dashboard/property-owner-dashboard.html" if done else "/PO-after-signup/PO_welcome-page.html"
@@ -720,6 +711,87 @@ def google_callback():
 
 def Number_bool(val):
     return int(bool(val)) == 1
+
+
+# ══════════════════════════════════════════════════════════
+# GOOGLE OAuth — Complete registration (role select)
+# ══════════════════════════════════════════════════════════
+@auth_bp.post("/auth/google/complete")
+def google_complete():
+    import jwt as pyjwt
+    data          = request.get_json(silent=True) or {}
+    role          = (data.get("role") or "").strip().upper()
+    pending_token = (data.get("pending_token") or "").strip()
+
+    if role not in ("RESIDENT", "OWNER"):
+        return json_error("Invalid role.", 400)
+    if not pending_token:
+        return json_error("Missing pending token.", 400)
+
+    secret = current_app.config["JWT_SECRET"]
+    try:
+        payload = pyjwt.decode(pending_token, secret, algorithms=["HS256"])
+    except pyjwt.ExpiredSignatureError:
+        return json_error("Session expired. Please sign in with Google again.", 401)
+    except pyjwt.InvalidTokenError:
+        return json_error("Invalid session token.", 401)
+
+    if payload.get("type") != "google_pending":
+        return json_error("Invalid token type.", 401)
+
+    google_id  = payload["google_id"]
+    email      = payload["email"]
+    first_name = payload.get("first_name") or None
+    last_name  = payload.get("last_name")  or None
+    picture    = payload.get("picture")    or None
+    email_verified_google = payload.get("email_verified", False)
+
+    # Guard: user may have already completed via double-submit
+    existing = User.query.filter_by(google_id=google_id).first()
+    if not existing:
+        existing = User.query.filter_by(email=email).first()
+
+    if existing:
+        # Already registered — just log them in
+        if not getattr(existing, "is_active", True):
+            return json_error("This account has been deactivated.", 403)
+        if getattr(existing, "is_suspended", False):
+            return json_error("This account is suspended.", 403)
+        existing.google_id        = google_id
+        existing.avatar_url_google = picture
+        existing.last_login_at    = datetime.now(timezone.utc)
+        db.session.commit()
+        token = create_access_token(existing)
+        resp  = jsonify({"message": "Logged in", "user": existing.to_dict()})
+        return _set_auth_cookie(resp, token), 200
+
+    user = User(
+        email             = email,
+        role              = role,
+        first_name        = first_name,
+        last_name         = last_name,
+        google_id         = google_id,
+        avatar_url_google = picture,
+        avatar_url        = picture,
+        email_verified    = bool(email_verified_google),
+        is_verified       = True if role == "RESIDENT" else False,
+        is_suspended      = False,
+        kyc_status        = "NONE",
+        student_status    = "NONE",
+    )
+    user.password_hash = generate_password_hash(google_id + "_google_oauth_unusable")
+    user.last_login_at = datetime.now(timezone.utc)
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Registration failed. Please try again.", 500)
+
+    token = create_access_token(user)
+    resp  = jsonify({"message": "Registered", "user": user.to_dict()})
+    return _set_auth_cookie(resp, token), 201
 
 
 def _redirect_error(msg: str):

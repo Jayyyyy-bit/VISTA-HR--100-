@@ -1165,7 +1165,62 @@
     document.getElementById("menuFeedback")?.addEventListener("click", () => {
       window.location.href = "/shared/feedback.html";
     });
-    menuHelp?.addEventListener("click", () => { openMenu(false); showInfo("Help center (later)."); });
+
+    menuHelp?.addEventListener("click", () => {
+      openMenu(false);
+      const ov = document.getElementById("helpCenterOverlay");
+      if (!ov) return;
+      ov.style.display = "flex";
+      _initHelpFaq();
+      if (window.lucide?.createIcons) lucide.createIcons();
+    });
+
+    document.getElementById("helpCenterClose")?.addEventListener("click", () => {
+      const ov = document.getElementById("helpCenterOverlay");
+      if (ov) ov.style.display = "none";
+    });
+    document.getElementById("helpCenterOverlay")?.addEventListener("click", e => {
+      if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
+    });
+    document.getElementById("helpTicketBtn")?.addEventListener("click", () => {
+      document.getElementById("helpCenterOverlay").style.display = "none";
+      window.location.href = "/shared/my_tickets.html";
+    });
+
+    function _initHelpFaq() {
+      const list = document.getElementById("helpFaqList");
+      if (!list || list.dataset.init) return;
+      list.dataset.init = "1";
+      const faqs = [
+        ["Why is my listing not visible to residents?", "Your KYC must be approved and your listing must be set to Published. Check your verification status in Account Settings."],
+        ["What happens if I don't respond to a booking in time?", "Pending bookings automatically cancel after 3 days with no response. Approved bookings cancel if no viewing is scheduled within 3 days."],
+        ["How do I verify a resident's payment?", "When a resident submits payment proof, a 'Verify Payment' button appears on the booking card. Click it to view the proof image, then approve or reject."],
+        ["Can I cancel an active reservation?", "Owners cannot cancel ACTIVE bookings. Contact support via a ticket if you have an urgent situation."],
+        ["How long does KYC approval take?", "KYC applications are reviewed by our admin team, typically within 1–2 business days."],
+        ["How do I print a lease contract?", "On any Approved or Active booking card, click the 'Print Contract' button to generate a printable lease agreement."],
+      ];
+      list.innerHTML = faqs.map(([q, a], i) => `
+            <div style="border:1px solid #f3f4f6;border-radius:10px;overflow:hidden;">
+                <button data-faq="${i}" style="width:100%;text-align:left;padding:12px 14px;background:none;border:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;font-weight:600;color:#111827;">
+                    <span>${q}</span>
+                    <i data-lucide="chevron-down" style="width:15px;height:15px;color:#9ca3af;flex-shrink:0;transition:transform 0.2s;"></i>
+                </button>
+                <div id="faqBody${i}" hidden style="padding:0 14px 12px;font-size:13px;color:#4b5563;line-height:1.6;border-top:1px solid #f3f4f6;">${a}</div>
+            </div>`).join("");
+
+      list.querySelectorAll("[data-faq]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = btn.dataset.faq;
+          const body = document.getElementById(`faqBody${idx}`);
+          const icon = btn.querySelector("i[data-lucide]");
+          const isOpen = !body.hidden;
+          body.hidden = isOpen;
+          if (icon) icon.style.transform = isOpen ? "" : "rotate(180deg)";
+          if (window.lucide?.createIcons) lucide.createIcons();
+        });
+      });
+      if (window.lucide?.createIcons) lucide.createIcons();
+    }
     menuLogout?.addEventListener("click", () => {
       openMenu(false);
       const ov = document.getElementById("poLogoutOverlay");

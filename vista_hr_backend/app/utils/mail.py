@@ -1,42 +1,47 @@
 """
 app/utils/mail.py
 -----------------
-Sends transactional emails via Resend API.
+Sends transactional emails via Gmail SMTP (App Password).
 
 .env keys needed:
-    RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
-    RESEND_FROM=VISTA-HR <onboarding@resend.dev>
+    GMAIL_USER=your.address@gmail.com
+    GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx   # 16-char Google App Password
 """
 
 import os
-import resend
+import smtplib
+import threading
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-def _get_client():
-    api_key = os.getenv("RESEND_API_KEY", "")
-    if not api_key:
-        raise RuntimeError(
-            "Mail not configured. Set RESEND_API_KEY in .env"
-        )
-    resend.api_key = api_key
-    return resend
 
-def _from_address():
-    return os.getenv("RESEND_FROM", "VISTA-HR <onboarding@resend.dev>")
+# ── Internal transport ────────────────────────────────────────────────────────
+
+def _send(to: str, subject: str, html: str, text: str = "") -> None:
+    gmail_user = os.getenv("GMAIL_USER", "")
+    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "")
+    from_addr  = f"VISTA-HR <{gmail_user}>"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = from_addr
+    msg["To"]      = to
+    if text:
+        msg.attach(MIMEText(text, "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login(gmail_user, gmail_pass)
+        smtp.sendmail(gmail_user, to, msg.as_string())
+
 
 def send_email(to: str, subject: str, html_body: str, text_body: str = "") -> None:
-    client = _get_client()
-    params = {
-        "from": _from_address(),
-        "to": [to],
-        "subject": subject,
-        "html": html_body,
-    }
-    if text_body:
-        params["text"] = text_body
-    client.Emails.send(params)
+    """Fire-and-forget — always called in a daemon thread."""
+    t = threading.Thread(target=_send, args=(to, subject, html_body, text_body), daemon=True)
+    t.start()
 
 
-# ── Template helpers ──────────────────────────────────────────────────────────
+# ── Template ──────────────────────────────────────────────────────────────────
 
 def _base_template(title: str, body_html: str) -> str:
     return f"""<!DOCTYPE html>
@@ -85,6 +90,8 @@ def _base_template(title: str, body_html: str) -> str:
 </body>
 </html>"""
 
+
+# ── Template helpers (signatures unchanged) ───────────────────────────────────
 
 def send_otp_email(to: str, otp: str, name: str = "") -> None:
     greeting = f"Hi {name}," if name else "Hi,"
