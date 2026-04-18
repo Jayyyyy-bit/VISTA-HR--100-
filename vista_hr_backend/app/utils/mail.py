@@ -9,10 +9,8 @@ Sends transactional emails via Gmail SMTP (App Password).
 """
 
 import os
-import smtplib
+import resend
 import threading
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 
 # ── Internal transport ────────────────────────────────────────────────────────
@@ -20,43 +18,23 @@ from email.mime.text import MIMEText
 def _send(to: str, subject: str, html: str, text: str = "") -> None:
     import logging
     logger = logging.getLogger(__name__)
-
-    gmail_user = os.getenv("GMAIL_USER", "")
-    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "")
-
-    if not gmail_user or not gmail_pass:
-        logger.error(f"[MAIL] GMAIL_USER or GMAIL_APP_PASSWORD not set")
+    api_key = os.getenv("RESEND_API_KEY", "")
+    if not api_key:
+        logger.error("[MAIL] RESEND_API_KEY not set")
         return
-
-    from_addr = f"VISTA-HR <{gmail_user}>"
-    logger.info(f"[MAIL] Sending '{subject}' to {to} from {gmail_user}")
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"]    = from_addr
-    msg["To"]      = to
-    if text:
-        msg.attach(MIMEText(text, "plain"))
-    msg.attach(MIMEText(html, "html"))
-
+    resend.api_key = api_key
+    from_addr = os.getenv("RESEND_FROM", "VISTA-HR <onboarding@resend.dev>")
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-            smtp.ehlo()
-            smtp.starttls()
-            smtp.ehlo()
-            smtp.login(gmail_user, gmail_pass)
-            smtp.sendmail(gmail_user, to, msg.as_string())
-            logger.info(f"[MAIL] ✓ Sent successfully to {to}")
-    except smtplib.SMTPAuthenticationError as e:
-        logger.error(f"[MAIL] Auth failed — check GMAIL_APP_PASSWORD: {e}")
-    except smtplib.SMTPException as e:
-        logger.error(f"[MAIL] SMTP error: {e}")
+        params = {"from": from_addr, "to": [to], "subject": subject, "html": html}
+        if text:
+            params["text"] = text
+        resend.Emails.send(params)
+        logger.info(f"[MAIL] ✓ Sent to {to}")
     except Exception as e:
-        logger.error(f"[MAIL] Unexpected error: {e}")
+        logger.error(f"[MAIL] Resend error: {e}")
 
 
 def send_email(to: str, subject: str, html_body: str, text_body: str = "") -> None:
-    """Fire-and-forget — always called in a daemon thread."""
     t = threading.Thread(target=_send, args=(to, subject, html_body, text_body), daemon=True)
     t.start()
 
