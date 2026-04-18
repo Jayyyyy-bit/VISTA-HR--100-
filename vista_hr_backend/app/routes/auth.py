@@ -257,7 +257,8 @@ def send_otp():
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         remaining = (expires - datetime.now(timezone.utc)).total_seconds()
-        if remaining > 540:   # 600s max - 60s cooldown = 540s
+        # Only rate-limit if OTP is still valid AND was issued < 60s ago
+        if 0 < remaining <= 600 and remaining > 540:
             return json_error("Please wait before requesting a new code.", 429)
 
     otp = _attach_otp(user)
