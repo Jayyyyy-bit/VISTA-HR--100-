@@ -142,28 +142,28 @@ async function initAuth() {
 
     // Check localStorage first
     // Check localStorage first (optimistic render)
+    // Check localStorage first (optimistic render while server verifies)
     let session = null;
     try { session = JSON.parse(localStorage.getItem("vista_session_user")); } catch { }
-    // Only use cache if email matches cookie — server verify always wins below
     if (session?.user) patchNav(session.user, loginBtn, startBtn);
 
-    // Verify with server (non-blocking, timeout after 3s)
-    setTimeout(async () => {
-        try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 3000);
-            const r = await fetch(`${API}/auth/me`, { credentials: "include", signal: controller.signal });
-            clearTimeout(timeout);
+    // Verify with server — always authoritative
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        const r = await fetch(`${API}/auth/me`, { credentials: "include", signal: controller.signal });
+        clearTimeout(timeout);
 
-            if (r.ok) {
-                const d = await r.json();
-                if (d?.user) {
-                    localStorage.setItem("vista_session_user", JSON.stringify({ user: d.user }));
-                    patchNav(d.user, loginBtn, startBtn);
-                }
-            } else { localStorage.removeItem("vista_session_user"); }
-        } catch { }
-    }, 0);
+        if (r.ok) {
+            const d = await r.json();
+            if (d?.user) {
+                localStorage.setItem("vista_session_user", JSON.stringify({ user: d.user }));
+                patchNav(d.user, loginBtn, startBtn);
+            }
+        } else {
+            localStorage.removeItem("vista_session_user");
+        }
+    } catch { }
 }
 
 function patchNav(user, loginBtn, startBtn) {
