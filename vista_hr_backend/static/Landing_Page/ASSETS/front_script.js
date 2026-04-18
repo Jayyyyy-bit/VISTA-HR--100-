@@ -141,8 +141,10 @@ async function initAuth() {
     document.getElementById("helpNavBtn")?.addEventListener("click", () => fp.goTo(5));
 
     // Check localStorage first
+    // Check localStorage first (optimistic render)
     let session = null;
     try { session = JSON.parse(localStorage.getItem("vista_session_user")); } catch { }
+    // Only use cache if email matches cookie — server verify always wins below
     if (session?.user) patchNav(session.user, loginBtn, startBtn);
 
     // Verify with server (non-blocking, timeout after 3s)
