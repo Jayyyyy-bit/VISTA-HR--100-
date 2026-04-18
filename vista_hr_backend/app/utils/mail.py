@@ -30,7 +30,10 @@ def _send(to: str, subject: str, html: str, text: str = "") -> None:
         msg.attach(MIMEText(text, "plain"))
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+    with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.ehlo()
         smtp.login(gmail_user, gmail_pass)
         smtp.sendmail(gmail_user, to, msg.as_string())
 
