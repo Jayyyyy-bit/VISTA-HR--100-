@@ -1406,11 +1406,12 @@ function _warmFaceApi() { _FaceValidator.warm(); }
         const toggleRow = el("studentToggleRow");
         const form = el("studentStateForm");
 
-        // Upload form: only visible when NONE (collapsed toggle) or actively resubmitting
-        // Status banners: PENDING, APPROVED, REJECTED shown separately
-        const showForm = status === "NONE" || status === "REJECTED_RESUBMIT";
+        // Upload form stays collapsed by default. User must click "Get verified"
+        // to expand (handled by studentExpandBtn listener). Only REJECTED_RESUBMIT
+        // shows the form immediately since user explicitly chose to re-submit.
+        const autoShowForm = status === "REJECTED_RESUBMIT";
         if (toggleRow) toggleRow.style.display = (status === "NONE") ? "" : "none";
-        if (form) form.hidden = !showForm;
+        if (form) form.hidden = !autoShowForm;
 
         el("studentStatePending").hidden = status !== "PENDING";
         el("studentStateApproved").hidden = status !== "APPROVED";
