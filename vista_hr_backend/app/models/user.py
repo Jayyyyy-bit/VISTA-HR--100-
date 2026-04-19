@@ -102,12 +102,25 @@ class User(db.Model):
     def check_password(self, raw_password: str) -> bool:
         return check_password_hash(self.password_hash, raw_password)
 
-    def to_dict(self):
+    def _has_usable_password(self) -> bool:
+        """Returns False for Google-only users (their password_hash is a sentinel)."""
+        if not self.password_hash:
+            return False
+        if not self.google_id:
+            return True
+        # Google user — check if password matches the sentinel
+        sentinel = f"{self.google_id}_google_oauth_unusable"
+        try:
+            return not check_password_hash(self.password_hash, sentinel)
+        except Exception:
+            return True
+
+    def to_dict(self, include_sensitive=False):
         role_val = self.role.value if hasattr(self.role, "value") else str(self.role)
         kyc_val  = self.kyc_status.value if hasattr(self.kyc_status, "value") else str(self.kyc_status or "NONE")
         stu_val  = self.student_status.value if hasattr(self.student_status, "value") else str(self.student_status or "NONE")
 
-        return {
+        data = {
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
@@ -123,19 +136,36 @@ class User(db.Model):
             "suspension_reason": self.suspension_reason,
             "strike_count": int(getattr(self, "strike_count", 0) or 0),
             "has_completed_onboarding": int(bool(getattr(self, "has_completed_onboarding", False))),
-            # KYC (owners)
+            # KYC (owners) — status metadata only, no doc URLs
             "kyc_status": kyc_val,
             "kyc_reject_reason": self.kyc_reject_reason,
-            # Student (residents)
+            "kyc_submitted_at":  self.kyc_submitted_at.isoformat()  if self.kyc_submitted_at  else None,
+            "kyc_reviewed_at":   self.kyc_reviewed_at.isoformat()   if self.kyc_reviewed_at   else None,
+            # Student (residents) — status metadata only, no doc URLs
             "student_verified": bool(self.student_verified),
             "student_status": stu_val,
             "student_reject_reason": self.student_reject_reason,
+            "student_submitted_at": self.student_submitted_at.isoformat() if self.student_submitted_at else None,
+            "student_reviewed_at":  self.student_reviewed_at.isoformat()  if self.student_reviewed_at  else None,
             # Profile extras
             "based_in":         self.based_in,
             "google_id":        self.google_id,
             "has_google":       bool(self.google_id),
+            "has_password":     self._has_usable_password(),
             # Session
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
             "token_version": int(self.token_version or 0),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+        # Sensitive fields — admin-only (KYC/student document URLs)
+        if include_sensitive:
+            data.update({
+                "kyc_id_front_url": self.kyc_id_front_url,
+                "kyc_id_back_url":  self.kyc_id_back_url,
+                "kyc_selfie_url":   self.kyc_selfie_url,
+                "student_id_url":   self.student_id_url,
+                "student_cor_url":  self.student_cor_url,
+            })
+
+        return data

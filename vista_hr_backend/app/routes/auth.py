@@ -97,37 +97,14 @@ def register():
 
     existing = User.query.filter_by(email=email).first()
     if existing:
-        # Option A — deactivated account: reactivate with new credentials
+        # Deactivated account: tell user to log in (login reactivates automatically)
         if not getattr(existing, "is_active", True):
-            if existing.role.value if hasattr(existing.role, "value") else str(existing.role) != role:
-                return json_error(
-                    "This email was previously registered as a different role. "
-                    "Please use a different email.", 409
-                )
-            existing.set_password(password)
-            existing.first_name     = first_name
-            existing.last_name      = last_name
-            existing.phone          = phone
-            existing.is_active      = True
-            existing.is_verified    = False
-            existing.email_verified = False
-            existing.is_suspended   = False
-            existing.kyc_status     = "NONE"
-            existing.student_status = "NONE"
-            existing.token_version  = int(existing.token_version or 0) + 1
-            otp = _attach_otp(existing)
-            try:
-                db.session.commit()
-                display_name = f"{first_name or ''} {last_name or ''}".strip() or email
-                _send_async(send_otp_email, email, otp, display_name)
-            except SQLAlchemyError:
-                db.session.rollback()
-                return json_error("Database error", 500)
-            token = create_access_token(existing)
-            resp = jsonify({"message": "Account reactivated", "user": existing.to_dict()})
-            return _set_auth_cookie(resp, token), 201
-
-        # Option B — active account exists: clear error by state
+            return json_error(
+                "This email belongs to a deactivated account. "
+                "Please log in with your previous password to reactivate it.",
+                409, code="ACCOUNT_DEACTIVATED"
+            )
+        # Suspended account
         if getattr(existing, "is_suspended", False):
             return json_error(
                 "This email is associated with a suspended account. "
@@ -192,10 +169,13 @@ def login():
     if not user or not user.check_password(password):
         return json_error("Invalid credentials", 401)
 
-    # Block deactivated (soft-deleted) accounts from logging in
+    # Deactivated (soft-deleted) accounts: auto-reactivate on successful login
+    # (User proved ownership via password — safe to restore access)
+
+    was_reactivated = False
     if not getattr(user, "is_active", True):
-        return json_error("This account has been deactivated.", 403,
-                          code="ACCOUNT_DEACTIVATED")
+        user.is_active = True
+        was_reactivated = True
 
     if getattr(user, "is_suspended", False):
         sus_until = getattr(user, "suspended_until", None)
@@ -280,7 +260,75 @@ def send_otp():
 
 
 # ======================================================
-# VERIFY EMAIL (submit OTP)
+# PASSWORD-CHANGE OTP (authenticated users only)
+# Reuses email_otp column but bypasses email_verified checks
+# ======================================================
+@auth_bp.post("/auth/password/send-otp")
+@require_auth
+def password_send_otp():
+    user = g.current_user
+
+    # Rate-limit: only resend if last OTP was issued > 60s ago
+    if user.email_otp_expires_at:
+        expires = user.email_otp_expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        remaining = (expires - datetime.now(timezone.utc)).total_seconds()
+        if 0 < remaining <= 600 and remaining > 540:
+            wait = int(540 - (600 - remaining)) if remaining > 540 else 0
+            return json_error("Please wait a moment before requesting a new code.", 429)
+
+    otp = _attach_otp(user)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+    try:
+        name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+        _send_async(send_otp_email, user.email, otp, name)
+    except Exception as mail_err:
+        current_app.logger.warning(f"Password OTP send failed for {user.email}: {mail_err}")
+
+    return jsonify({"message": "Verification code sent."}), 200
+
+
+@auth_bp.post("/auth/password/verify-otp")
+@require_auth
+def password_verify_otp():
+    user = g.current_user
+    data = request.get_json(silent=True) or {}
+    otp_input = (data.get("otp") or "").strip()
+    if not otp_input:
+        return json_error("Code is required.", 400)
+
+    if not user.email_otp or not user.email_otp_expires_at:
+        return json_error("No active code. Please request a new one.", 400)
+
+    expires = user.email_otp_expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if expires < datetime.now(timezone.utc):
+        return json_error("Code expired. Please request a new one.", 400)
+
+    if user.email_otp != _hash_otp(otp_input):
+        return json_error("Invalid code.", 400)
+
+    # Clear OTP on success (one-time use) — do NOT touch email_verified
+    user.email_otp = None
+    user.email_otp_expires_at = None
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error", 500)
+
+    return jsonify({"message": "Verified.", "password_otp_verified": True}), 200
+
+
+# ======================================================
+# VERIFY EMAIL (initial signup OTP)
 # ======================================================
 @auth_bp.post("/auth/verify-email")
 def verify_email():
@@ -647,16 +695,22 @@ def google_callback():
     user = User.query.filter_by(google_id=google_id).first()
     is_new_user = False
 
+    # ── STEP 1b: Reactivate deactivated Google user on re-login ──
+    if user and not getattr(user, "is_active", True):
+        user.is_active = True
+        db.session.commit()
+
     # ── STEP 2: Link Google to existing email account ──
     if not user:
         user = User.query.filter_by(email=email).first()
         if user:
-            # Check status before linking
-            if not getattr(user, "is_active", True):
-                return _redirect_error("This account has been deactivated.")
+            # Suspended accounts stay blocked — cannot be self-reactivated
             if getattr(user, "is_suspended", False):
                 return _redirect_error("This account is suspended.")
-            
+            # Deactivated email-account? Reactivate on Google link.
+            if not getattr(user, "is_active", True):
+                user.is_active = True
+
             user.google_id = google_id
             user.avatar_url_google = picture
             if not user.avatar_url and picture:
@@ -684,9 +738,7 @@ def google_callback():
             params = urlencode({"mode": "google", "gpt": gpt})
             return flask_redirect(f"/Login_Register_Page/Signup/roles.html?{params}")
 
-    # Final security checks
-    if not getattr(user, "is_active", True):
-        return _redirect_error("This account has been deactivated.")
+    # Final security checks — suspended blocks; deactivated already handled above
     if getattr(user, "is_suspended", False):
         return _redirect_error("This account is suspended.")
 

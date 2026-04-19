@@ -393,7 +393,20 @@
 
         const t = state.activeThread;
         const ini = t.initials || initials(t.other_name || "");
-        if (el("rmChatAv")) el("rmChatAv").textContent = ini;
+        const chatAv = el("rmChatAv");
+        if (chatAv) {
+            if (t.other_avatar) {
+                chatAv.textContent = "";
+                chatAv.style.cssText = "overflow:hidden;padding:0;";
+                let img = chatAv.querySelector("img");
+                if (!img) { img = document.createElement("img"); img.alt = ini; chatAv.appendChild(img); }
+                img.src = t.other_avatar;
+                img.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;";
+            } else {
+                chatAv.innerHTML = "";
+                chatAv.textContent = ini;
+            }
+        }
         if (el("rmChatName")) el("rmChatName").textContent = t.other_name || "Property Owner";
         if (el("rmChatSub")) el("rmChatSub").textContent = t.other_email || "Property Owner";
         if (el("rmListingChipTitle")) el("rmListingChipTitle").textContent = t.listing_title || "—";

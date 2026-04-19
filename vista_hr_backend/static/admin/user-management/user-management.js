@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         content: document.getElementById("viewContent"),
         analytics: document.getElementById("viewAnalytics"),
         tickets: document.getElementById("viewTickets"),
+        feedback: document.getElementById("viewFeedback"),
     };
 
     const pageTitles = {
@@ -90,6 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         users: ["Users", "Manage accounts, roles, and verifications"],
         content: ["Content", "Listings management and Amenities CMS"],
         tickets: ["Tickets", "Manage support tickets and concerns"],
+        feedback: ["Feedback", "User feedback and ratings"],
     };
 
     let currentView = "overview";
@@ -118,6 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (name === "users") { loadUsers(); initUserSubTabs(); }
         if (name === "content") { initContentSubTabs(); }
         if (name === "tickets") { tkLoad(); }
+        if (name === "feedback") { fbLoad(); }
     }
 
     document.querySelectorAll(".sidenav-item").forEach(a => {
@@ -195,10 +198,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function loadOverview() {
         try {
-            const [userData, kycData, studentData] = await Promise.all([
+            const [userData, kycData, studentData, listingsData, bookingsData, feedbackData] = await Promise.all([
                 apiFetch("/users"),
                 apiFetch("/admin/kyc?status=PENDING"),
                 apiFetch("/admin/student?status=PENDING"),
+                apiFetch("/listings").catch(() => ({ listings: [] })),
+                apiFetch("/bookings").catch(() => ({ bookings: [] })),
+                apiFetch("/feedback?limit=50").catch(() => ({ feedback: [] })),
             ]);
 
             cachedUsers = (userData.users || []).map(u => ({
@@ -220,26 +226,60 @@ document.addEventListener("DOMContentLoaded", async () => {
             const kycItems = kycData.kyc_applications || [];
             const stuItems = studentData.student_applications || [];
 
+            // New metrics
+            const listings = listingsData.listings || [];
+            const activeListings = listings.filter(l => {
+                const s = (l.status || "").toUpperCase();
+                return s === "PUBLISHED" || s === "ACTIVE";
+            }).length;
+
+            const bookings = bookingsData.bookings || [];
+            const activeBookings = bookings.filter(b =>
+                ["APPROVED", "VIEWING_SCHEDULED", "ACTIVE"].includes(b.status)
+            ).length;
+
+            const feedback = feedbackData.feedback || [];
+            const rated = feedback.filter(f => f.rating);
+            const avgFeedback = rated.length
+                ? (rated.reduce((s, f) => s + f.rating, 0) / rated.length).toFixed(1)
+                : "—";
+
             // Stats
             document.getElementById("ovTotalUsers").textContent = total;
-            document.getElementById("ovPendingKyc").textContent = kycItems.length;
-            document.getElementById("ovPendingStudent").textContent = stuItems.length;
-            document.getElementById("ovSuspended").textContent = suspended;
+            const elActiveListings = document.getElementById("ovActiveListings");
+            const elAvgFeedback = document.getElementById("ovAvgFeedback");
+            const elAvgFeedbackSub = document.getElementById("ovAvgFeedbackSub");
+            const elActiveBookings = document.getElementById("ovActiveBookings");
+            if (elActiveListings) elActiveListings.textContent = activeListings;
+            if (elAvgFeedback) elAvgFeedback.textContent = avgFeedback === "—" ? "—" : `${avgFeedback} ★`;
+            if (elAvgFeedbackSub) elAvgFeedbackSub.textContent = `Based on ${rated.length} ${rated.length === 1 ? "review" : "reviews"}`;
+            if (elActiveBookings) elActiveBookings.textContent = activeBookings;
 
-            // Highlight alert cards if counts > 0
-            document.getElementById("kycStatCard").classList.toggle("has-alert", kycItems.length > 0);
-            document.getElementById("studentStatCard").classList.toggle("has-alert", stuItems.length > 0);
+            // Active users now (last_login_at within 15 min)
+            const now = Date.now();
+            const FIFTEEN_MIN = 15 * 60 * 1000;
+            const activeNowUsers = (userData.users || []).filter(u => {
+                if (!u.last_login_at) return false;
+                const t = new Date(u.last_login_at).getTime();
+                return !isNaN(t) && (now - t) <= FIFTEEN_MIN;
+            });
+            const activeCount = activeNowUsers.length;
+            const activeAdmins = activeNowUsers.filter(u => mapRoleFromBackend(u.role) === "Admin").length;
+            const activeOwners = activeNowUsers.filter(u => mapRoleFromBackend(u.role) === "Property Owner").length;
+            const activeResidents = activeNowUsers.filter(u => mapRoleFromBackend(u.role) === "Resident").length;
 
-            // Breakdown bars
-            document.getElementById("bkAdmins").textContent = admins;
-            document.getElementById("bkOwners").textContent = owners;
-            document.getElementById("bkResidents").textContent = residents;
-            const max = Math.max(total, 1);
-            setTimeout(() => {
-                document.getElementById("bkAdminsBar").style.width = Math.round(admins / max * 100) + "%";
-                document.getElementById("bkOwnersBar").style.width = Math.round(owners / max * 100) + "%";
-                document.getElementById("bkResidentsBar").style.width = Math.round(residents / max * 100) + "%";
-            }, 80);
+            const elActiveCount = document.getElementById("anActiveCount");
+            const elActiveAdmins = document.getElementById("anActiveAdmins");
+            const elActiveOwners = document.getElementById("anActiveOwners");
+            const elActiveResidents = document.getElementById("anActiveResidents");
+            const elActiveEmpty = document.getElementById("anActiveEmpty");
+            const elActiveDot = document.getElementById("anActiveDot");
+            if (elActiveCount) elActiveCount.textContent = activeCount;
+            if (elActiveAdmins) elActiveAdmins.textContent = activeAdmins;
+            if (elActiveOwners) elActiveOwners.textContent = activeOwners;
+            if (elActiveResidents) elActiveResidents.textContent = activeResidents;
+            if (elActiveEmpty) elActiveEmpty.hidden = activeCount > 0;
+            if (elActiveDot) elActiveDot.style.background = activeCount > 0 ? "#22c55e" : "#9ca3af";
 
             // KYC queue (show max 5)
             renderKycQueue(kycItems.slice(0, 5));
@@ -442,9 +482,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                     ${suspUntil ? `<span style="font-size:11px;color:var(--muted);margin-left:6px;">Until ${suspUntil}</span>` : ""}
                     
                      ${u.role !== 'Admin' ? `
-                    <span style="font-size:12px; color:${verifColor}; margin-left:12px; display:flex; align-items:center; gap:4px; font-weight:500;">
+                    <span class="verifHoverTrigger" data-uid="${u.id}" style="font-size:12px; color:${verifColor}; margin-left:12px; display:flex; align-items:center; gap:4px; font-weight:500; cursor:pointer; padding:2px 6px; border-radius:6px; transition:background 150ms;">
                         <i data-lucide="shield-check" style="width:14px; height:14px;"></i>
                         ${verifiedCount}/2 Verified
+                        <i data-lucide="info" style="width:11px; height:11px; opacity:0.5;"></i>
                     </span>
 
                     <div class="strike-row" style="margin-left:auto">
@@ -476,10 +517,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                    </button>`
                         : ""
                     }
-            <button class="um-btn um-btn--danger" data-action="delete" data-id="${u.id}">
-                <i data-lucide="trash-2"></i>
-            </button>
-        `
+            `
                 }
 </div>
             </div>`;
@@ -510,6 +548,173 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById("uPagPrev")?.addEventListener("click", () => { if (currentUserPage > 1) { currentUserPage--; renderUsers(); } });
             document.getElementById("uPagNext")?.addEventListener("click", () => { if (currentUserPage < totalPages) { currentUserPage++; renderUsers(); } });
         }
+
+        // Attach hover popover to each N/2 Verified badge after render
+        attachVerifHover();
+    }
+
+    // ── Verification history popover ───────────────────────────
+    let _verifPopover = null;
+    let _verifHideTimer = null;
+
+    function ensureVerifPopover() {
+        if (_verifPopover) return _verifPopover;
+        _verifPopover = document.createElement("div");
+        _verifPopover.id = "verifHoverPopover";
+        _verifPopover.style.cssText = "position:fixed;z-index:9998;min-width:280px;max-width:340px;background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:14px;font-size:12px;opacity:0;pointer-events:none;transition:opacity 150ms;transform:translateY(4px);";
+        _verifPopover.addEventListener("mouseenter", () => { clearTimeout(_verifHideTimer); });
+        _verifPopover.addEventListener("mouseleave", () => { hideVerifPopover(); });
+        document.body.appendChild(_verifPopover);
+        return _verifPopover;
+    }
+
+    function fmtDate(iso) {
+        if (!iso) return "—";
+        try {
+            return new Date(iso).toLocaleDateString("en-PH", {
+                month: "short", day: "numeric", year: "numeric"
+            });
+        } catch { return "—"; }
+    }
+
+    function verifStatusPill(status) {
+        const map = {
+            APPROVED: "background:#dcfce7;color:#15803d;",
+            PENDING: "background:#fef3c7;color:#92400e;",
+            REJECTED: "background:#fee2e2;color:#991b1b;",
+            NONE: "background:#f3f4f6;color:#6b7280;",
+        };
+        const style = map[status] || map.NONE;
+        return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;${style}">${escHtml(status)}</span>`;
+    }
+
+    function renderDocThumbs(docs) {
+        // docs: [{label, url}]
+        const valid = docs.filter(d => d.url);
+        if (!valid.length) {
+            return `<div style="font-size:11px;color:#9ca3af;font-style:italic;">No documents uploaded</div>`;
+        }
+        return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">` +
+            valid.map(d => `
+                <a href="${escHtml(d.url)}" target="_blank" rel="noopener"
+                    style="display:block;width:54px;height:54px;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,0.08);position:relative;background:#f3f4f6;cursor:pointer;"
+                    title="${escHtml(d.label)} — click to open">
+                    <img src="${escHtml(d.url)}" alt="${escHtml(d.label)}"
+                        style="width:100%;height:100%;object-fit:cover;">
+                    <span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;font-weight:600;padding:1px 4px;text-align:center;">${escHtml(d.label)}</span>
+                </a>`).join("") +
+            `</div>`;
+    }
+
+    function showVerifPopover(triggerEl, u) {
+        const pop = ensureVerifPopover();
+        clearTimeout(_verifHideTimer);
+
+        const kycDocs = [
+            { label: "ID Front", url: u.kyc_id_front_url },
+            { label: "ID Back", url: u.kyc_id_back_url },
+            { label: "Selfie", url: u.kyc_selfie_url },
+        ];
+        const studentDocs = [
+            { label: "Student ID", url: u.student_id_url },
+            { label: "COR", url: u.student_cor_url },
+        ];
+
+        const emailRow = `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f3f4f6;">
+                <span style="font-weight:600;color:#374151;">Email</span>
+                ${u.email_verified
+                ? `<span style="color:#15803d;display:flex;align-items:center;gap:4px;font-weight:600;"><i data-lucide="mail-check" style="width:12px;height:12px;"></i>Verified</span>`
+                : `<span style="color:#9ca3af;">Not verified</span>`}
+            </div>`;
+
+        const kycSection = `
+            <div style="padding:8px 0;border-bottom:1px solid #f3f4f6;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:600;color:#374151;">Identity (KYC)</span>
+                    ${verifStatusPill(u.kyc_status)}
+                </div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:2px;">
+                    Submitted: ${fmtDate(u.kyc_submitted_at)}
+                </div>
+                ${renderDocThumbs(kycDocs)}
+            </div>`;
+
+        const studentSection = u.role === "Resident" ? `
+            <div style="padding:8px 0 0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:600;color:#374151;">Student</span>
+                    ${verifStatusPill(u.student_status)}
+                </div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:2px;">
+                    Submitted: ${fmtDate(u.student_submitted_at)}
+                </div>
+                ${renderDocThumbs(studentDocs)}
+            </div>` : "";
+
+        pop.innerHTML = `
+            <div style="font-weight:700;font-size:13px;color:#111;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">
+                Verification history
+            </div>
+            ${emailRow}
+            ${kycSection}
+            ${studentSection}
+        `;
+
+        // Position popover: above trigger if there's room, else below
+        const rect = triggerEl.getBoundingClientRect();
+        pop.style.opacity = "0";
+        pop.style.pointerEvents = "auto";
+        pop.style.display = "block";
+
+        // Temporarily show to measure
+        requestAnimationFrame(() => {
+            const popRect = pop.getBoundingClientRect();
+            const gap = 8;
+            let top = rect.top - popRect.height - gap;
+            let left = rect.left + (rect.width / 2) - (popRect.width / 2);
+
+            // Flip below if no room above
+            if (top < 10) top = rect.bottom + gap;
+            // Clamp horizontally
+            if (left < 10) left = 10;
+            if (left + popRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - popRect.width - 10;
+            }
+
+            pop.style.top = top + "px";
+            pop.style.left = left + "px";
+            pop.style.opacity = "1";
+            pop.style.transform = "translateY(0)";
+
+            if (window.lucide?.createIcons) lucide.createIcons();
+        });
+    }
+
+    function hideVerifPopover() {
+        clearTimeout(_verifHideTimer);
+        _verifHideTimer = setTimeout(() => {
+            if (_verifPopover) {
+                _verifPopover.style.opacity = "0";
+                _verifPopover.style.pointerEvents = "none";
+            }
+        }, 200);
+    }
+
+    function attachVerifHover() {
+        document.querySelectorAll(".verifHoverTrigger").forEach(el => {
+            el.addEventListener("mouseenter", () => {
+                const uid = Number(el.dataset.uid);
+                const u = users.find(x => x.id === uid);
+                if (!u) return;
+                el.style.background = "rgba(3,3,3,0.04)";
+                showVerifPopover(el, u);
+            });
+            el.addEventListener("mouseleave", () => {
+                el.style.background = "transparent";
+                hideVerifPopover();
+            });
+        });
     }
 
     async function loadUsers() {
@@ -527,6 +732,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                 suspension_reason: u.suspension_reason || "",
                 strike_count: u.strike_count || 0,
                 kyc_status: u.kyc_status || "NONE",
+                kyc_submitted_at: u.kyc_submitted_at || null,
+                kyc_id_front_url: u.kyc_id_front_url || null,
+                kyc_id_back_url: u.kyc_id_back_url || null,
+                kyc_selfie_url: u.kyc_selfie_url || null,
+                student_status: u.student_status || "NONE",
+                student_verified: !!u.student_verified,
+                student_submitted_at: u.student_submitted_at || null,
+                student_id_url: u.student_id_url || null,
+                student_cor_url: u.student_cor_url || null,
                 email_verified: !!u.email_verified,
                 created_at: u.created_at,
                 avatar_url: u.avatar_url || null,
@@ -582,15 +796,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        if (action === "delete") {
-            openApproveModal(`Delete ${user.name}? This cannot be undone.`, async () => {
-                try {
-                    await apiFetch(`/users/${id}`, { method: "DELETE" });
-                    addActivity("deleted", user);
-                    await loadUsers();
-                } catch (err) { showError(err.message); }
-            });
-        }
+        // "delete" action removed — admins cannot delete accounts. Use suspend instead.
     });
 
     // ── Modal ────────────────────────────────────────────────
@@ -600,6 +806,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             editingId = user.id;
             modalTitle.textContent = "Edit user";
             nameInput.value = user.name;
+            nameInput.readOnly = true;
+            nameInput.style.opacity = "0.6";
+            nameInput.style.cursor = "not-allowed";
+            nameInput.title = "Name cannot be changed by admin";
             emailInput.value = user.email;
             emailInput.readOnly = true;
             emailInput.style.opacity = "0.6";
@@ -630,8 +840,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             roleInput.style.pointerEvents = "";
             const roleDisplay = document.getElementById("roleReadOnly");
             if (roleDisplay) roleDisplay.hidden = true;
-            modalTitle.textContent = "Add user";
+            modalTitle.textContent = "Add admin";
             nameInput.value = "";
+            nameInput.readOnly = false;
+            nameInput.style.opacity = "";
+            nameInput.style.cursor = "";
+            nameInput.title = "";
             emailInput.value = "";
             emailInput.readOnly = false;
             emailInput.style.opacity = "";
@@ -640,7 +854,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Show password field on add
             const pwField = passwordInput.closest(".form-field, .field, div") || passwordInput.parentElement;
             if (pwField) pwField.hidden = false;
-            roleInput.value = "Resident";
+            roleInput.value = "Admin";
             statusInput.value = "Verified";
             if (passwordHint) passwordHint.textContent = "required";
         }
@@ -1768,6 +1982,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ── Init ─────────────────────────────────────────────────
     await loadOverview();
+    // Refresh "active now" count every 60s while overview is visible
+    setInterval(() => {
+        const ov = document.getElementById("viewOverview");
+        if (ov && !ov.hidden) loadOverview();
+    }, 60000);
     if (window.lucide?.createIcons) lucide.createIcons();
 
     // ══ AMENITIES CMS ═════════════════════════════════════════
@@ -2280,4 +2499,318 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (location.hash === "#tickets") tkLoad();
 
 
+
+    // ── Feedback panel ────────────────────────────────────────
+    let _fbAll = [];
+
+    async function fbLoad() {
+        const listEl = document.getElementById("fbList");
+        if (listEl) listEl.innerHTML = `<div class="queue-empty">Loading…</div>`;
+        try {
+            const data = await apiFetch("/feedback?limit=50");
+            _fbAll = data.feedback || [];
+        } catch { _fbAll = []; }
+        fbRender(_fbAll);
+    }
+
+    // Normalize backend role values ("RESIDENT"/"OWNER"/"resident") → display strings
+    function fbNormalizeRole(r) {
+        const v = (r || "").toLowerCase();
+        if (v.includes("owner")) return "Property Owner";
+        if (v.includes("resident")) return "Resident";
+        return r || "Unknown";
+    }
+
+    const FB_PAGE_SIZE = 5;
+    let _fbPage = 1;
+    let _fbFiltered = [];
+
+    function fbRender(items) {
+        // Normalize role on every item so filters + charts stay consistent
+        items = items.map(f => ({ ...f, role: fbNormalizeRole(f.role) }));
+
+        // Stats
+        const total = items.length;
+        const rated = items.filter(f => f.rating);
+        const avg = rated.length ? (rated.reduce((s, f) => s + f.rating, 0) / rated.length).toFixed(1) : "—";
+        const residents = items.filter(f => f.role === "Resident").length;
+        const owners = items.filter(f => f.role === "Property Owner").length;
+
+        setText("fbStatAvg", avg === "—" ? "—" : `${avg} ★`);
+        setText("fbStatTotal", total);
+        setText("fbStatResidents", residents);
+        setText("fbStatOwners", owners);
+
+        // Rating bars (1–5) — with hover tooltip
+        const barsEl = document.getElementById("fbRatingBars");
+        if (barsEl) {
+            const counts = [5, 4, 3, 2, 1].map(star => ({
+                star,
+                count: items.filter(f => f.rating === star).length,
+            }));
+            const max = Math.max(...counts.map(c => c.count), 1);
+            barsEl.innerHTML = counts.map(({ star, count }) => {
+                const pct = total ? Math.round(count / total * 100) : 0;
+                const tip = `${count} ${count === 1 ? "review" : "reviews"} · ${pct}% of total`;
+                return `
+                <div class="fb-bar-row" data-tip="${escHtml(tip)}" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;position:relative;cursor:pointer;padding:4px 0;border-radius:6px;transition:background 150ms;">
+                    <span style="font-size:12px;font-weight:700;width:16px;text-align:right;color:#6b7280;">${star}</span>
+                    <i data-lucide="star" style="width:12px;height:12px;color:#f59e0b;flex-shrink:0;"></i>
+                    <div style="flex:1;height:10px;background:#f3f4f6;border-radius:999px;overflow:hidden;">
+                        <div style="height:100%;width:${Math.round(count / max * 100)}%;background:#f59e0b;border-radius:999px;transition:width 600ms ease;"></div>
+                    </div>
+                    <span style="font-size:12px;font-weight:700;color:#374151;width:20px;">${count}</span>
+                </div>`;
+            }).join("");
+            if (window.lucide?.createIcons) lucide.createIcons();
+        }
+
+        // Role chart — with hover tooltip
+        const roleEl = document.getElementById("fbRoleChart");
+        if (roleEl) {
+            const roleCounts = {};
+            items.forEach(f => {
+                const r = f.role || "Unknown";
+                roleCounts[r] = (roleCounts[r] || 0) + 1;
+            });
+            const maxR = Math.max(...Object.values(roleCounts), 1);
+            const colors = { "Resident": "#3b82f6", "Property Owner": "#f59e0b", "Unknown": "#9ca3af" };
+            roleEl.innerHTML = Object.entries(roleCounts).map(([role, count]) => {
+                const pct = total ? Math.round(count / total * 100) : 0;
+                const avgRole = (() => {
+                    const rrated = items.filter(f => f.role === role && f.rating);
+                    return rrated.length ? (rrated.reduce((s, f) => s + f.rating, 0) / rrated.length).toFixed(1) : "—";
+                })();
+                const tip = `${count} ${count === 1 ? "review" : "reviews"} · ${pct}% · avg ${avgRole}★`;
+                return `
+                <div class="fb-bar-row" data-tip="${escHtml(tip)}" style="position:relative;cursor:pointer;padding:4px 0;border-radius:6px;transition:background 150ms;">
+                    <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;">
+                        <span>${escHtml(role)}</span>
+                        <span style="color:#6b7280;">${count}</span>
+                    </div>
+                    <div style="height:10px;background:#f3f4f6;border-radius:999px;overflow:hidden;">
+                        <div style="height:100%;width:${Math.round(count / maxR * 100)}%;background:${colors[role] || "#9ca3af"};border-radius:999px;transition:width 600ms ease;"></div>
+                    </div>
+                </div>`;
+            }).join("");
+        }
+
+        // Cache filtered set + reset pagination
+        _fbFiltered = items;
+        _fbPage = 1;
+        fbRenderPage();
+
+        // Attach hover tooltip (delegated, once)
+        fbAttachChartTooltip();
+    }
+
+    function fbRenderPage() {
+        const listEl = document.getElementById("fbList");
+        const pagerEl = document.getElementById("fbPager");
+        if (!listEl) return;
+
+        if (!_fbFiltered.length) {
+            listEl.innerHTML = `<div class="queue-empty">No feedback yet.</div>`;
+            if (pagerEl) pagerEl.innerHTML = "";
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(_fbFiltered.length / FB_PAGE_SIZE));
+        if (_fbPage > totalPages) _fbPage = totalPages;
+        const start = (_fbPage - 1) * FB_PAGE_SIZE;
+        const pageItems = _fbFiltered.slice(start, start + FB_PAGE_SIZE);
+
+        // Grid cards (3 columns on wide, auto-fit on narrow)
+        listEl.style.display = "grid";
+        listEl.style.gridTemplateColumns = "repeat(auto-fill, minmax(280px, 1fr))";
+        listEl.style.gap = "14px";
+
+        listEl.innerHTML = pageItems.map(f => {
+            const stars = f.rating
+                ? Array.from({ length: 5 }, (_, i) =>
+                    `<i data-lucide="star" style="width:13px;height:13px;color:${i < f.rating ? "#f59e0b" : "#e5e7eb"};fill:${i < f.rating ? "#f59e0b" : "none"};"></i>`
+                ).join("")
+                : "";
+            const date = f.created_at
+                ? new Date(f.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+                : "—";
+            const ini = ((f.name || "?")[0]).toUpperCase();
+            const avHtml = f.avatar_url
+                ? `<img src="${escHtml(f.avatar_url)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+                : `<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1B3F6E,#C8872A);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${escHtml(ini)}</div>`;
+            const roleBadgeColor = (f.role || "").toLowerCase().includes("owner")
+                ? "background:#fef3c7;color:#92400e;"
+                : "background:#dbeafe;color:#1e40af;";
+            return `
+            <div style="position:relative;display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid rgba(0,0,0,0.07);border-radius:14px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.04);min-height:180px;">
+                <button type="button" data-fb-delete="${f.id}" title="Delete feedback"
+                    style="position:absolute;top:10px;right:10px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:#9ca3af;border-radius:6px;cursor:pointer;transition:all 150ms;"
+                    onmouseover="this.style.background='#fee2e2';this.style.color='#dc2626';"
+                    onmouseout="this.style.background='transparent';this.style.color='#9ca3af';">
+                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                </button>
+                <div style="display:flex;align-items:center;gap:12px;padding-right:32px;">
+                    ${avHtml}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(f.name || "Anonymous")}</div>
+                        ${f.role ? `<div><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;${roleBadgeColor}">${escHtml(f.role)}</span></div>` : ""}
+                    </div>
+                    <span style="display:flex;gap:2px;align-items:center;flex-shrink:0;">${stars}</span>
+                </div>
+                <p style="font-size:13px;color:#374151;line-height:1.55;margin:0;flex:1;font-style:italic;">"${escHtml(f.message)}"</p>
+                <div style="font-size:11px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:8px;">${date}</div>
+            </div>`;
+        }).join("");
+
+        // Pagination controls
+        if (pagerEl) {
+            if (totalPages <= 1) {
+                pagerEl.innerHTML = "";
+            } else {
+                const btn = (label, page, disabled, active) => `
+                    <button type="button" data-fb-page="${page}" ${disabled ? "disabled" : ""}
+                        style="min-width:36px;height:36px;padding:0 10px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:${active ? "#1B3F6E" : "#fff"};color:${active ? "#fff" : "#374151"};font-size:13px;font-weight:600;cursor:${disabled ? "not-allowed" : "pointer"};opacity:${disabled ? "0.4" : "1"};transition:all 150ms;">${label}</button>`;
+                const pages = [];
+                for (let i = 1; i <= totalPages; i++) pages.push(btn(String(i), i, false, i === _fbPage));
+                pagerEl.innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                        <span style="font-size:12px;color:#6b7280;">
+                            Showing ${start + 1}–${Math.min(start + FB_PAGE_SIZE, _fbFiltered.length)} of ${_fbFiltered.length}
+                        </span>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            ${btn("‹", _fbPage - 1, _fbPage === 1, false)}
+                            ${pages.join("")}
+                            ${btn("›", _fbPage + 1, _fbPage === totalPages, false)}
+                        </div>
+                    </div>`;
+            }
+        }
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    // Pager click delegation (bound once)
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-fb-page]");
+        if (!btn || btn.disabled) return;
+        const p = parseInt(btn.dataset.fbPage);
+        if (!isNaN(p)) { _fbPage = p; fbRenderPage(); }
+    });
+
+    // Delete feedback delegation
+    document.addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-fb-delete]");
+        if (!btn) return;
+        const id = btn.dataset.fbDelete;
+        const target = _fbAll.find(f => String(f.id) === String(id));
+        if (!target) return;
+        fbShowDeleteModal(target);
+    });
+
+    function fbShowDeleteModal(item) {
+        let overlay = document.getElementById("fbDeleteOverlay");
+        if (!overlay) {
+            overlay = document.createElement("div");
+            overlay.id = "fbDeleteOverlay";
+            overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;";
+            overlay.innerHTML = `
+                <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:440px;box-shadow:0 24px 80px rgba(0,0,0,0.22);">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                        <i data-lucide="alert-triangle" style="color:#dc2626;width:22px;height:22px;"></i>
+                        <h3 style="margin:0;font-size:17px;font-weight:700;">Delete this feedback?</h3>
+                    </div>
+                    <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 14px;">
+                        This will permanently remove the feedback from the database and the public landing page. This action cannot be undone.
+                    </p>
+                    <div id="fbDeletePreview" style="padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:12px;color:#374151;line-height:1.5;margin-bottom:16px;max-height:120px;overflow:auto;"></div>
+                    <p id="fbDeleteErr" style="color:#dc2626;font-size:12px;margin:0 0 10px;display:none;"></p>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button type="button" id="fbDeleteCancel" style="padding:10px 18px;border:1px solid rgba(0,0,0,0.1);background:#fff;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Cancel</button>
+                        <button type="button" id="fbDeleteConfirm" style="padding:10px 18px;border:none;background:#dc2626;color:#fff;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">
+                            <span class="btnLabel">Delete</span>
+                            <span class="btnSpinner" hidden>…</span>
+                        </button>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+            overlay.addEventListener("click", (e) => {
+                if (e.target === overlay) overlay.remove();
+            });
+        }
+
+        const preview = overlay.querySelector("#fbDeletePreview");
+        preview.innerHTML = `<strong>${escHtml(item.name || "Anonymous")}</strong>${item.role ? ` · ${escHtml(item.role)}` : ""}${item.rating ? ` · ${item.rating}★` : ""}<br>"${escHtml(item.message)}"`;
+
+        const errEl = overlay.querySelector("#fbDeleteErr");
+        errEl.style.display = "none";
+        errEl.textContent = "";
+
+        overlay.querySelector("#fbDeleteCancel").onclick = () => overlay.remove();
+
+        const confirmBtn = overlay.querySelector("#fbDeleteConfirm");
+        const label = confirmBtn.querySelector(".btnLabel");
+        const spinner = confirmBtn.querySelector(".btnSpinner");
+        confirmBtn.disabled = false;
+        if (label) label.hidden = false;
+        if (spinner) spinner.hidden = true;
+
+        confirmBtn.onclick = async () => {
+            confirmBtn.disabled = true;
+            if (label) label.hidden = true;
+            if (spinner) spinner.hidden = false;
+            errEl.style.display = "none";
+            try {
+                await apiFetch(`/feedback/${item.id}`, { method: "DELETE" });
+                _fbAll = _fbAll.filter(f => String(f.id) !== String(item.id));
+                overlay.remove();
+                fbApplyFilters();
+            } catch (err) {
+                errEl.textContent = err.message || "Failed to delete feedback.";
+                errEl.style.display = "block";
+                confirmBtn.disabled = false;
+                if (label) label.hidden = false;
+                if (spinner) spinner.hidden = true;
+            }
+        };
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    // Chart hover tooltip — single floating bubble, delegated
+    let _fbTooltipEl = null;
+    function fbAttachChartTooltip() {
+        if (!_fbTooltipEl) {
+            _fbTooltipEl = document.createElement("div");
+            _fbTooltipEl.style.cssText = "position:fixed;z-index:9999;padding:6px 10px;background:#1f2937;color:#fff;font-size:11px;font-weight:600;border-radius:6px;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.15);opacity:0;transform:translate(-50%,-100%) translateY(-8px);transition:opacity 120ms;";
+            document.body.appendChild(_fbTooltipEl);
+        }
+        document.querySelectorAll(".fb-bar-row").forEach(row => {
+            row.onmouseenter = (e) => {
+                _fbTooltipEl.textContent = row.dataset.tip || "";
+                _fbTooltipEl.style.opacity = "1";
+                row.style.background = "rgba(245,158,11,0.06)";
+            };
+            row.onmousemove = (e) => {
+                _fbTooltipEl.style.left = e.clientX + "px";
+                _fbTooltipEl.style.top = e.clientY + "px";
+            };
+            row.onmouseleave = () => {
+                _fbTooltipEl.style.opacity = "0";
+                row.style.background = "transparent";
+            };
+        });
+    }
+
+    // Filters
+    document.getElementById("fbFilterRole")?.addEventListener("change", fbApplyFilters);
+    document.getElementById("fbFilterStar")?.addEventListener("change", fbApplyFilters);
+
+    function fbApplyFilters() {
+        const role = document.getElementById("fbFilterRole")?.value || "";
+        const star = parseInt(document.getElementById("fbFilterStar")?.value) || 0;
+        let filtered = _fbAll;
+        if (role) filtered = filtered.filter(f => fbNormalizeRole(f.role) === role);
+        if (star) filtered = filtered.filter(f => f.rating === star);
+        fbRender(filtered);
+    }
 });

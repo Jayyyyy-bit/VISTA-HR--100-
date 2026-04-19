@@ -1556,3 +1556,28 @@ body {
     display: block;
     animation: panelIn 180ms ease;
 }
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.modalOverlay[hidden] {
+    display: none;
+}
+
+.modalCard {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+}

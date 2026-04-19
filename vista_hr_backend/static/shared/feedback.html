@@ -235,7 +235,14 @@
 
             <div class="field">
                 <label>Your name *</label>
-                <input type="text" id="fbName" placeholder="Juan dela Cruz" autocomplete="name">
+                <input type="text" id="fbName" placeholder="Juan dela Cruz" autocomplete="name" readonly
+                    style="background:#f9fafb;color:#374151;cursor:not-allowed;">
+                <small
+                    style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;text-transform:none;letter-spacing:0;font-weight:400;">
+                    <i data-lucide="lock"
+                        style="width:10px;height:10px;display:inline-block;vertical-align:middle;"></i>
+                    Pulled from your account.
+                </small>
             </div>
             <div class="field">
                 <label>I am a…</label>
@@ -326,6 +333,25 @@
                 });
             });
 
+            // Profanity list — English + Tagalog common slurs/curses
+            const PROFANITY = [
+                // English
+                "fuck", "shit", "bitch", "asshole", "cunt", "dick", "pussy", "bastard", "motherfucker", "fucker", "fuckin",
+                "nigger", "nigga", "faggot", "retard", "whore", "slut", "cock", "piss", "damn",
+                // Tagalog / Filipino
+                "putang", "putangina", "tangina", "tanga", "gago", "gaga", "bobo", "bwisit", "ulol", "tarantado",
+                "pakshet", "pakyu", "lintik", "hinayupak", "leche", "siraulo", "engot", "inutil", "hayop ka", "puke", "pepe", "titi",
+                "kantot", "jakol", "tamod", "burat"
+            ];
+
+            function containsProfanity(text) {
+                const lower = text.toLowerCase().replace(/[^a-z\s]/g, " ");
+                return PROFANITY.some(bad => {
+                    const re = new RegExp(`\\b${bad}\\b`, "i");
+                    return re.test(lower);
+                });
+            }
+
             // Submit
             document.getElementById("fbSubmit")?.addEventListener("click", async () => {
                 const name = document.getElementById("fbName")?.value.trim();
@@ -337,6 +363,11 @@
                 errEl.hidden = true;
                 if (!name) { errEl.textContent = "Name is required."; errEl.hidden = false; return; }
                 if (!message) { errEl.textContent = "Message is required."; errEl.hidden = false; return; }
+                if (containsProfanity(message)) {
+                    errEl.textContent = "Please keep your feedback respectful. Profanity is not allowed.";
+                    errEl.hidden = false;
+                    return;
+                }
 
                 btn.disabled = true;
                 btn.innerHTML = `Sending… <i data-lucide="loader-2"></i>`;

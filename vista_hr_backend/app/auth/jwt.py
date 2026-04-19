@@ -38,6 +38,7 @@ from ..models import User
 from ..utils.errors import json_error
 
 
+
 COOKIE_NAME = "access_token"
 
 
@@ -223,3 +224,4 @@ def require_role(*roles):
             return fn(*args, **kwargs)
         return wrapper
     return decorator
+

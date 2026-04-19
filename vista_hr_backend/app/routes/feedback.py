@@ -1,19 +1,42 @@
 """
 app/routes/feedback.py
 ----------------------
-POST /feedback        — public, submit feedback
-GET  /feedback        — public, fetch approved feedback for landing page
+POST   /feedback       — auth (RESIDENT/OWNER), submit feedback
+GET    /feedback       — public, fetch feedback for landing page
+DELETE /feedback/<id>  — auth (ADMIN), remove feedback
 """
+
 from __future__ import annotations
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import SQLAlchemyError
+
+import re
 
 from ..extensions import db
 from ..utils.errors import json_error
 from ..auth.jwt import require_role
 
 feedback_bp = Blueprint("feedback", __name__)
+
+# Server-side profanity filter — mirrors frontend list
+_PROFANITY = {
+    # English
+    "fuck", "shit", "bitch", "asshole", "cunt", "dick", "pussy", "bastard",
+    "motherfucker", "fucker", "fuckin", "nigger", "nigga", "faggot", "retard",
+    "whore", "slut", "cock", "piss", "damn",
+    # Tagalog / Filipino
+    "putang", "putangina", "tangina", "tanga", "gago", "gaga", "bobo", "bwisit",
+    "ulol", "tarantado", "pakshet", "pakyu", "lintik", "hinayupak", "leche",
+    "siraulo", "engot", "inutil", "puke", "pepe", "titi", "kantot", "jakol",
+    "tamod", "burat" , "tite", "pepe", "G@g0", "tanga", "bugok", "bulok" "niga", "inanyo", "kingina", "kinginanyo", "haulol", "kagaguhan", 
+    "Tanginanyo", "tanginanyo"
+}
+
+def _contains_profanity(text: str) -> bool:
+    lowered = re.sub(r"[^a-z\s]", " ", (text or "").lower())
+    tokens = set(lowered.split())
+    return bool(tokens & _PROFANITY)
 
 
 class Feedback(db.Model):
@@ -58,6 +81,8 @@ def submit_feedback():
         return json_error("Name is required.", 400)
     if not message:
         return json_error("Message is required.", 400)
+    if _contains_profanity(message) or _contains_profanity(name):
+        return json_error("Please keep your feedback respectful. Profanity is not allowed.", 400)
     if rating is not None:
         try:
             rating = int(rating)
@@ -86,3 +111,18 @@ def get_feedback():
         .limit(limit).all()
     )
     return jsonify({"feedback": [f.to_dict() for f in items]}), 200
+
+
+@feedback_bp.delete("/feedback/<int:feedback_id>")
+@require_role("ADMIN")
+def delete_feedback(feedback_id):
+    fb = db.session.get(Feedback, feedback_id)
+    if not fb:
+        return json_error("Feedback not found.", 404)
+    try:
+        db.session.delete(fb)
+        db.session.commit()
+        return jsonify({"message": "Feedback deleted."}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return json_error("Database error.", 500)

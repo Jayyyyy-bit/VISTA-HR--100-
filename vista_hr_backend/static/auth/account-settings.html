@@ -421,10 +421,49 @@
 
                 <div class="settingsCard">
                     <div class="cardSectionLabel">Change password</div>
-                    <div class="cardSectionSub">You'll be logged in with your new password immediately after saving.
+                    <div class="cardSectionSub">For your security, we'll send a 6-digit code to your email before you
+                        can change your password. You'll be logged out of all devices after updating.
                     </div>
 
-                    <div class="fieldGroup">
+                    <!-- ══ OTP GATE ══ -->
+                    <div id="pwOtpGate">
+                        <div class="infoCallout infoCallout--blue" style="margin-bottom:14px;">
+                            <i data-lucide="shield-alert"></i>
+                            <div>Verify it's you. We'll email a 6-digit code to <strong id="pwOtpEmail">—</strong>.
+                            </div>
+                        </div>
+                        <p class="globalErr" id="pwOtpErr" hidden></p>
+                        <p class="saveMsg" id="pwOtpMsg" hidden></p>
+
+                        <div id="pwOtpSendStep">
+                            <button class="btnPrimary" id="pwOtpSendBtn" type="button">
+                                <span class="btnLabel">Send verification code</span>
+                                <span class="btnSpinner" hidden></span>
+                            </button>
+                        </div>
+
+                        <div id="pwOtpEnterStep" hidden style="margin-top:14px;">
+                            <label class="fieldLabel" for="pwOtpCodeInput"
+                                style="display:block;margin-bottom:8px;font-size:13px;font-weight:500;">
+                                Enter the 6-digit code sent to your email
+                            </label>
+                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <input id="pwOtpCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code"
+                                    maxlength="6" placeholder="000000"
+                                    style="width:140px;letter-spacing:0.2em;font-size:18px;font-weight:600;text-align:center;padding:10px 14px;border:1.5px solid rgba(3,3,3,0.15);border-radius:10px;outline:none;font-family:inherit;" />
+                                <button class="btnPrimary" id="pwOtpVerifyBtn" type="button" disabled>
+                                    <span class="btnLabel">Verify code</span>
+                                    <span class="btnSpinner" hidden></span>
+                                </button>
+                                <button class="btnGhost btnGhost--sm" id="pwOtpResendBtn" type="button">
+                                    <i data-lucide="refresh-cw"></i> Resend
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ══ PASSWORD FIELDS — locked until OTP verified ══ -->
+                    <div class="fieldGroup" id="pwFieldsGroup" hidden style="display:none;">
                         <div class="field">
                             <label class="fieldLabel" for="inputCurrentPw">Current password</label>
                             <div class="pwWrap">
@@ -466,28 +505,63 @@
                         </div>
                     </div>
 
-                    <div class="cardFoot">
+                    <div class="cardFoot" id="pwCardFoot" hidden style="display:none;">
                         <p class="saveMsg" id="pwSaveMsg" hidden></p>
                         <button class="btnPrimary" id="changePasswordBtn" type="button">
                             <span class="btnLabel">Update password</span>
                             <span class="btnSpinner" hidden></span>
                         </button>
                     </div>
+
+                    <!-- ══ Google-only user notice ══ -->
+                    <div id="pwGoogleNotice" hidden
+                        style="padding:18px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;margin-top:14px;">
+                        <div style="display:flex;gap:12px;align-items:flex-start;">
+                            <i data-lucide="shield-check"
+                                style="color:#0369a1;width:20px;height:20px;flex-shrink:0;margin-top:2px;"></i>
+                            <div>
+                                <div style="font-size:14px;font-weight:700;color:#0c4a6e;margin-bottom:6px;">Password
+                                    managed by Google</div>
+                                <div style="font-size:13px;color:#0369a1;line-height:1.6;">
+                                    You signed in with Google, so there's no local password for this account. To update
+                                    your password, visit your
+                                    <a href="https://myaccount.google.com/security" target="_blank" rel="noopener"
+                                        style="color:#0c4a6e;font-weight:600;text-decoration:underline;">Google Account
+                                        security settings</a>.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="settingsCard" style="max-width:580px;margin-top:0;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                        <div>
-                            <div class="cardSectionLabel" style="margin-bottom:0;">Sessions</div>
-                            <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Last login: <span
-                                    id="lastLoginAt">—</span></div>
-                        </div>
+                    <div
+                        style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+                        <div class="cardSectionLabel" style="margin-bottom:0;">Active Sessions</div>
                         <button class="btnDanger" id="logoutAllBtn" type="button">
                             <i data-lucide="log-out"></i> Logout from all devices
                         </button>
                     </div>
+                    <!-- Current session row -->
+                    <div
+                        style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--surface,#f9fafb);border:1px solid rgba(0,0,0,0.07);border-radius:10px;">
+                        <div
+                            style="width:36px;height:36px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="monitor" style="width:16px;height:16px;color:#0369a1;"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                                <span id="sessionDeviceName">This device</span>
+                                <span
+                                    style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;">Current</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--muted);margin-top:2px;">
+                                Last login: <span id="lastLoginAt">—</span>
+                            </div>
+                        </div>
+                    </div>
                     <p class="disclaimer" style="margin-top:10px;">
                         <i data-lucide="info"></i>
-                        This will immediately invalidate all active sessions including this one.
+                        Logging out from all devices will invalidate all sessions including this one.
                     </p>
                 </div>
             </section>
@@ -947,16 +1021,23 @@
     </div>
 
     <!-- ══ DEACTIVATE CONFIRMATION MODAL ══ -->
-    <div class="modalOverlay" id="deactivateOverlay" hidden>
-        <div class="modalCard">
+    <div class="modalOverlay" id="deactivateOverlay" hidden
+        style="position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;padding:16px;">
+        <div class="modalCard"
+            style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:460px;box-shadow:0 24px 80px rgba(0,0,0,0.22);">
             <div class="modalHeader">
                 <i data-lucide="alert-triangle" style="color:#dc2626;width:22px;height:22px;"></i>
                 <h3 class="modalTitle">Deactivate your account?</h3>
             </div>
             <p class="modalDesc">
                 This will hide your profile and archive all your listings. You'll be logged out immediately.
-                Your data will be preserved — contact support to reactivate later.
             </p>
+            <div
+                style="margin-top:10px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#15803d;display:flex;gap:8px;align-items:flex-start;">
+                <i data-lucide="refresh-ccw" style="width:14px;height:14px;flex-shrink:0;margin-top:1px;"></i>
+                <span><strong>Your account can be reactivated.</strong> Simply sign up again with the same email address
+                    and your data will be restored.</span>
+            </div>
             <div class="field" style="margin-top:14px;">
                 <label class="fieldLabel" for="deactivatePw">Enter your password to confirm</label>
                 <input class="fieldInput" id="deactivatePw" type="password" placeholder="Password" />
@@ -976,8 +1057,10 @@
     </div>
 
     <!-- ══ LOGOUT ALL CONFIRMATION MODAL ══ -->
-    <div class="modalOverlay" id="logoutAllOverlay" hidden>
-        <div class="modalCard">
+    <div class="modalOverlay" id="logoutAllOverlay" hidden
+        style="position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;padding:16px;">
+        <div class="modalCard"
+            style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:460px;box-shadow:0 24px 80px rgba(0,0,0,0.22);">
             <div class="modalHeader">
                 <i data-lucide="log-out" style="color:#dc2626;width:22px;height:22px;"></i>
                 <h3 class="modalTitle">Logout from all devices?</h3>

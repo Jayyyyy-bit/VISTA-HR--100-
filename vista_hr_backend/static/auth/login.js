@@ -3,6 +3,128 @@
     const LS_LAST_USER_ID_KEY = "vista_last_user_id";
     const API_BASE = "/api";
 
+    // ── Failed-login lockout ladder ─────────────────────────
+    // Stage 0: 0–4 wrong          → no lock
+    // Stage 1: 5th wrong           → lock 3 min   (window attempts 1–5)
+    // Stage 2: 10th wrong          → lock 15 min  (window attempts 6–10)
+    // Stage 3: 13th wrong          → lock 24 hr   (window attempts 11–13)
+    const LOCK_KEY = "vista_login_lockout_v1"; // { [email]: { wrong: N, lockedUntil: ms, stage: 0|1|2|3 } }
+    const LOCK_LADDER = [
+        { threshold: 5, duration: 3 * 60 * 1000, label: "3 minutes", stage: 1 },
+        { threshold: 10, duration: 15 * 60 * 1000, label: "15 minutes", stage: 2 },
+        { threshold: 13, duration: 24 * 60 * 60 * 1000, label: "24 hours", stage: 3 },
+    ];
+
+    function loadLockMap() {
+        try { return JSON.parse(localStorage.getItem(LOCK_KEY) || "{}"); }
+        catch { return {}; }
+    }
+    function saveLockMap(m) { localStorage.setItem(LOCK_KEY, JSON.stringify(m)); }
+
+    function getLockState(email) {
+        const map = loadLockMap();
+        return map[email] || { wrong: 0, lockedUntil: 0, stage: 0 };
+    }
+    function setLockState(email, state) {
+        const map = loadLockMap();
+        map[email] = state;
+        saveLockMap(map);
+    }
+    function clearLockState(email) {
+        const map = loadLockMap();
+        delete map[email];
+        saveLockMap(map);
+    }
+
+    function isLocked(email) {
+        const s = getLockState(email);
+        return s.lockedUntil && s.lockedUntil > Date.now();
+    }
+
+    function registerWrongAttempt(email) {
+        const s = getLockState(email);
+        s.wrong = (s.wrong || 0) + 1;
+
+        // Find the highest ladder step whose threshold we just crossed
+        let triggered = null;
+        for (const step of LOCK_LADDER) {
+            if (s.wrong === step.threshold) { triggered = step; break; }
+        }
+        if (triggered) {
+            s.lockedUntil = Date.now() + triggered.duration;
+            s.stage = triggered.stage;
+        }
+        setLockState(email, s);
+        return { state: s, triggered };
+    }
+
+    // ── Lockout modal ───────────────────────────────────────
+    let _lockTimer = null;
+
+    function openLockModal(email) {
+        const s = getLockState(email);
+        const overlay = document.getElementById("lockOverlay");
+        const modal = document.getElementById("lockModal");
+        const title = document.getElementById("lockTitle");
+        const sub = document.getElementById("lockSub");
+        const info = document.getElementById("lockStageInfo");
+        if (!overlay || !modal) return;
+
+        const stageCopy = {
+            1: { title: "Too many failed attempts", sub: "You've entered the wrong password 5 times. Take a short break.", info: "Next wrong attempts: 5 more will lock this account for 15 minutes." },
+            2: { title: "Account temporarily locked", sub: "You've entered the wrong password 10 times in a row.", info: "Next wrong attempts: 3 more will lock this account for 24 hours." },
+            3: { title: "Account locked for 24 hours", sub: "For your security, this account is locked due to repeated failed logins.", info: "If this wasn't you, reset your password now." },
+        }[s.stage] || { title: "Too many failed attempts", sub: "", info: "" };
+
+        title.textContent = stageCopy.title;
+        sub.textContent = stageCopy.sub;
+        info.textContent = stageCopy.info;
+
+        overlay.hidden = false;
+        modal.hidden = false;
+        if (window.lucide?.createIcons) lucide.createIcons();
+
+        // Start countdown
+        const cd = document.getElementById("lockCountdown");
+        function tick() {
+            const remaining = s.lockedUntil - Date.now();
+            if (remaining <= 0) {
+                cd.textContent = "0:00";
+                clearInterval(_lockTimer); _lockTimer = null;
+                closeLockModal();
+                // Reset wrong counter for this stage — user gets fresh attempts
+                const cur = getLockState(email);
+                cur.lockedUntil = 0;
+                setLockState(email, cur);
+                return;
+            }
+            const totalSec = Math.ceil(remaining / 1000);
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const sec = totalSec % 60;
+            cd.textContent = h > 0
+                ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
+                : `${m}:${String(sec).padStart(2, "0")}`;
+        }
+        tick();
+        if (_lockTimer) clearInterval(_lockTimer);
+        _lockTimer = setInterval(tick, 1000);
+    }
+
+    function closeLockModal() {
+        const overlay = document.getElementById("lockOverlay");
+        const modal = document.getElementById("lockModal");
+        if (overlay) overlay.hidden = true;
+        if (modal) modal.hidden = true;
+        if (_lockTimer) { clearInterval(_lockTimer); _lockTimer = null; }
+    }
+
+    // "Reset password instead" button opens the forgot-password flow
+    document.getElementById("lockForgotBtn")?.addEventListener("click", () => {
+        closeLockModal();
+        document.getElementById("forgotBtn")?.click();
+    });
+
     const ROUTE_ROLES = "/Login_Register_Page/Signup/roles.html";
     const ROUTE_ADMIN_USERS = "/admin/user-management/user-management.html";
     const ROUTE_OWNER_DASHBOARD = "/Property-Owner/dashboard/property-owner-dashboard.html";
@@ -322,6 +444,12 @@
             return;
         }
 
+        // Gate: still locked?
+        if (isLocked(email)) {
+            openLockModal(email);
+            return;
+        }
+
         try {
             const res = await fetch(`${API_BASE}/auth/login`, {
                 method: "POST",
@@ -338,9 +466,30 @@
                     location.href = `/auth/verify-email.html?email=${encodeURIComponent(email)}`;
                     return;
                 }
-                setError(data?.message || data?.error || "Invalid email/password.");
+
+                // Register the wrong attempt. Only advance the ladder for credential failures,
+                // not for server errors (5xx).
+                if (res.status >= 400 && res.status < 500) {
+                    const { state, triggered } = registerWrongAttempt(email);
+                    if (triggered) {
+                        openLockModal(email);
+                        return;
+                    }
+                    // Show remaining attempts before next lockout
+                    const nextStep = LOCK_LADDER.find(s => s.threshold > state.wrong);
+                    const remaining = nextStep ? (nextStep.threshold - state.wrong) : 0;
+                    const base = data?.message || data?.error || "Invalid email/password.";
+                    setError(remaining > 0
+                        ? `${base} ${remaining} attempt${remaining === 1 ? "" : "s"} left before temporary lockout.`
+                        : base);
+                } else {
+                    setError(data?.message || data?.error || "Server error. Please try again.");
+                }
                 return;
             }
+
+            // Success → clear lockout state for this email
+            clearLockState(email);
 
             const newUserId = String(data.user?.id ?? "");
             const lastUserId = localStorage.getItem(LS_LAST_USER_ID_KEY);

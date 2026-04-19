@@ -240,6 +240,30 @@
 
     </div>
 
+    <!-- ══ LOGIN LOCKOUT MODAL ══ -->
+    <div class="fp-overlay" id="lockOverlay" hidden></div>
+    <div class="fp-modal" id="lockModal" hidden role="dialog" aria-modal="true">
+        <div class="fp-step">
+            <div class="fp-head" style="text-align:center;">
+                <div style="width:56px;height:56px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                    <i data-lucide="lock" style="width:26px;height:26px;color:#dc2626;"></i>
+                </div>
+                <h2 class="fp-title" id="lockTitle">Too many failed attempts</h2>
+                <p class="fp-sub" id="lockSub">For your security, login has been temporarily disabled.</p>
+            </div>
+            <div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;margin-bottom:16px;text-align:center;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#991b1b;margin-bottom:6px;">Try again in</div>
+                <div id="lockCountdown" style="font-size:28px;font-weight:800;color:#dc2626;font-variant-numeric:tabular-nums;letter-spacing:0.02em;">—</div>
+            </div>
+            <p id="lockStageInfo" style="font-size:12px;color:#6b7280;text-align:center;margin:0 0 14px;line-height:1.5;"></p>
+            <div class="fp-actions">
+                <button class="fp-submit full" id="lockForgotBtn" type="button" style="width:100%;">
+                    Reset password instead
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         if (window.lucide?.createIcons) window.lucide.createIcons();
     </script>

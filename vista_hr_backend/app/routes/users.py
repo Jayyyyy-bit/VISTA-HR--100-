@@ -93,7 +93,9 @@ def serialize_user(user: User):
         "student_id_url":    getattr(user, "student_id_url", None),
         "student_cor_url":   getattr(user, "student_cor_url", None),
         "student_reject_reason": getattr(user, "student_reject_reason", None),
+        "student_submitted_at":  user.student_submitted_at.isoformat() if getattr(user, "student_submitted_at", None) else None,
         "avatar_url":        getattr(user, "avatar_url", None),
+        "last_login_at":     user.last_login_at.isoformat() if getattr(user, "last_login_at", None) else None,
         "created_at":        user.created_at.isoformat() if user.created_at else None,
         "updated_at":        user.updated_at.isoformat() if user.updated_at else None,
     }
@@ -452,11 +454,33 @@ def logout_all_devices():
 @users_bp.post("/users/me/deactivate")
 @require_auth
 def deactivate_own_account():
-    """Self-service account deactivation. Blocked if user has active bookings."""
+    """Self-service account deactivation. Blocked if user has active bookings.
+    Verification:
+      - Local user:  {password: "..."} — must match account password
+      - Google user: {via_google: true, email_confirm: "..."} — must match account email
+    """
     from ..models.booking import Booking
 
     user = g.current_user
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+
+    data = request.get_json(silent=True) or {}
+    via_google = bool(data.get("via_google"))
+
+    if via_google:
+        # Google-only user: require google_id + email match (case-insensitive)
+        if not user.google_id:
+            return json_error("This account is not linked to Google.", 400)
+        confirm = (data.get("email_confirm") or "").strip().lower()
+        if not confirm or confirm != (user.email or "").lower():
+            return json_error("Email does not match your account.", 401)
+    else:
+        # Local password flow
+        pw = (data.get("password") or "").strip()
+        if not pw:
+            return json_error("Password is required.", 400)
+        if not user.check_password(pw):
+            return json_error("Incorrect password.", 401)
 
     # Check for active bookings — block deactivation if any exist
     active_statuses = ("PENDING", "APPROVED", "ACTIVE")

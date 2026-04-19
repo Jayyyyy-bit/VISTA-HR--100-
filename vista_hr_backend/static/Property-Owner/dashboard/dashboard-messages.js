@@ -322,16 +322,19 @@
         const t = state.activeThread;
         if (!el || !t) return;
         const ini = t.initials || initials(t.other_name || "");
+        const avContent = t.other_avatar
+            ? `<img src="${esc(t.other_avatar)}" alt="${esc(ini)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">`
+            : esc(ini);
         el.innerHTML = `
-            <div class="msgChatHeaderAvatar">${esc(ini)}</div>
-            <div class="msgChatHeaderInfo">
-                <div class="msgChatHeaderName">${esc(t.other_name || "")}</div>
-                <div class="msgChatHeaderSub">${esc(t.other_email || "")}</div>
-            </div>
-            <div class="msgPropertyChip">
-                <i data-lucide="home" style="width:11px;height:11px;stroke-width:2"></i>
-                ${esc(t.listing_title || "")}
-            </div>`;
+        <div class="msgChatHeaderAvatar" style="overflow:hidden;padding:0;">${avContent}</div>
+        <div class="msgChatHeaderInfo">
+            <div class="msgChatHeaderName">${esc(t.other_name || "")}</div>
+            <div class="msgChatHeaderSub">${esc(t.other_email || "")}</div>
+        </div>
+        <div class="msgPropertyChip">
+            <i data-lucide="home" style="width:11px;height:11px;stroke-width:2"></i>
+            ${esc(t.listing_title || "")}
+        </div>`;
         if (window.lucide) lucide.createIcons();
     }
 

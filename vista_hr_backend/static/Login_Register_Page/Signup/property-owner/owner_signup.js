@@ -216,7 +216,24 @@ function toggleEye(btn, input) {
 togglePass.addEventListener("click", () => toggleEye(togglePass, password));
 toggleConfirm.addEventListener("click", () => toggleEye(toggleConfirm, confirmPassword));
 
-// Password strength
+// Password strength + live checklist
+const pwChecklist = document.getElementById("pwChecklist");
+
+function updatePwChecklist(val) {
+    if (!pwChecklist) return;
+    const rules = {
+        length:  val.length >= 8 && val.length <= 16,
+        upper:   /[A-Z]/.test(val),
+        lower:   /[a-z]/.test(val),
+        number:  /[0-9]/.test(val),
+        special: /[^A-Za-z0-9]/.test(val),
+    };
+    pwChecklist.querySelectorAll("li[data-rule]").forEach(li => {
+        li.classList.toggle("valid", !!rules[li.dataset.rule]);
+    });
+    return rules;
+}
+
 password.addEventListener("input", () => {
     if (password.value.length > 16) password.value = password.value.slice(0, 16);
 
@@ -232,18 +249,18 @@ password.addEventListener("input", () => {
     const widths = ["12%", "30%", "50%", "70%", "100%"];
     strengthBar.style.width = widths[Math.min(score, 4)];
 
+    // Update checklist (visual bullets)
+    updatePwChecklist(val);
+
     if (!val) {
-        strengthText.textContent = "Use 8–16 characters with upper/lower/number/special.";
         setValid(password, passwordError);
         return;
     }
 
     const errs = validatePassword(val);
     if (errs.length) {
-        strengthText.textContent = errs[0];
         setInvalid(password, passwordError, errs[0], false);
     } else {
-        strengthText.textContent = "Strong password ✓";
         setValid(password, passwordError);
     }
 
@@ -255,6 +272,9 @@ password.addEventListener("input", () => {
         }
     }
 });
+
+// Initialize checklist state on page load
+updatePwChecklist("");
 
 confirmPassword.addEventListener("input", () => {
     if (!confirmPassword.value) {

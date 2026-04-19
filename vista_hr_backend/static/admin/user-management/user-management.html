@@ -85,6 +85,11 @@
                 <span class="nav-badge sidebar-badge" id="ticketsBadge" hidden></span>
             </a>
 
+            <a class="sidenav-item" data-view="feedback" href="#" title="Feedback">
+                <i data-lucide="message-circle-heart"></i>
+                <span class="sidebar-label">Feedback</span>
+            </a>
+
         </nav>
 
         <!-- Bottom -->
@@ -119,28 +124,28 @@
                         <strong class="stat-value" id="ovTotalUsers">—</strong>
                     </div>
                 </div>
-                <div class="stat-card" id="kycStatCard">
-                    <div class="stat-icon warn"><i data-lucide="shield-alert"></i></div>
+                <div class="stat-card">
+                    <div class="stat-icon an-teal"><i data-lucide="home"></i></div>
                     <div class="stat-body">
-                        <span class="stat-label">Pending KYC</span>
-                        <strong class="stat-value" id="ovPendingKyc">—</strong>
-                        <span class="stat-sub">Owner verifications</span>
-                    </div>
-                </div>
-                <div class="stat-card" id="studentStatCard">
-                    <div class="stat-icon warn"><i data-lucide="book-open"></i></div>
-                    <div class="stat-body">
-                        <span class="stat-label">Pending student</span>
-                        <strong class="stat-value" id="ovPendingStudent">—</strong>
-                        <span class="stat-sub">Resident verifications</span>
+                        <span class="stat-label">Active listings</span>
+                        <strong class="stat-value" id="ovActiveListings">—</strong>
+                        <span class="stat-sub">Published properties</span>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon danger"><i data-lucide="ban"></i></div>
+                    <div class="stat-icon an-amber"><i data-lucide="star"></i></div>
                     <div class="stat-body">
-                        <span class="stat-label">Suspended</span>
-                        <strong class="stat-value" id="ovSuspended">—</strong>
-                        <span class="stat-sub">Accounts</span>
+                        <span class="stat-label">Avg feedback</span>
+                        <strong class="stat-value" id="ovAvgFeedback">—</strong>
+                        <span class="stat-sub" id="ovAvgFeedbackSub">Based on 0 reviews</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-blue"><i data-lucide="calendar-check"></i></div>
+                    <div class="stat-body">
+                        <span class="stat-label">Active bookings</span>
+                        <strong class="stat-value" id="ovActiveBookings">—</strong>
+                        <span class="stat-sub">Approved · Viewing · Occupied</span>
                     </div>
                 </div>
             </div>
@@ -161,31 +166,37 @@
 
                 <div class="right-col">
                     <div class="panel">
-                        <div class="panel-head">
-                            <h2 class="panel-title">User breakdown</h2>
+                        <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;">
+                            <h2 class="panel-title" style="display:flex;align-items:center;gap:8px;">
+                                <span id="anActiveDot"
+                                    style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;box-shadow:0 0 0 3px rgba(34,197,94,0.2);"></span>
+                                Active users now
+                            </h2>
+                            <span style="font-size:11px;color:#9ca3af;">Last 15 min</span>
                         </div>
-                        <div class="breakdown-grid">
+                        <div style="padding:4px 0 8px;">
+                            <div style="font-size:36px;font-weight:800;color:#111;line-height:1;margin-bottom:4px;">
+                                <span id="anActiveCount">0</span>
+                            </div>
+                            <div style="font-size:12px;color:#6b7280;">online right now</div>
+                        </div>
+                        <div class="breakdown-grid" style="margin-top:12px;">
                             <div class="breakdown-item">
-                                <div class="bk-val" id="bkAdmins">—</div>
+                                <div class="bk-val" id="anActiveAdmins">0</div>
                                 <div class="bk-lbl">Admins</div>
-                                <div class="bk-bar">
-                                    <div class="bk-fill gray" id="bkAdminsBar" style="width:0%"></div>
-                                </div>
                             </div>
                             <div class="breakdown-item">
-                                <div class="bk-val" id="bkOwners">—</div>
+                                <div class="bk-val" id="anActiveOwners">0</div>
                                 <div class="bk-lbl">Owners</div>
-                                <div class="bk-bar">
-                                    <div class="bk-fill blue" id="bkOwnersBar" style="width:0%"></div>
-                                </div>
                             </div>
                             <div class="breakdown-item">
-                                <div class="bk-val" id="bkResidents">—</div>
+                                <div class="bk-val" id="anActiveResidents">0</div>
                                 <div class="bk-lbl">Residents</div>
-                                <div class="bk-bar">
-                                    <div class="bk-fill teal" id="bkResidentsBar" style="width:0%"></div>
-                                </div>
                             </div>
+                        </div>
+                        <div id="anActiveEmpty" hidden
+                            style="margin-top:10px;font-size:12px;color:#9ca3af;text-align:center;padding:8px;background:#f9fafb;border-radius:8px;">
+                            No active users in the last 15 minutes.
                         </div>
                     </div>
 
@@ -252,7 +263,7 @@
                         <option value="Suspended">Suspended</option>
                     </select>
                     <button class="um-add-btn" id="addUserBtn" type="button">
-                        <i data-lucide="user-plus"></i> Add user
+                        <i data-lucide="user-plus"></i> Add admin
                     </button>
                 </div>
 
@@ -541,7 +552,6 @@
         <section id="viewTickets" class="view" hidden>
             <div class="topbar-row"
                 style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                <h2 class="view-title">Support Tickets</h2>
                 <div style="display:flex;gap:8px;">
                     <select id="tkFilterStatus" class="filter-select"
                         style="padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:12px;">
@@ -605,6 +615,82 @@
             <div id="tkEmpty" hidden style="text-align:center;padding:48px 20px;color:var(--muted);">
                 <i data-lucide="ticket" style="width:36px;height:36px;opacity:0.3;margin-bottom:10px;"></i>
                 <p>No tickets found</p>
+            </div>
+        </section>
+
+        <!-- FEEDBACK -->
+        <section id="viewFeedback" class="view" hidden>
+            <div
+                style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <select id="fbFilterRole"
+                        style="padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:12px;">
+                        <option value="">All roles</option>
+                        <option value="Resident">Resident</option>
+                        <option value="Property Owner">Property Owner</option>
+                    </select>
+                    <select id="fbFilterStar"
+                        style="padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:12px;">
+                        <option value="">All ratings</option>
+                        <option value="5">★★★★★ 5</option>
+                        <option value="4">★★★★ 4</option>
+                        <option value="3">★★★ 3</option>
+                        <option value="2">★★ 2</option>
+                        <option value="1">★ 1</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Stat cards -->
+            <div class="an-stats-row" style="margin-bottom:20px;">
+                <div class="stat-card">
+                    <div class="stat-icon an-amber"><i data-lucide="star"></i></div>
+                    <div class="stat-body"><span class="stat-label">Avg rating</span><strong class="stat-value"
+                            id="fbStatAvg">—</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-blue"><i data-lucide="message-circle-heart"></i></div>
+                    <div class="stat-body"><span class="stat-label">Total feedback</span><strong class="stat-value"
+                            id="fbStatTotal">—</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-green"><i data-lucide="users"></i></div>
+                    <div class="stat-body"><span class="stat-label">From residents</span><strong class="stat-value"
+                            id="fbStatResidents">—</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-teal"><i data-lucide="home"></i></div>
+                    <div class="stat-body"><span class="stat-label">From owners</span><strong class="stat-value"
+                            id="fbStatOwners">—</strong></div>
+                </div>
+            </div>
+
+            <!-- Charts row -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+                <div class="panel" style="padding:20px;">
+                    <div class="panel-head" style="margin-bottom:16px;">
+                        <h2 class="panel-title">Ratings distribution</h2>
+                    </div>
+                    <div id="fbRatingBars"></div>
+                </div>
+                <div class="panel" style="padding:20px;">
+                    <div class="panel-head" style="margin-bottom:16px;">
+                        <h2 class="panel-title">By role</h2>
+                    </div>
+                    <div id="fbRoleChart" style="display:flex;flex-direction:column;gap:10px;"></div>
+                </div>
+            </div>
+
+            <!-- Feedback cards -->
+            <div class="panel" style="padding:20px;">
+                <div class="panel-head" style="margin-bottom:16px;">
+                    <h2 class="panel-title">All feedback</h2>
+                </div>
+                <div id="fbList" style="display:flex;flex-direction:column;gap:12px;">
+                    <div class="queue-empty">Loading…</div>
+                </div>
+                <div id="fbPager"></div>
             </div>
         </section>
 
@@ -700,10 +786,11 @@
                 <div class="field">
                     <label for="roleInput">Role</label>
                     <select id="roleInput">
-                        <option value="Admin">Admin</option>
-                        <option value="Property Owner">Property Owner</option>
-                        <option value="Resident" selected>Resident</option>
+                        <option value="Admin" selected>Admin</option>
                     </select>
+                    <small style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;">
+                        Admins can only create other admin accounts. Owners and residents self-register.
+                    </small>
                 </div>
                 <div class="field">
                     <label for="statusInput">Status</label>

@@ -416,6 +416,20 @@ function _warmFaceApi() { _FaceValidator.warm(); }
             });
         }
 
+        // Show current device type based on user agent
+        const ua = navigator.userAgent;
+        const deviceEl = el("sessionDeviceName");
+        if (deviceEl) {
+            let device = "This device";
+            if (/iPhone|iPad|iPod/.test(ua)) device = "iPhone / iPad";
+            else if (/Android/.test(ua) && /Mobile/.test(ua)) device = "Android Phone";
+            else if (/Android/.test(ua)) device = "Android Tablet";
+            else if (/Macintosh/.test(ua)) device = "Mac";
+            else if (/Windows/.test(ua)) device = "Windows PC";
+            else if (/Linux/.test(ua)) device = "Linux";
+            deviceEl.textContent = device;
+        }
+
         // ── Right panel population ──────────────────────────────
 
 
@@ -950,6 +964,40 @@ function _warmFaceApi() { _FaceValidator.warm(); }
         }
     });
 
+    // ── Name input filter (letters, spaces, - . ' only) ────────
+    // Allowed: A–Z a–z, accented letters (À-ÿ), space, hyphen, period, apostrophe
+    const NAME_ALLOWED = /[a-zA-ZÀ-ÿ\s\-'.]/;
+    const NAME_BLOCKED_GLOBAL = /[^a-zA-ZÀ-ÿ\s\-'.]/g;
+
+    ["inputFirstName", "inputLastName"].forEach(id => {
+        const input = el(id);
+        if (!input) return;
+        input.addEventListener("keydown", (e) => {
+            // Allow control keys (backspace, delete, arrows, tab, etc.)
+            if (e.key.length !== 1) return;
+            if (e.ctrlKey || e.metaKey) return;
+            if (!NAME_ALLOWED.test(e.key)) e.preventDefault();
+        });
+        input.addEventListener("input", () => {
+            const cleaned = input.value.replace(NAME_BLOCKED_GLOBAL, "");
+            if (cleaned !== input.value) {
+                const pos = input.selectionStart - (input.value.length - cleaned.length);
+                input.value = cleaned;
+                try { input.setSelectionRange(pos, pos); } catch { }
+            }
+        });
+        input.addEventListener("paste", (e) => {
+            const text = (e.clipboardData || window.clipboardData).getData("text");
+            if (NAME_BLOCKED_GLOBAL.test(text)) {
+                e.preventDefault();
+                const cleaned = text.replace(NAME_BLOCKED_GLOBAL, "");
+                const start = input.selectionStart, end = input.selectionEnd;
+                input.value = input.value.slice(0, start) + cleaned + input.value.slice(end);
+                input.setSelectionRange(start + cleaned.length, start + cleaned.length);
+            }
+        });
+    });
+
     // ── Save profile ────────────────────────────────────────────
     el("saveProfileBtn")?.addEventListener("click", async () => {
         const btn = el("saveProfileBtn");
@@ -958,6 +1006,17 @@ function _warmFaceApi() { _FaceValidator.warm(); }
 
         const first = el("inputFirstName").value.trim();
         const last = el("inputLastName").value.trim();
+
+        const namePattern = /^[a-zA-ZÀ-ÿ\s\-'.]+$/;
+        if (first && !namePattern.test(first)) {
+            showMsg("saveMsg", "First name can only contain letters, spaces, hyphens, apostrophes, or periods.", true);
+            return;
+        }
+        if (last && !namePattern.test(last)) {
+            showMsg("saveMsg", "Last name can only contain letters, spaces, hyphens, apostrophes, or periods.", true);
+            return;
+        }
+
         const phone = el("inputPhone").value.trim() || null;
         const basedIn = el("inputBasedIn") ? (el("inputBasedIn").value.trim() || null) : null;
 
@@ -1039,8 +1098,152 @@ function _warmFaceApi() { _FaceValidator.warm(); }
         lbl.style.color = lvl.color;
     });
 
+    // ── Password-change OTP gate ────────────────────────────────
+    let pwOtpVerified = false;
+
+    function resetPwOtpGate() {
+        pwOtpVerified = false;
+        const gate = el("pwOtpGate"), fields = el("pwFieldsGroup"), foot = el("pwCardFoot");
+        if (gate) gate.hidden = false;
+        if (fields) { fields.hidden = true; fields.style.display = "none"; }
+        if (foot) { foot.hidden = true; foot.style.display = "none"; }
+        const sendStep = el("pwOtpSendStep"), enterStep = el("pwOtpEnterStep");
+        if (sendStep) sendStep.hidden = false;
+        if (enterStep) enterStep.hidden = true;
+        const codeInput = el("pwOtpCodeInput"); if (codeInput) codeInput.value = "";
+        const verifyBtn = el("pwOtpVerifyBtn"); if (verifyBtn) verifyBtn.disabled = true;
+        ["pwOtpErr", "pwOtpMsg"].forEach(id => { const e = el(id); if (e) e.hidden = true; });
+    }
+
+    function initPwOtpGate() {
+        const emailSpan = el("pwOtpEmail");
+        if (emailSpan && currentUser?.email) emailSpan.textContent = currentUser.email;
+
+        // Google-only user (no local password): hide normal flow, show Google notice
+        const isGoogleOnly = currentUser?.has_google && currentUser?.has_password === false;
+        const googleNotice = el("pwGoogleNotice");
+        const gate = el("pwOtpGate");
+        if (isGoogleOnly) {
+            if (gate) gate.hidden = true;
+            if (googleNotice) googleNotice.hidden = false;
+            const fields = el("pwFieldsGroup"), foot = el("pwCardFoot");
+            if (fields) { fields.hidden = true; fields.style.display = "none"; }
+            if (foot) { foot.hidden = true; foot.style.display = "none"; }
+            if (window.lucide?.createIcons) lucide.createIcons();
+            return;
+        }
+        if (googleNotice) googleNotice.hidden = true;
+        resetPwOtpGate();
+    }
+
+    // (Google users: password section is read-only — no handler needed.)
+
+    let _pwOtpResendTimer = null;
+
+    function startPwOtpResendCooldown(seconds = 60) {
+        const resendBtn = el("pwOtpResendBtn");
+        if (!resendBtn) return;
+        clearInterval(_pwOtpResendTimer);
+        let left = seconds;
+        const originalHtml = `<i data-lucide="refresh-cw"></i> Resend`;
+        const tick = () => {
+            if (left <= 0) {
+                clearInterval(_pwOtpResendTimer);
+                resendBtn.disabled = false;
+                resendBtn.innerHTML = originalHtml;
+                if (window.lucide?.createIcons) lucide.createIcons();
+                return;
+            }
+            resendBtn.disabled = true;
+            resendBtn.innerHTML = `Resend in ${left}s`;
+            left--;
+        };
+        tick();
+        _pwOtpResendTimer = setInterval(tick, 1000);
+    }
+
+    async function sendPwChangeOtp(btnId) {
+        const btn = el(btnId);
+        const label = btn?.querySelector(".btnLabel");
+        const spinner = btn?.querySelector(".btnSpinner");
+        const errEl = el("pwOtpErr"), msgEl = el("pwOtpMsg");
+        if (errEl) errEl.hidden = true;
+        if (msgEl) msgEl.hidden = true;
+        if (btn) { btn.disabled = true; if (label) label.hidden = true; if (spinner) spinner.hidden = false; }
+
+        try {
+            const res = await fetch(`${API}/auth/password/send-otp`, {
+                method: "POST", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to send code.");
+            el("pwOtpSendStep").hidden = true;
+            el("pwOtpEnterStep").hidden = false;
+            if (msgEl) { msgEl.textContent = "✓ Code sent. Check your inbox."; msgEl.className = "saveMsg"; msgEl.hidden = false; }
+            startPwOtpResendCooldown(60);
+            if (window.lucide?.createIcons) lucide.createIcons();
+        } catch (err) {
+            if (errEl) { errEl.textContent = err.message; errEl.hidden = false; }
+            if (btn) { btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true; }
+            return;
+        }
+        // Success path: keep send button's state locked (user moved to enter step)
+        if (btn) { if (label) label.hidden = false; if (spinner) spinner.hidden = true; }
+    }
+
+    el("pwOtpSendBtn")?.addEventListener("click", () => sendPwChangeOtp("pwOtpSendBtn"));
+    el("pwOtpResendBtn")?.addEventListener("click", () => sendPwChangeOtp("pwOtpResendBtn"));
+
+    el("pwOtpCodeInput")?.addEventListener("input", (e) => {
+        e.target.value = e.target.value.replace(/\D/g, "");
+        el("pwOtpVerifyBtn").disabled = e.target.value.length !== 6;
+    });
+
+    el("pwOtpVerifyBtn")?.addEventListener("click", async () => {
+        const btn = el("pwOtpVerifyBtn");
+        const label = btn.querySelector(".btnLabel");
+        const spinner = btn.querySelector(".btnSpinner");
+        const errEl = el("pwOtpErr"), msgEl = el("pwOtpMsg");
+        const code = el("pwOtpCodeInput").value.trim();
+        if (code.length !== 6) return;
+        if (errEl) errEl.hidden = true;
+        btn.disabled = true; if (label) label.hidden = true; if (spinner) spinner.hidden = false;
+
+        try {
+            const res = await fetch(`${API}/auth/password/verify-otp`, {
+                method: "POST", credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ otp: code }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Invalid or expired code.");
+            pwOtpVerified = true;
+            clearInterval(_pwOtpResendTimer);
+            el("pwOtpGate").hidden = true;
+            const fields = el("pwFieldsGroup"), foot = el("pwCardFoot");
+            if (fields) { fields.hidden = false; fields.style.display = ""; }
+            if (foot) { foot.hidden = false; foot.style.display = ""; }
+            if (msgEl) { msgEl.hidden = true; }
+            if (window.lucide?.createIcons) lucide.createIcons();
+        } catch (err) {
+            if (errEl) { errEl.textContent = err.message; errEl.hidden = false; }
+            btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true;
+        }
+    });
+
+    // Initialize gate on section open
+    document.querySelectorAll('.sidebarNavItem[data-section="security"]').forEach(b => {
+        b.addEventListener("click", () => { if (!pwOtpVerified) initPwOtpGate(); });
+    });
+
     // ── Change password ─────────────────────────────────────────
     el("changePasswordBtn")?.addEventListener("click", async () => {
+        if (!pwOtpVerified) {
+            showMsg("pwSaveMsg", "Please verify the email code first.", true);
+            return;
+        }
+
         const btn = el("changePasswordBtn");
         const label = btn.querySelector(".btnLabel");
         const spinner = btn.querySelector(".btnSpinner");
@@ -1074,16 +1277,26 @@ function _warmFaceApi() { _FaceValidator.warm(); }
                 if (fields.new_password) el("errNewPw").textContent = fields.new_password;
                 if (fields.confirm_password) el("errConfirmPw").textContent = fields.confirm_password;
                 if (!Object.keys(fields).length) throw new Error(data.error || "Failed to update password.");
+                btn.disabled = false; label.hidden = false; spinner.hidden = true;
                 return;
             }
             el("inputCurrentPw").value = "";
             el("inputNewPw").value = "";
             el("inputConfirmPw").value = "";
             el("pwStrengthWrap").hidden = true;
-            showMsg("pwSaveMsg", "Password updated successfully!", false);
+            showMsg("pwSaveMsg", "Password updated. Logging you out for security…", false);
+
+            // Force logout after 2s — invalidates session on all devices
+            setTimeout(async () => {
+                try {
+                    await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" });
+                } catch { /* non-fatal */ }
+                sessionStorage.setItem("loadingDest", "/auth/login.html");
+                sessionStorage.setItem("loadingMsg", "Password changed. Please sign in again.");
+                location.href = "/auth/loading.html";
+            }, 2000);
         } catch (err) {
             showMsg("pwSaveMsg", err.message, true);
-        } finally {
             btn.disabled = false; label.hidden = false; spinner.hidden = true;
         }
     });
@@ -1644,14 +1857,18 @@ function _warmFaceApi() { _FaceValidator.warm(); }
 
     // ── Logout from all devices (modal) ────────────────────────
     el("logoutAllBtn")?.addEventListener("click", () => {
-        el("logoutAllOverlay").hidden = false;
+        const o = el("logoutAllOverlay");
+        o.hidden = false; o.style.display = "flex";
         if (window.lucide?.createIcons) lucide.createIcons();
     });
     el("logoutAllCancelBtn")?.addEventListener("click", () => {
-        el("logoutAllOverlay").hidden = true;
+        const o = el("logoutAllOverlay");
+        o.hidden = true; o.style.display = "none";
     });
     el("logoutAllOverlay")?.addEventListener("click", (e) => {
-        if (e.target === el("logoutAllOverlay")) el("logoutAllOverlay").hidden = true;
+        if (e.target === el("logoutAllOverlay")) {
+            e.target.hidden = true; e.target.style.display = "none";
+        }
     });
     el("logoutAllConfirmBtn")?.addEventListener("click", async () => {
         const btn = el("logoutAllConfirmBtn");
@@ -1668,7 +1885,8 @@ function _warmFaceApi() { _FaceValidator.warm(); }
             sessionStorage.setItem("loadingMsg", "Logging you out…");
             location.href = "/auth/loading.html";
         } catch (err) {
-            el("logoutAllOverlay").hidden = true;
+            const o = el("logoutAllOverlay");
+            o.hidden = true; o.style.display = "none";
             showMsg("pwSaveMsg", err.message, true);
             btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true;
         }
@@ -1682,6 +1900,23 @@ function _warmFaceApi() { _FaceValidator.warm(); }
         if (el("deactivateErr")) el("deactivateErr").textContent = "";
         if (el("deactivatePw")) el("deactivatePw").value = "";
         if (confirmBtn) confirmBtn.disabled = false;
+
+        // Google-only user: confirm by typing email (no local password exists)
+        const isGoogleOnly = currentUser?.has_google && currentUser?.has_password === false;
+        const pwInput = el("deactivatePw");
+        const pwField = pwInput?.closest(".field");
+        const pwLabel = pwField?.querySelector(".fieldLabel");
+        if (isGoogleOnly && pwInput) {
+            if (pwLabel) pwLabel.textContent = `Type your email (${currentUser.email}) to confirm`;
+            pwInput.type = "text";
+            pwInput.placeholder = currentUser.email;
+            pwInput.autocomplete = "off";
+        } else if (pwInput) {
+            if (pwLabel) pwLabel.textContent = "Enter your password to confirm";
+            pwInput.type = "password";
+            pwInput.placeholder = "Password";
+            pwInput.autocomplete = "current-password";
+        }
 
         // Check for active bookings that would block deactivation
         try {
@@ -1708,21 +1943,38 @@ function _warmFaceApi() { _FaceValidator.warm(); }
             }
         } catch { /* non-fatal — allow modal to open, backend will also guard */ }
 
-        el("deactivateOverlay").hidden = false;
+        const overlay = el("deactivateOverlay");
+        if (!overlay) return;
+        overlay.hidden = false;
+        overlay.style.display = "flex";
         if (window.lucide?.createIcons) lucide.createIcons();
     });
 
     el("deactivateCancelBtn")?.addEventListener("click", () => {
-        el("deactivateOverlay").hidden = true;
+        const o = el("deactivateOverlay");
+        o.hidden = true; o.style.display = "none";
     });
     el("deactivateOverlay")?.addEventListener("click", (e) => {
-        if (e.target === el("deactivateOverlay")) el("deactivateOverlay").hidden = true;
+        if (e.target === el("deactivateOverlay")) {
+            e.target.hidden = true; e.target.style.display = "none";
+        }
     });
 
     el("deactivateConfirmBtn")?.addEventListener("click", async () => {
-        const pw = el("deactivatePw")?.value || "";
+        const val = el("deactivatePw")?.value || "";
         const errEl = el("deactivateErr");
-        if (!pw) { errEl.textContent = "Password is required."; return; }
+        const isGoogleOnly = currentUser?.has_google && currentUser?.has_password === false;
+
+        if (!val) {
+            errEl.textContent = isGoogleOnly ? "Please type your email to confirm." : "Password is required.";
+            return;
+        }
+
+        // Google user: email must match (case-insensitive)
+        if (isGoogleOnly && val.trim().toLowerCase() !== (currentUser.email || "").toLowerCase()) {
+            errEl.textContent = "Email does not match your account.";
+            return;
+        }
 
         const btn = el("deactivateConfirmBtn");
         const label = btn.querySelector(".btnLabel");
@@ -1731,25 +1983,25 @@ function _warmFaceApi() { _FaceValidator.warm(); }
         errEl.textContent = "";
 
         try {
-            // Verify password first
-            const verifyRes = await fetch(`${API}/auth/login`, {
-                method: "POST",
+            const payload = isGoogleOnly
+                ? { via_google: true, email_confirm: val.trim() }
+                : { password: val };
+
+            const res = await fetch(`${API}/users/me/deactivate`, {
+                method: "POST", credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: currentUser.email, password: pw }),
-                credentials: "include",
+                body: JSON.stringify(payload),
             });
-            if (!verifyRes.ok) {
-                errEl.textContent = "Incorrect password.";
+            const data = await res.json().catch(() => ({}));
+            if (res.status === 401 || res.status === 403) {
+                errEl.textContent = data.error || (isGoogleOnly ? "Verification failed." : "Incorrect password.");
                 btn.disabled = false; if (label) label.hidden = false; if (spinner) spinner.hidden = true;
                 return;
             }
-
-            // Self-service deactivation (checks for active bookings on backend)
-            const res = await fetch(`${API}/users/me/deactivate`, {
-                method: "POST", credentials: "include",
-            });
-            const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || "Failed to deactivate.");
+
+            // Clear cookie client-side, then route to login
+            try { await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" }); } catch { }
             sessionStorage.setItem("loadingDest", "/auth/login.html");
             sessionStorage.setItem("loadingMsg", "Account deactivated.");
             location.href = "/auth/loading.html";
