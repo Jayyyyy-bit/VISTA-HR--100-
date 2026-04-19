@@ -115,6 +115,8 @@ const fp = {
             setTimeout(() => {
                 this.isAnimating = false;
                 lucide.createIcons();
+                // Re-render hero map tiles when slide 0 becomes visible
+                if (index === 0 && _heroMap) _heroMap.invalidateSize();
             }, 920);
         }
     }
@@ -431,6 +433,7 @@ function initHeroMap() {
         iconAnchor: [7, 7],
     });
 
+    setTimeout(() => _heroMap.invalidateSize(), 300);
     _loadMapPins(pinIcon);
 }
 

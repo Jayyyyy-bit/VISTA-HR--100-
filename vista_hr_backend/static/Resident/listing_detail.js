@@ -668,6 +668,7 @@ function initMap(lat, lng, title, addr) {
             attribution: "© OpenStreetMap",
             maxZoom: 19
         }).addTo(map);
+        setTimeout(() => map.invalidateSize(), 300);
 
         const icon = L.divIcon({
             className: "",
