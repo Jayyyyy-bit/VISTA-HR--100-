@@ -207,7 +207,7 @@ async function initStats() {
     let totalCities = 0;
     let totalUsers = 0;
 
-    if (cached && cacheTime && (now - parseInt(cacheTime)) < 5 * 60 * 1000) {
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < 60 * 1000) {
         // Use cached data
         try {
             const d = JSON.parse(cached);
@@ -243,8 +243,8 @@ async function initStats() {
     }
 
     const fire = () => {
-        countUp(document.getElementById("statListings"), Math.max(totalListings, 1));
-        countUp(document.getElementById("statOwners"), Math.max(totalOwners, 1), 1300);
+        countUp(document.getElementById("statListings"), totalListings);
+        countUp(document.getElementById("statOwners"), totalOwners, 1300);
         countUp(document.getElementById("statUsers"), totalUsers, 1300);
         const citiesEl = document.getElementById("statCities");
         if (citiesEl) {

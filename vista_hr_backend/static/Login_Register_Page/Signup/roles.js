@@ -1,4 +1,4 @@
-const API = "api";
+const API = "/api";
 
 lucide.createIcons();
 
