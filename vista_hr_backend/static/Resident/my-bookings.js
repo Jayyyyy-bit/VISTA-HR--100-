@@ -430,8 +430,8 @@
 
         const viewingBlock = ""; // replaced by viewingResponseBlock
 
-        // Viewing response block
-        const viewingResponseBlock = isViewingScheduled && b.viewing_date && !b._viewingConfirmed ? `
+        // Viewing response block — hide if confirmed (local OR persisted from backend)
+        const viewingResponseBlock = isViewingScheduled && b.viewing_date && !b._viewingConfirmed && !b.viewing_confirmed_at ? `
             <div class="bc-viewing-block">
                 <i data-lucide="eye"></i>
                 <div style="flex:1">

@@ -64,8 +64,12 @@ class Booking(db.Model):
     days_early = db.Column(db.Integer, nullable=True)
 
     # Viewing declined by resident
+    # Viewing declined by resident
     viewing_declined_at     = db.Column(db.DateTime, nullable=True)
     viewing_decline_reason  = db.Column(db.String(500), nullable=True)
+
+    # Viewing confirmed by resident (prevents re-prompting on refresh)
+    viewing_confirmed_at    = db.Column(db.DateTime, nullable=True)
 
     # Relationships (lazy=True is fine for this scale)
     listing = db.relationship("Listing", backref=db.backref("bookings", lazy=True))
@@ -107,6 +111,7 @@ class Booking(db.Model):
             "days_early":              self.days_early,
             "viewing_declined_at":     self.viewing_declined_at.isoformat() if self.viewing_declined_at else None,
             "viewing_decline_reason":  self.viewing_decline_reason,
+            "viewing_confirmed_at":    self.viewing_confirmed_at.isoformat() if self.viewing_confirmed_at else None,
             # Denormalized listing snapshot for easy display
             "listing": {
                 "title": listing.title if listing else None,

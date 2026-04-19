@@ -695,7 +695,13 @@ def viewing_response(booking_id: int):
     listing_title = listing.title if listing else f"Listing #{booking.listing_id}"
 
     if action == "CONFIRM":
-        # No status change — viewing is proceeding
+        # Persist confirmation so refresh doesn't re-show the prompt
+        booking.viewing_confirmed_at = datetime.now(timezone.utc)
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            return json_error("Database error.", 500)
         # Notify owner
         if owner:
             create_notification(

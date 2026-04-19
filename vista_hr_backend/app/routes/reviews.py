@@ -362,6 +362,24 @@ def submit_review():
 
     try:
         db.session.add(review)
+        db.session.flush()
+
+        # SYSTEM reviews also go into the feedback table so they show
+        # on the admin panel and landing page (single source for platform feedback)
+        if review_type == "SYSTEM":
+            from .feedback import Feedback
+            display_role = "Resident" if user_role == "RESIDENT" else "Property Owner"
+            display_name = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip() or user.email
+            fb = Feedback(
+                name=display_name,
+                email=user.email,
+                role=display_role,
+                message=comment or f"Rated {rating}★",
+                rating=rating,
+                user_id=user.id,
+            )
+            db.session.add(fb)
+
         db.session.commit()
         return jsonify({"message": "Review submitted", "review": review.to_dict()}), 201
     except SQLAlchemyError:
@@ -399,8 +417,21 @@ def get_user_reviews(user_id: int):
     )
     avg = round(float(stats), 1) if stats else None
 
+    # Enrich each review with reviewer avatar (single query batch)
+    reviewer_ids = [r.reviewer_id for r in reviews]
+    avatar_map = {}
+    if reviewer_ids:
+        rows = db.session.query(User.id, User.avatar_url).filter(User.id.in_(reviewer_ids)).all()
+        avatar_map = {row.id: row.avatar_url for row in rows}
+
+    out = []
+    for r in reviews:
+        d = r.to_dict()
+        d["reviewer_avatar_url"] = avatar_map.get(r.reviewer_id)
+        out.append(d)
+
     return jsonify({
-        "reviews":    [r.to_dict() for r in reviews],
+        "reviews":    out,
         "total":      total,
         "avg_rating": avg,
         "page":       page,
