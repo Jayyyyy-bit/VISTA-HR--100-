@@ -1022,11 +1022,25 @@
         btn.textContent = "Submitting…";
 
         try {
-            const res = await fetch(`${API}/reviews/submit`, {
-                method: "POST", credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ booking_id: bookingId, review_type: type, rating, comment }),
-            });
+            let res;
+            if (type === "LISTING") {
+                // LISTING reviews go to a different endpoint (backend separates them)
+                const booking = _all.find(b => b.id === bookingId);
+                const listingId = booking?.listing_id || booking?.listing?.id;
+                if (!listingId) throw new Error("Listing not found for this booking.");
+                res = await fetch(`${API}/listings/${listingId}/reviews`, {
+                    method: "POST", credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ rating, comment }),
+                });
+            } else {
+                // OWNER / SYSTEM / RESIDENT go through /reviews/submit
+                res = await fetch(`${API}/reviews/submit`, {
+                    method: "POST", credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ booking_id: bookingId, review_type: type, rating, comment }),
+                });
+            }
             if (!res.ok) {
                 const d = await res.json().catch(() => ({}));
                 throw new Error(d.error || "Submission failed.");

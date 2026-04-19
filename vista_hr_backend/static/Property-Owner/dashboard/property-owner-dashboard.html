@@ -194,14 +194,20 @@
                                 <div class="td-stat-sub">published units</div>
                             </div>
                         </div>
-                        <div class="td-stat-item">
+                        <a href="/Property-Owner/dashboard/my-reviews.html" class="td-stat-item" id="avgFeedbackCard"
+                            style="text-decoration:none;color:inherit;cursor:pointer;transition:transform 150ms, box-shadow 150ms;"
+                            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.08)';"
+                            onmouseout="this.style.transform='';this.style.boxShadow='';">
                             <div class="td-stat-icon td-stat-icon--occupancy"><i data-lucide="star"></i></div>
                             <div class="td-stat-body">
                                 <div class="td-stat-num" id="statAvgFeedback">—</div>
-                                <div class="td-stat-label">Avg feedback</div>
+                                <div class="td-stat-label" style="display:flex;align-items:center;gap:4px;">
+                                    Avg feedback
+                                    <i data-lucide="external-link" style="width:11px;height:11px;opacity:0.5;"></i>
+                                </div>
                                 <div class="td-stat-sub" id="statAvgFeedbackSub">No ratings yet</div>
                             </div>
-                        </div>
+                        </a>
                     </div>
 
                     <!-- 7-day chart -->
