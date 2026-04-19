@@ -68,25 +68,41 @@
         </div>
 
         <!-- Status filter tabs -->
-        <!-- Status filter tabs -->
-        <div class="filterBar" id="filterBar" role="tablist">
-            <button class="filterTab active" data-status="ALL">All</button>
-            <button class="filterTab" data-status="PENDING">
-                Pending
-                <span class="tabCount" id="countPending" hidden></span>
+        <!-- Primary toggle: Bookings | Transactions -->
+        <div class="primaryToggle" id="primaryToggle">
+            <button class="toggleBtn active" data-view="bookings">
+                <i data-lucide="calendar-check"></i> Bookings
             </button>
-            <button class="filterTab" data-status="APPROVED">Approved</button>
-            <button class="filterTab" data-status="VIEWING_SCHEDULED">Viewing</button>
-            <button class="filterTab" data-status="VIEWING_DECLINED">Declined</button>
-            <button class="filterTab" data-status="ACTIVE">Occupied</button>
-            <button class="filterTab" data-status="COMPLETED">Completed</button>
-            <button class="filterTab" data-status="MOVED_OUT">Early Out</button>
-            <button class="filterTab" data-status="REJECTED">Rejected</button>
-            <button class="filterTab" data-status="CANCELLED">Cancelled</button>
+            <button class="toggleBtn" data-view="transactions">
+                <i data-lucide="receipt"></i> Transactions
+            </button>
+        </div>
+
+        <!-- Bookings: status dropdown filter -->
+        <div id="bookingsControls">
+            <div class="statusFilterRow">
+                <label class="statusFilterLabel">Filter by status</label>
+                <select class="statusSelect" id="statusSelect">
+                    <option value="ALL">All reservations</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="VIEWING_SCHEDULED">Viewing Scheduled</option>
+                    <option value="VIEWING_DECLINED">Viewing Declined</option>
+                    <option value="ACTIVE">Occupied</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="MOVED_OUT">Early Move-out</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
+                <span class="statusFilterCount" id="statusFilterCount"></span>
+            </div>
         </div>
 
         <!-- Booking list -->
         <div id="bookingList"></div>
+
+        <!-- Transactions view -->
+        <div id="transactionList" hidden></div>
 
     </main>
 

@@ -1353,8 +1353,9 @@ body.dark-slide .btn-pill:hover {
 }
 
 .footer-links {
-    display: flex;
-    gap: 20px;
+    display: inline-flex;
+    position: relative;
+    gap: 10px;
     flex-wrap: wrap;
 }
 

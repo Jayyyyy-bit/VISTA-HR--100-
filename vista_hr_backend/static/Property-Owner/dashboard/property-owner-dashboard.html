@@ -195,11 +195,11 @@
                             </div>
                         </div>
                         <div class="td-stat-item">
-                            <div class="td-stat-icon td-stat-icon--occupancy"><i data-lucide="percent"></i></div>
+                            <div class="td-stat-icon td-stat-icon--occupancy"><i data-lucide="star"></i></div>
                             <div class="td-stat-body">
-                                <div class="td-stat-num" id="statOccupancy">—</div>
-                                <div class="td-stat-label">Occupancy</div>
-                                <div class="td-stat-sub">units occupied</div>
+                                <div class="td-stat-num" id="statAvgFeedback">—</div>
+                                <div class="td-stat-label">Avg feedback</div>
+                                <div class="td-stat-sub" id="statAvgFeedbackSub">No ratings yet</div>
                             </div>
                         </div>
                     </div>
@@ -840,6 +840,28 @@
     <script src="/Property-Owner/dashboard/property-owner-dashboard.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-messages.js" defer></script>
     <script src="/Property-Owner/dashboard/dashboard-today.js" defer></script>
+    <script>
+        // Avg feedback stat — fetches OWNER-type reviews targeting current user
+        (async () => {
+            try {
+                const meRes = await fetch("/api/auth/me", { credentials: "include" });
+                if (!meRes.ok) return;
+                const { user } = await meRes.json();
+                if (!user || !user.id) return;
+                const r = await fetch(`/api/reviews/user/${user.id}?type=OWNER&per_page=1`, { credentials: "include" });
+                const d = await r.json().catch(() => ({}));
+                const avgEl = document.getElementById("statAvgFeedback");
+                const subEl = document.getElementById("statAvgFeedbackSub");
+                if (d.avg_rating && d.total) {
+                    if (avgEl) avgEl.textContent = `${d.avg_rating} ★`;
+                    if (subEl) subEl.textContent = `${d.total} review${d.total !== 1 ? "s" : ""}`;
+                } else {
+                    if (avgEl) avgEl.textContent = "—";
+                    if (subEl) subEl.textContent = "No ratings yet";
+                }
+            } catch { /* non-fatal */ }
+        })();
+    </script>
 
 
 

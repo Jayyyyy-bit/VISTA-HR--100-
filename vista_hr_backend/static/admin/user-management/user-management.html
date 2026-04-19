@@ -90,6 +90,11 @@
                 <span class="sidebar-label">Feedback</span>
             </a>
 
+            <a class="sidenav-item" data-view="apirefs" href="#" title="API Reference">
+                <i data-lucide="code-2"></i>
+                <span class="sidebar-label">API Reference</span>
+            </a>
+
         </nav>
 
         <!-- Bottom -->
@@ -692,6 +697,57 @@
                 </div>
                 <div id="fbPager"></div>
             </div>
+        </section>
+
+        <!-- ══ API REFERENCE ═══════════════════════════════════════ -->
+        <section id="viewApiRefs" class="view" hidden>
+            <div
+                style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <h2 class="view-title">API Reference</h2>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input id="apiSearch" type="text" placeholder="Search endpoints…"
+                        style="padding:8px 14px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:12px;min-width:240px;font-family:inherit;" />
+                    <select id="apiFilterMethod"
+                        style="padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-size:12px;">
+                        <option value="">All methods</option>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Summary stats -->
+            <div class="an-stats-row" style="margin-bottom:20px;">
+                <div class="stat-card">
+                    <div class="stat-icon an-blue"><i data-lucide="route"></i></div>
+                    <div class="stat-body"><span class="stat-label">Total endpoints</span>
+                        <strong class="stat-value" id="apiStatTotal">—</strong>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-teal"><i data-lucide="folder"></i></div>
+                    <div class="stat-body"><span class="stat-label">Domains</span>
+                        <strong class="stat-value" id="apiStatDomains">—</strong>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-amber"><i data-lucide="shield"></i></div>
+                    <div class="stat-body"><span class="stat-label">Auth-protected</span>
+                        <strong class="stat-value" id="apiStatProtected">—</strong>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon an-green"><i data-lucide="globe"></i></div>
+                    <div class="stat-body"><span class="stat-label">Public</span>
+                        <strong class="stat-value" id="apiStatPublic">—</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div id="apiDomainsList" style="display:flex;flex-direction:column;gap:16px;"></div>
         </section>
 
         <!-- Ticket reply modal -->

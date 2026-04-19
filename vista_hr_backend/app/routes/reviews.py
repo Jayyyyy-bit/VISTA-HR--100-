@@ -158,7 +158,7 @@ def create_listing_review(listing_id: int):
     eligible_booking = Booking.query.filter(
         Booking.listing_id  == listing_id,
         Booking.resident_id == user.id,
-        Booking.status      == "COMPLETED",
+        Booking.status.in_(("COMPLETED", "MOVED_OUT")),
     ).first()
     if not eligible_booking:
         return json_error("You can only review a listing after your booking is completed.", 403,
@@ -303,10 +303,10 @@ def submit_review():
 
     # Business rules per type
     if review_type == "OWNER":
-        # Resident rates owner — booking must be ACTIVE or COMPLETED/CANCELLED (moved in at least)
+        # Resident rates owner — booking must be ACTIVE, COMPLETED, CANCELLED, or MOVED_OUT
         if not is_resident:
             return json_error("Only residents can rate property owners.", 403)
-        if booking.status not in ("ACTIVE", "COMPLETED", "CANCELLED"):
+        if booking.status not in ("ACTIVE", "COMPLETED", "CANCELLED", "MOVED_OUT"):
             return json_error("You can rate the owner once your booking is active.", 403)
 
     elif review_type == "RESIDENT":
@@ -442,11 +442,11 @@ def review_eligibility(booking_id: int):
     pending = []
 
     if is_resident:
-        if status in ("ACTIVE", "COMPLETED", "CANCELLED") and "OWNER" not in done:
+        if status in ("ACTIVE", "COMPLETED", "CANCELLED", "MOVED_OUT") and "OWNER" not in done:
             pending.append("OWNER")
-        if status in ("ACTIVE", "COMPLETED", "CANCELLED") and "SYSTEM" not in done:
+        if status in ("ACTIVE", "COMPLETED", "CANCELLED", "MOVED_OUT") and "SYSTEM" not in done:
             pending.append("SYSTEM")
-        if status == "COMPLETED" and "LISTING" not in done:
+        if status in ("COMPLETED", "MOVED_OUT") and "LISTING" not in done:
             pending.append("LISTING")
 
     if is_owner:

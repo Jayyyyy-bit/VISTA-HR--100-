@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         analytics: document.getElementById("viewAnalytics"),
         tickets: document.getElementById("viewTickets"),
         feedback: document.getElementById("viewFeedback"),
+        apirefs: document.getElementById("viewApiRefs"),
     };
 
     const pageTitles = {
@@ -92,6 +93,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         content: ["Content", "Listings management and Amenities CMS"],
         tickets: ["Tickets", "Manage support tickets and concerns"],
         feedback: ["Feedback", "User feedback and ratings"],
+        apirefs: ["API Reference", "Endpoint catalog for VISTA-HR backend"],
     };
 
     let currentView = "overview";
@@ -121,6 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (name === "content") { initContentSubTabs(); }
         if (name === "tickets") { tkLoad(); }
         if (name === "feedback") { fbLoad(); }
+        if (name === "apirefs") { apiRefsLoad(); }
     }
 
     document.querySelectorAll(".sidenav-item").forEach(a => {
@@ -2809,4 +2812,257 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (star) filtered = filtered.filter(f => f.rating === star);
         fbRender(filtered);
     }
+
+    // ══════════════════════════════════════════════════════════
+    // API REFERENCE — static endpoint catalog
+    // ══════════════════════════════════════════════════════════
+    const API_ENDPOINTS = [
+        // ── Auth ─────────────────────────────────────────────
+        { domain: "Auth", method: "POST", path: "/api/auth/register", auth: "Public", desc: "Register new local account (Resident/Owner). Blocks deactivated emails." },
+        { domain: "Auth", method: "POST", path: "/api/auth/login", auth: "Public", desc: "Sign in with email + password. Auto-reactivates deactivated accounts." },
+        { domain: "Auth", method: "POST", path: "/api/auth/logout", auth: "Any", desc: "Clear JWT cookie." },
+        { domain: "Auth", method: "POST", path: "/api/auth/send-otp", auth: "Public", desc: "Send signup verification OTP to email." },
+        { domain: "Auth", method: "POST", path: "/api/auth/verify-email", auth: "Public", desc: "Submit OTP to verify email (initial signup)." },
+        { domain: "Auth", method: "POST", path: "/api/auth/password/send-otp", auth: "Any", desc: "Send OTP for authenticated password-change flow." },
+        { domain: "Auth", method: "POST", path: "/api/auth/password/verify-otp", auth: "Any", desc: "Verify OTP before allowing password update." },
+        { domain: "Auth", method: "POST", path: "/api/auth/forgot-password", auth: "Public", desc: "Request password reset link via email." },
+        { domain: "Auth", method: "POST", path: "/api/auth/reset-password", auth: "Public", desc: "Set new password using reset token." },
+        { domain: "Auth", method: "PATCH", path: "/api/auth/me/password", auth: "Any", desc: "Change own password (requires OTP verification client-side)." },
+        { domain: "Auth", method: "GET", path: "/api/auth/me", auth: "Any", desc: "Fetch current authenticated user." },
+        { domain: "Auth", method: "GET", path: "/api/auth/google", auth: "Public", desc: "Initiate Google OAuth flow." },
+        { domain: "Auth", method: "GET", path: "/api/auth/google/callback", auth: "Public", desc: "Google OAuth callback. Reactivates deactivated users." },
+        { domain: "Auth", method: "POST", path: "/api/auth/google/complete", auth: "Public", desc: "Finish new Google user signup with chosen role." },
+
+        // ── Users ────────────────────────────────────────────
+        { domain: "Users", method: "GET", path: "/api/users", auth: "ADMIN", desc: "List all users. Includes last_login_at, KYC/student doc URLs." },
+        { domain: "Users", method: "POST", path: "/api/users", auth: "ADMIN", desc: "Create new admin account." },
+        { domain: "Users", method: "PUT", path: "/api/users/{id}", auth: "ADMIN", desc: "Edit user account (name read-only on edit)." },
+        { domain: "Users", method: "PATCH", path: "/api/users/{id}", auth: "ADMIN", desc: "Partial update — suspend/uplift/reset-strikes." },
+        { domain: "Users", method: "DELETE", path: "/api/users/{id}", auth: "ADMIN", desc: "Hard delete user (UI-hidden, kept for ops)." },
+        { domain: "Users", method: "PATCH", path: "/api/users/me/profile", auth: "Any", desc: "Update own first/last name, phone, based_in." },
+        { domain: "Users", method: "PATCH", path: "/api/users/me/avatar", auth: "Any", desc: "Upload new avatar via Cloudinary URL." },
+        { domain: "Users", method: "POST", path: "/api/users/me/logout-all", auth: "Any", desc: "Bump token_version to invalidate all sessions." },
+        { domain: "Users", method: "POST", path: "/api/users/me/deactivate", auth: "Any", desc: "Self-deactivate. Local: {password}. Google: {via_google, email_confirm}." },
+        { domain: "Users", method: "POST", path: "/api/admin/users/{id}/reactivate", auth: "ADMIN", desc: "Manual admin reactivation." },
+        { domain: "Users", method: "POST", path: "/api/admin/users/{id}/reset-strikes", auth: "ADMIN", desc: "Reset user strike count to 0." },
+
+        // ── Listings ─────────────────────────────────────────
+        { domain: "Listings", method: "GET", path: "/api/listings/mine", auth: "OWNER", desc: "Owner's own listings." },
+        { domain: "Listings", method: "GET", path: "/api/listings/{id}", auth: "OWNER", desc: "Get single listing (owner-scoped)." },
+        { domain: "Listings", method: "GET", path: "/api/listings/drafts/latest", auth: "OWNER", desc: "Resume latest draft." },
+        { domain: "Listings", method: "GET", path: "/api/listings/property-types", auth: "OWNER", desc: "Allowed property type enum values." },
+        { domain: "Listings", method: "POST", path: "/api/listings", auth: "OWNER", desc: "Create new listing (starts as DRAFT)." },
+        { domain: "Listings", method: "PATCH", path: "/api/listings/{id}/step-{n}", auth: "OWNER", desc: "Multi-step wizard save (steps 1–10)." },
+        { domain: "Listings", method: "POST", path: "/api/listings/{id}/publish", auth: "OWNER", desc: "Set status to PUBLISHED (requires KYC approved)." },
+        { domain: "Listings", method: "POST", path: "/api/listings/{id}/archive", auth: "OWNER", desc: "Archive listing (keeps data, hides from feed)." },
+        { domain: "Listings", method: "DELETE", path: "/api/listings/{id}", auth: "OWNER", desc: "Delete draft listing." },
+        { domain: "Listings", method: "GET", path: "/api/listings/feed", auth: "Any", desc: "Resident feed — published listings with filters." },
+        { domain: "Listings", method: "GET", path: "/api/admin/listings", auth: "ADMIN", desc: "Paginated list of all listings with filters." },
+        { domain: "Listings", method: "POST", path: "/api/admin/listings/{id}/status", auth: "ADMIN", desc: "Override listing status." },
+        { domain: "Listings", method: "GET", path: "/api/public/stats", auth: "Public", desc: "Landing page stats (published count, cities, etc)." },
+
+        // ── Bookings ─────────────────────────────────────────
+        { domain: "Bookings", method: "POST", path: "/api/bookings", auth: "RESIDENT", desc: "Create booking request. Guards: 1 live per resident, listing occupancy." },
+        { domain: "Bookings", method: "GET", path: "/api/bookings", auth: "Any", desc: "List bookings — filtered by role." },
+        { domain: "Bookings", method: "PATCH", path: "/api/bookings/{id}/status", auth: "OWNER", desc: "Approve/reject/cancel/activate/complete." },
+        { domain: "Bookings", method: "PATCH", path: "/api/bookings/{id}/viewing-response", auth: "RESIDENT", desc: "Confirm/decline scheduled viewing." },
+        { domain: "Bookings", method: "PATCH", path: "/api/bookings/{id}/move-out", auth: "RESIDENT", desc: "Resident move-out (records days_early)." },
+        { domain: "Bookings", method: "PATCH", path: "/api/bookings/{id}/payment-proof", auth: "RESIDENT", desc: "Upload payment proof via Cloudinary." },
+        { domain: "Bookings", method: "PATCH", path: "/api/bookings/{id}/verify-payment", auth: "OWNER", desc: "Owner verifies payment proof." },
+        { domain: "Bookings", method: "DELETE", path: "/api/bookings/{id}", auth: "RESIDENT", desc: "Delete own terminal booking." },
+        { domain: "Bookings", method: "DELETE", path: "/api/bookings/{id}/owner-delete", auth: "OWNER", desc: "Owner deletes terminal booking." },
+
+        // ── KYC & Student ────────────────────────────────────
+        { domain: "KYC", method: "POST", path: "/api/kyc/submit", auth: "OWNER", desc: "Submit KYC documents (ID front/back/selfie)." },
+        { domain: "KYC", method: "GET", path: "/api/admin/kyc", auth: "ADMIN", desc: "List KYC applications by status." },
+        { domain: "KYC", method: "POST", path: "/api/admin/kyc/{id}/approve", auth: "ADMIN", desc: "Approve KYC, unlocks listing publishing." },
+        { domain: "KYC", method: "POST", path: "/api/admin/kyc/{id}/reject", auth: "ADMIN", desc: "Reject KYC with reason." },
+        { domain: "KYC", method: "POST", path: "/api/student/submit", auth: "RESIDENT", desc: "Submit student verification (school ID + COR)." },
+        { domain: "KYC", method: "GET", path: "/api/admin/student", auth: "ADMIN", desc: "List student verification applications." },
+        { domain: "KYC", method: "POST", path: "/api/admin/student/{id}/approve", auth: "ADMIN", desc: "Approve student, unlocks discount eligibility." },
+        { domain: "KYC", method: "POST", path: "/api/admin/student/{id}/reject", auth: "ADMIN", desc: "Reject student verification." },
+
+        // ── Messages ─────────────────────────────────────────
+        { domain: "Messages", method: "GET", path: "/api/messages/conversations", auth: "Any", desc: "List threads (inbox or archived)." },
+        { domain: "Messages", method: "GET", path: "/api/messages/conversations/{lid}/{oid}", auth: "Any", desc: "Get thread messages." },
+        { domain: "Messages", method: "POST", path: "/api/messages", auth: "Any", desc: "Send message — text and/or image_url." },
+        { domain: "Messages", method: "DELETE", path: "/api/messages/conversations/{lid}/{oid}", auth: "Any", desc: "Soft-delete conversation for self." },
+        { domain: "Messages", method: "POST", path: "/api/messages/conversations/{lid}/{oid}/archive", auth: "Any", desc: "Archive thread." },
+        { domain: "Messages", method: "DELETE", path: "/api/messages/conversations/{lid}/{oid}/archive", auth: "Any", desc: "Unarchive thread." },
+        { domain: "Messages", method: "GET", path: "/api/messages/unread-count", auth: "Any", desc: "Badge count of unread messages." },
+        { domain: "Messages", method: "POST", path: "/api/messages/typing", auth: "Any", desc: "Set typing_until = now+4s." },
+        { domain: "Messages", method: "GET", path: "/api/messages/typing/{user_id}", auth: "Any", desc: "Poll typing status for peer." },
+
+        // ── Feedback ─────────────────────────────────────────
+        { domain: "Feedback", method: "POST", path: "/api/feedback", auth: "RESIDENT/OWNER", desc: "Submit feedback. Server-side profanity filter (EN+TL)." },
+        { domain: "Feedback", method: "GET", path: "/api/feedback", auth: "Public", desc: "Landing page display." },
+        { domain: "Feedback", method: "DELETE", path: "/api/feedback/{id}", auth: "ADMIN", desc: "Remove feedback from DB + landing page." },
+
+        // ── Tickets ──────────────────────────────────────────
+        { domain: "Tickets", method: "POST", path: "/api/tickets", auth: "Any", desc: "Submit support ticket." },
+        { domain: "Tickets", method: "GET", path: "/api/tickets", auth: "Any", desc: "List own tickets." },
+        { domain: "Tickets", method: "GET", path: "/api/admin/tickets", auth: "ADMIN", desc: "List all tickets with filters." },
+        { domain: "Tickets", method: "POST", path: "/api/admin/tickets/{id}/reply", auth: "ADMIN", desc: "Reply + update status." },
+
+        // ── Uploads ──────────────────────────────────────────
+        { domain: "Uploads", method: "POST", path: "/api/uploads/sign", auth: "Any", desc: "Cloudinary signed upload params (folder-scoped)." },
+
+        // ── Notifications ────────────────────────────────────
+        { domain: "Notifications", method: "GET", path: "/api/notifications", auth: "Any", desc: "List notifications for current user." },
+        { domain: "Notifications", method: "PATCH", path: "/api/notifications/{id}/read", auth: "Any", desc: "Mark single notification as read." },
+        { domain: "Notifications", method: "POST", path: "/api/notifications/read-all", auth: "Any", desc: "Mark all as read." },
+
+        // ── Reviews ──────────────────────────────────────────
+        { domain: "Reviews", method: "POST", path: "/api/reviews", auth: "RESIDENT", desc: "Submit review for completed booking." },
+        { domain: "Reviews", method: "GET", path: "/api/reviews", auth: "Any", desc: "List reviews for a listing." },
+
+        // ── Saved ────────────────────────────────────────────
+        { domain: "Saved", method: "POST", path: "/api/saved/{listing_id}", auth: "RESIDENT", desc: "Save listing to favorites." },
+        { domain: "Saved", method: "DELETE", path: "/api/saved/{listing_id}", auth: "RESIDENT", desc: "Remove from favorites." },
+        { domain: "Saved", method: "GET", path: "/api/saved", auth: "RESIDENT", desc: "List saved listings." },
+
+        // ── Amenities CMS ────────────────────────────────────
+        { domain: "Amenities", method: "GET", path: "/api/amenities", auth: "Any", desc: "List all active amenities (with emoji/icon)." },
+        { domain: "Amenities", method: "POST", path: "/api/admin/amenities", auth: "ADMIN", desc: "Create new amenity." },
+        { domain: "Amenities", method: "PATCH", path: "/api/admin/amenities/{id}", auth: "ADMIN", desc: "Update amenity." },
+        { domain: "Amenities", method: "DELETE", path: "/api/admin/amenities/{id}", auth: "ADMIN", desc: "Remove amenity." },
+
+        // ── Analytics ────────────────────────────────────────
+        { domain: "Analytics", method: "GET", path: "/api/analytics/overview", auth: "ADMIN", desc: "Platform-wide KPIs (users, listings, bookings, revenue)." },
+
+        // ── Locations ────────────────────────────────────────
+        { domain: "Locations", method: "GET", path: "/api/locations/regions", auth: "Any", desc: "List PH regions." },
+        { domain: "Locations", method: "GET", path: "/api/locations/cities", auth: "Any", desc: "List cities for a region." },
+        { domain: "Locations", method: "GET", path: "/api/locations/barangays", auth: "Any", desc: "List barangays for a city." },
+    ];
+
+    function methodColor(m) {
+        const map = {
+            GET: "background:#dbeafe;color:#1e40af;",
+            POST: "background:#dcfce7;color:#15803d;",
+            PATCH: "background:#fef3c7;color:#92400e;",
+            PUT: "background:#fed7aa;color:#9a3412;",
+            DELETE: "background:#fee2e2;color:#991b1b;",
+        };
+        return map[m] || "background:#f3f4f6;color:#374151;";
+    }
+
+    function authBadge(a) {
+        if (a === "Public") return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ecfdf5;color:#047857;">Public</span>`;
+        if (a === "ADMIN") return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ede9fe;color:#5b21b6;">Admin</span>`;
+        if (a === "OWNER") return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;">Owner</span>`;
+        if (a === "RESIDENT") return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#dbeafe;color:#1e40af;">Resident</span>`;
+        if (a === "Any") return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#4b5563;">Authed</span>`;
+        return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#374151;">${escHtml(a)}</span>`;
+    }
+
+    function apiRefsLoad() {
+        // Stats
+        const total = API_ENDPOINTS.length;
+        const domains = new Set(API_ENDPOINTS.map(e => e.domain)).size;
+        const publicCount = API_ENDPOINTS.filter(e => e.auth === "Public").length;
+        const protectedCount = total - publicCount;
+        setText("apiStatTotal", total);
+        setText("apiStatDomains", domains);
+        setText("apiStatProtected", protectedCount);
+        setText("apiStatPublic", publicCount);
+
+        apiRefsRender();
+    }
+
+    function apiRefsRender() {
+        const container = document.getElementById("apiDomainsList");
+        if (!container) return;
+
+        const keyword = (document.getElementById("apiSearch")?.value || "").trim().toLowerCase();
+        const method = document.getElementById("apiFilterMethod")?.value || "";
+
+        let filtered = API_ENDPOINTS;
+        if (keyword) {
+            filtered = filtered.filter(e =>
+                e.path.toLowerCase().includes(keyword) ||
+                e.desc.toLowerCase().includes(keyword) ||
+                e.domain.toLowerCase().includes(keyword)
+            );
+        }
+        if (method) {
+            filtered = filtered.filter(e => e.method === method);
+        }
+
+        if (!filtered.length) {
+            container.innerHTML = `<div class="queue-empty">No endpoints match your filters.</div>`;
+            return;
+        }
+
+        // Group by domain
+        const grouped = {};
+        filtered.forEach(e => {
+            if (!grouped[e.domain]) grouped[e.domain] = [];
+            grouped[e.domain].push(e);
+        });
+
+        container.innerHTML = Object.entries(grouped).map(([domain, endpoints]) => `
+            <div class="panel" style="padding:20px;">
+                <div class="panel-head" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+                    <h2 class="panel-title" style="margin:0;">${escHtml(domain)}</h2>
+                    <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;background:#f3f4f6;color:#6b7280;">
+                        ${endpoints.length} ${endpoints.length === 1 ? "endpoint" : "endpoints"}
+                    </span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${endpoints.map(e => `
+                        <div class="api-row" data-path="${escHtml(e.path)}"
+                            style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid rgba(0,0,0,0.07);border-radius:10px;background:#fafafa;transition:background 120ms;">
+                            <span style="font-size:11px;font-weight:800;padding:4px 0;border-radius:6px;text-align:center;${methodColor(e.method)}">
+                                ${escHtml(e.method)}
+                            </span>
+                            <div style="min-width:0;">
+                                <code style="font-size:12.5px;font-family:'SF Mono','Monaco','Consolas',monospace;font-weight:600;color:#111;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                    ${escHtml(e.path)}
+                                </code>
+                                <div style="font-size:11px;color:#6b7280;margin-top:2px;line-height:1.5;">
+                                    ${escHtml(e.desc)}
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                ${authBadge(e.auth)}
+                                <button type="button" class="api-copy-btn" data-copy="${escHtml(e.path)}"
+                                    style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,0.08);background:#fff;border-radius:6px;cursor:pointer;color:#6b7280;transition:all 150ms;"
+                                    title="Copy path">
+                                    <i data-lucide="copy" style="width:13px;height:13px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join("")}
+                </div>
+            </div>
+        `).join("");
+
+        if (window.lucide?.createIcons) lucide.createIcons();
+    }
+
+    // Filter handlers
+    document.getElementById("apiSearch")?.addEventListener("input", apiRefsRender);
+    document.getElementById("apiFilterMethod")?.addEventListener("change", apiRefsRender);
+
+    // Copy-path delegation
+    document.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".api-copy-btn");
+        if (!btn) return;
+        const path = btn.dataset.copy;
+        try {
+            await navigator.clipboard.writeText(path);
+            const orig = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="check" style="width:13px;height:13px;color:#15803d;"></i>`;
+            btn.style.borderColor = "#86efac";
+            if (window.lucide?.createIcons) lucide.createIcons();
+            setTimeout(() => {
+                btn.innerHTML = orig;
+                btn.style.borderColor = "";
+                if (window.lucide?.createIcons) lucide.createIcons();
+            }, 1200);
+        } catch {
+            // Clipboard permission denied — silent fail
+        }
+    });
 });

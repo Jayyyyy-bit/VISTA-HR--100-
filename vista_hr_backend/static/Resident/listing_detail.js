@@ -60,6 +60,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const lid = parseInt(params.get("id"));
     if (!lid) { showErr("No listing specified."); return; }
 
+    // Clean the URL — hide ?id= from address bar (keeps state in lid variable)
+    try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } catch { /* ignore if history API unavailable */ }
+
     if (window.AuthGuard?.requireResident) {
         const ok = await window.AuthGuard.requireResident();
         if (!ok) return;
@@ -218,6 +223,8 @@ function render(l) {
 
         // Meet your landlord card
         renderLandlordCard(owner);
+        // Owner-targeted reviews (not listing reviews)
+        loadOwnerReviews(owner.id);
     }
 
     // Room breakdown cards
@@ -783,38 +790,45 @@ function renderRevSummary(avg, total, breakdown) {
     <div class="ld-rev-bars">${bars}</div>`;
 }
 
+async function loadOwnerReviews(ownerId) {
+    const llGrid = $("llRevGrid");
+    if (!llGrid || !ownerId) return;
+    try {
+        const r = await fetch(`${API}/reviews/user/${ownerId}?type=OWNER&per_page=6`, { credentials: "include" });
+        const d = await r.json().catch(() => ({}));
+        const ownerRevs = d.reviews || [];
+        if (!ownerRevs.length) {
+            llGrid.innerHTML = `<p class="ll-no-rev">No reviews yet.</p>`;
+            return;
+        }
+        llGrid.innerHTML = ownerRevs.map(rv => {
+            const date = rv.created_at
+                ? new Date(rv.created_at).toLocaleDateString("en-PH", { month: "short", year: "numeric", timeZone: "Asia/Manila" })
+                : "";
+            const name = rv.reviewer_name || "Resident";
+            const init = (name[0] || "R").toUpperCase();
+            const avatarHtml = rv.reviewer_avatar_url
+                ? `<img src="${esc(rv.reviewer_avatar_url)}" alt="${esc(name)}" class="ll-rev-av-img">`
+                : `<div class="ll-rev-av-fallback">${esc(init)}</div>`;
+            return `<div class="ll-rev-card">
+              <div class="ll-rev-top">
+                <div class="ll-rev-av-wrap">${avatarHtml}</div>
+                <div>
+                  <div class="ll-rev-name">${esc(name)}</div>
+                  <div class="ll-rev-date">${esc(date)}</div>
+                </div>
+                <div class="ll-rev-stars">${Array.from({ length: 5 }, (_, i) => starSvg(i < rv.rating, "ld-rev-s")).join("")}</div>
+              </div>
+              ${rv.comment ? `<p class="ll-rev-txt">${esc(rv.comment)}</p>` : ""}
+            </div>`;
+        }).join("");
+    } catch {
+        llGrid.innerHTML = `<p class="ll-no-rev">No reviews yet.</p>`;
+    }
+}
+
 function renderRevList(revs) {
     const grid = $("ldRevGrid");
-    const llGrid = $("llRevGrid");
-
-    // Populate Meet your landlord reviews panel (same data)
-    if (llGrid) {
-        if (!revs.length) {
-            llGrid.innerHTML = `<p class="ll-no-rev">No reviews yet.</p>`;
-        } else {
-            llGrid.innerHTML = revs.slice(0, 6).map(rv => {
-                const date = rv.created_at
-                    ? new Date(rv.created_at).toLocaleDateString("en-PH", { month: "short", year: "numeric", timeZone: "Asia/Manila" })
-                    : "";
-                const name = rv.resident_name || "Resident";
-                const init = (name[0] || "R").toUpperCase();
-                const avatarHtml = rv.reviewer_avatar_url
-                    ? `<img src="${esc(rv.reviewer_avatar_url)}" alt="${esc(name)}" class="ll-rev-av-img">`
-                    : `<div class="ll-rev-av-fallback">${esc(init)}</div>`;
-                return `<div class="ll-rev-card">
-                  <div class="ll-rev-top">
-                    <div class="ll-rev-av-wrap">${avatarHtml}</div>
-                    <div>
-                      <div class="ll-rev-name">${esc(name)}</div>
-                      <div class="ll-rev-date">${esc(date)}</div>
-                    </div>
-                    <div class="ll-rev-stars">${Array.from({ length: 5 }, (_, i) => starSvg(i < rv.rating, "ld-rev-s")).join("")}</div>
-                  </div>
-                  ${rv.comment ? `<p class="ll-rev-txt">${esc(rv.comment)}</p>` : ""}
-                </div>`;
-            }).join("");
-        }
-    }
 
     if (!grid) return;
     grid.innerHTML = revs.map(rv => {

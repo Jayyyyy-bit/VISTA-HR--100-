@@ -68,6 +68,9 @@
         updatePageSub();
         updatePendingBadge();
         renderList();
+        // Update count on initial load
+        const countEl = document.getElementById("statusFilterCount");
+        if (countEl) countEl.textContent = `${_all.length} result${_all.length !== 1 ? "s" : ""}`;
         if (window.lucide?.createIcons) lucide.createIcons();
     }
 
@@ -89,16 +92,122 @@
     }
 
     // ── Filter tabs ───────────────────────────────────────────
+    // ── Primary toggle (Bookings | Transactions) ──────────────
+    let _activeView = "bookings";
+
     function setupFilterTabs() {
-        document.querySelectorAll(".filterTab").forEach(btn => {
+        // Primary toggle
+        document.querySelectorAll(".toggleBtn").forEach(btn => {
             btn.addEventListener("click", () => {
-                document.querySelectorAll(".filterTab").forEach(b => b.classList.remove("active"));
+                document.querySelectorAll(".toggleBtn").forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
-                _status = btn.dataset.status;
+                _activeView = btn.dataset.view;
                 _page = 1;
-                renderList();
+
+                const bookingsControls = document.getElementById("bookingsControls");
+                const bookingList = document.getElementById("bookingList");
+                const txList = document.getElementById("transactionList");
+
+                if (_activeView === "bookings") {
+                    bookingsControls.hidden = false;
+                    bookingList.hidden = false;
+                    txList.hidden = true;
+                    renderList();
+                } else {
+                    bookingsControls.hidden = true;
+                    bookingList.hidden = true;
+                    txList.hidden = false;
+                    renderTransactions();
+                }
             });
         });
+
+        // Status dropdown
+        document.getElementById("statusSelect")?.addEventListener("change", e => {
+            _status = e.target.value;
+            _page = 1;
+            renderList();
+        });
+    }
+
+    // ── Transactions view ─────────────────────────────────────
+    function renderTransactions() {
+        const list = document.getElementById("transactionList");
+        if (!list) return;
+
+        // Filter bookings that have payment proof or are in payment-relevant statuses
+        const txBookings = _all.filter(b =>
+            b.payment_proof_url ||
+            ["VIEWING_SCHEDULED", "ACTIVE", "COMPLETED", "MOVED_OUT"].includes(b.status)
+        );
+
+        if (!txBookings.length) {
+            list.innerHTML = `<div class="tx-empty">
+                <i data-lucide="receipt" style="width:36px;height:36px;opacity:.3;display:block;margin:0 auto 10px;"></i>
+                No payment transactions yet.
+            </div>`;
+            if (window.lucide?.createIcons) lucide.createIcons();
+            return;
+        }
+
+        list.innerHTML = txBookings.map(b => {
+            const listing = b.listing || {};
+            const price = listing.price
+                ? `₱${Number(listing.price).toLocaleString()}/mo`
+                : "—";
+            const area = [listing.barangay, listing.city].filter(Boolean).join(", ") || "—";
+            const date = b.move_in_date
+                ? new Date(b.move_in_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+                : b.created_at
+                    ? new Date(b.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+                    : "—";
+
+            let iconCls, statusCls, statusLabel, iconName;
+            if (b.payment_verified) {
+                iconCls = "tx-icon--verified"; statusCls = "tx-status--verified";
+                statusLabel = "Payment verified"; iconName = "check-circle-2";
+            } else if (b.payment_proof_url) {
+                iconCls = "tx-icon--pending"; statusCls = "tx-status--pending";
+                statusLabel = "Awaiting verification"; iconName = "clock";
+            } else if (["CANCELLED", "REJECTED"].includes(b.status)) {
+                iconCls = "tx-icon--rejected"; statusCls = "tx-status--rejected";
+                statusLabel = "No payment"; iconName = "x-circle";
+            } else {
+                iconCls = "tx-icon--none"; statusCls = "tx-status--none";
+                statusLabel = "Pending payment"; iconName = "upload-cloud";
+            }
+
+            const canViewReceipt = ["VIEWING_SCHEDULED", "ACTIVE", "COMPLETED", "MOVED_OUT"].includes(b.status);
+
+            return `<div class="tx-card">
+                <div class="tx-icon ${iconCls}">
+                    <i data-lucide="${iconName}"></i>
+                </div>
+                <div class="tx-body">
+                    <div class="tx-title">${esc(listing.title || "Untitled listing")}</div>
+                    <div class="tx-meta">${esc(area)} · ${date}</div>
+                </div>
+                <div class="tx-right">
+                    <div class="tx-amount">${price}</div>
+                    <span class="tx-status ${statusCls}">${statusLabel}</span>
+                </div>
+                ${canViewReceipt ? `
+                <button class="tx-view-btn" data-receipt-id="${b.id}" style="
+                    display:inline-flex;align-items:center;gap:5px;
+                    padding:6px 14px;border-radius:8px;border:1px solid #e5e7eb;
+                    background:#fff;font-size:12px;font-weight:600;color:#374151;
+                    cursor:pointer;white-space:nowrap;flex-shrink:0;
+                    font-family:inherit;transition:background 120ms;">
+                    <i data-lucide="file-text" style="width:13px;height:13px;"></i> View
+                </button>` : ""}
+            </div>`;
+        }).join("");
+
+        list.querySelectorAll(".tx-view-btn").forEach(btn => {
+            btn.addEventListener("click", () => openReceipt(Number(btn.dataset.receiptId)));
+        });
+
+        if (window.lucide?.createIcons) lucide.createIcons();
     }
 
     // ── Render list ───────────────────────────────────────────
@@ -134,6 +243,9 @@
             </div>` : "";
 
         list.innerHTML = paged.map((b, i) => bookingCardHTML(b, i)).join("") + paginationHTML;
+        // Update count label
+        const countEl = document.getElementById("statusFilterCount");
+        if (countEl) countEl.textContent = `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`;
 
         list.querySelector("#mbPgPrev")?.addEventListener("click", () => { _page--; renderList(); });
         list.querySelector("#mbPgNext")?.addEventListener("click", () => { _page++; renderList(); });

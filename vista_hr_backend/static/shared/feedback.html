@@ -245,12 +245,14 @@
                 </small>
             </div>
             <div class="field">
-                <label>I am a…</label>
-                <select id="fbRole">
-                    <option value="">Select role</option>
-                    <option value="Resident">Resident</option>
-                    <option value="Property Owner">Property Owner</option>
-                </select>
+                <input type="text" id="fbRole" placeholder=" " autocomplete="role" readonly
+                    style="background:#f9fafb;color:#374151;cursor:not-allowed;">
+                <small
+                    style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;text-transform:none;letter-spacing:0;font-weight:400;">
+                    <i data-lucide="lock"
+                        style="width:10px;height:10px;display:inline-block;vertical-align:middle;"></i>
+                    Pulled from your account.
+                </small>
             </div>
             <div class="field">
                 <label>Rating (optional)</label>
