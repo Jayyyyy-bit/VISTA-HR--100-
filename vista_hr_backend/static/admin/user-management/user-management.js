@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 apiFetch("/users"),
                 apiFetch("/admin/kyc?status=PENDING"),
                 apiFetch("/admin/student?status=PENDING"),
-                apiFetch("/listings").catch(() => ({ listings: [] })),
+                apiFetch("/admin/listings?status=PUBLISHED&per_page=1").catch(() => ({ total: 0 })),
                 apiFetch("/bookings").catch(() => ({ bookings: [] })),
                 apiFetch("/feedback?limit=50").catch(() => ({ feedback: [] })),
             ]);
@@ -226,12 +226,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             const kycItems = kycData.kyc_applications || [];
             const stuItems = studentData.student_applications || [];
 
-            // New metrics
-            const listings = listingsData.listings || [];
-            const activeListings = listings.filter(l => {
-                const s = (l.status || "").toUpperCase();
-                return s === "PUBLISHED" || s === "ACTIVE";
-            }).length;
+            // Active listings — admin endpoint returns `total` of filtered PUBLISHED listings
+            const activeListings = listingsData.total || 0;
 
             const bookings = bookingsData.bookings || [];
             const activeBookings = bookings.filter(b =>

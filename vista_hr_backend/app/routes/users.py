@@ -11,6 +11,15 @@ from ..utils.errors import json_error
 
 users_bp = Blueprint("users", __name__)
 
+def _iso_utc(dt):
+    """Emit timezone-aware ISO string. Naive datetimes are assumed UTC (as stored)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        from datetime import timezone as _tz
+        dt = dt.replace(tzinfo=_tz.utc)
+    return dt.isoformat()
+
 MAX_STRIKES = 5
 
 VALID_ROLES = {"ADMIN", "OWNER", "RESIDENT"}
@@ -89,15 +98,15 @@ def serialize_user(user: User):
         "kyc_id_back_url":   getattr(user, "kyc_id_back_url", None),
         "kyc_selfie_url":    getattr(user, "kyc_selfie_url", None),
         "kyc_reject_reason": getattr(user, "kyc_reject_reason", None),
-        "kyc_submitted_at":  user.kyc_submitted_at.isoformat() if getattr(user, "kyc_submitted_at", None) else None,
+        "kyc_submitted_at":  _iso_utc(getattr(user, "kyc_submitted_at", None)),
         "student_id_url":    getattr(user, "student_id_url", None),
         "student_cor_url":   getattr(user, "student_cor_url", None),
         "student_reject_reason": getattr(user, "student_reject_reason", None),
-        "student_submitted_at":  user.student_submitted_at.isoformat() if getattr(user, "student_submitted_at", None) else None,
+        "student_submitted_at":  _iso_utc(getattr(user, "student_submitted_at", None)),
         "avatar_url":        getattr(user, "avatar_url", None),
-        "last_login_at":     user.last_login_at.isoformat() if getattr(user, "last_login_at", None) else None,
-        "created_at":        user.created_at.isoformat() if user.created_at else None,
-        "updated_at":        user.updated_at.isoformat() if user.updated_at else None,
+        "last_login_at":     _iso_utc(getattr(user, "last_login_at", None)),
+        "created_at":        _iso_utc(user.created_at),
+        "updated_at":        _iso_utc(user.updated_at),
     }
 
 
