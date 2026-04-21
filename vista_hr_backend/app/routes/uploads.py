@@ -11,8 +11,8 @@ uploads_bp = Blueprint("uploads", __name__)
 
 # Folders each role is permitted to upload to
 _ALLOWED_FOLDERS = {
-    "OWNER":    {"vista_hr/listings", "vista_hr/kyc", "vista_hr/avatars"},
-    "RESIDENT": {"vista_hr/kyc", "vista_hr/student_docs", "vista_hr/avatars", "vista_hr/payment_proofs"},
+    "OWNER":    {"vista_hr/listings", "vista_hr/kyc", "vista_hr/avatars", "vista_hr/messages", "messages"},
+    "RESIDENT": {"vista_hr/kyc", "vista_hr/student_docs", "vista_hr/avatars", "vista_hr/payment_proofs", "vista_hr/messages", "messages"},
     "ADMIN":    {"vista_hr/avatars"},
 }
 
